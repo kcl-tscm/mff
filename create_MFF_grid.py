@@ -39,11 +39,12 @@ class Grids_building:
 		nr = self.nr
 		element1 = self.element1
 		element2 = self.element2
+		rs = np.linspace(d0, df, nr)
 		
 		if element2 == None:		# If single element, build only a 2- and  3-body grid 
 			grid_1_1 = self.build_2_grid(d0, df, nr, element1, element1)
 			grid_1_1_1 = self.build_3_grid(d0, df, nr, element1, element1, element1)
-			result = [grid_1_1, grid_1_1_1]
+			result = [rs, element1, element2, grid_1_1, grid_1_1_1]
 			
 		else:						# If single element, build three 2- and four 3-body grids
 			grid_1_1 = self.build_2_grid(d0, df, nr, element1, element1)
@@ -55,7 +56,7 @@ class Grids_building:
 			grid_1_2_2 = self.build_3_grid(d0, df, nr, element1, element2, element2)
 			grid_2_2_2 = self.build_3_grid(d0, df, nr, element2, element2, element2)			
 
-			result = [grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
+			result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
 			
 		return(result)
 		

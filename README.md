@@ -42,8 +42,9 @@ A simple example on how to use the package, with typical parameters.
 
 ## Maintainers
 
-* Claudio Zeni (claudio.zeni@kcl.ac.uk)
-* Aldo Glielmo (aldo.glielmo@kcl.ac.uk).
+* Claudio Zeni (claudio.zeni@kcl.ac.uk),
+* Aldo Glielmo (aldo.glielmo@kcl.ac.uk),
+* Ádám Fekete (adam@fekete.co.uk).
 
 ## References
 

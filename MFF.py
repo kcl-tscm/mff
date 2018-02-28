@@ -3,6 +3,7 @@ import create_MFF_database
 import create_MFF_grid
 import GP_for_MFF
 import Kernels
+from interpolate_MFF import MBExp
 
 def create_MFF(filename, cutoff, nbodies = 3, ntr = 500, ntest = 500, sigma = 1.0, grid_start = 1.5, grid_spacing = 0.02):
 	
@@ -18,15 +19,16 @@ def create_MFF(filename, cutoff, nbodies = 3, ntr = 500, ntest = 500, sigma = 1.
 	# LAUNCH CONF AND FORCE EXTRACTION #
 	print("Extracting database from XYZ file")
 	#elementslist = create_MFF_database.carve_confs(filename, cutoff)
-	elementslist = [38]
-
+	
+	elementslist = [38, None]
+		
 	# IMPORT CONFS & FORCES #
 	forces = np.load("forces_cut=%.2f.npy" %(cutoff))
 	confs = np.load("confs_cut=%.2f.npy" %(cutoff))
-
+	
 	# CREATE GAUSSIAN PROCESS #
 	print("Training the GP module")
-	GP = GP_for_MFF.GaussianProcess(kernel=ker, noise=1e-5)
+	GP = GP_for_MFF.GaussianProcess(kernel=ker, noise=1e-5, optimizer=None)
 
 	# SEPARATE INTO TRAINING AND TESTING CONFIGURATIONS #
 	ind = np.arange(len(forces))
@@ -60,17 +62,20 @@ def create_MFF(filename, cutoff, nbodies = 3, ntr = 500, ntest = 500, sigma = 1.
 		quit()
 	
 	all_grids = mapping.build_grids()
-	np.save("MFF_%ib_ntr_%i_sig_%.2f_cut_%.2f" %(nbodies, ntr, sigma, cutoff), all_grids)
+	remap_name = ("MFF_%ib_ntr_%i_sig_%.2f_cut_%.2f.npy" %(nbodies, ntr, sigma, cutoff))
+	np.save(remap_name, all_grids)
 	
-	'''
-	# TEST PERFORMANCE OF MFF AGAINST GP # 
+	interp = MBExp()
+	ff = interp.tri_E_forces_confs
+	ef = interp.tri_E_energies_confs
+	interp.initialize(remap_name)
 	if (ntest > 0):
 		MFF_forces = np.zeros((ntest,3))
 		MFF_error = np.zeros((ntest,3))
 		for i in np.arange(ntest):
-			MFF_forces[i,:] =  TODO
-			MFF_forces = gp_forces[i,:] - MFF_forces[i,:]		
+			MFF_forces[i,:] =  ff(tst_confs[i])
+			MFF_error[i,:] = gp_forces[i,:] - MFF_forces[i,:]		
 		print("MAEF on forces: %.4f +- %.4f" %(np.mean(np.sqrt(np.sum(np.square(gp_error), axis =1))), np.std(np.sqrt(np.sum(np.square(gp_error), axis =1)))))
-	'''
+
 	
-create_MFF(filename = "movie.xyz", cutoff = 4.5, nbodies = 3, ntr = 10, ntest = 10, sigma = 1.2, grid_start = 1.5, grid_spacing = 0.05)
+create_MFF(filename = "movie_2.xyz", cutoff = 4.0, nbodies = 3, ntr = 5, ntest = 10, sigma = 1.2, grid_start = 1.5, grid_spacing = 0.1)

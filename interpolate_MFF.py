@@ -38,22 +38,22 @@ class MBExp:
 	
     def initialize(self,remap_name,):
 		remaps = np.load(remap_name)
+		rs = remaps[0]
 		self.element1 = remaps[1]
 		self.element2 = remaps[2]
 		if len(remaps) == 5:
 			self.monoelement = True
-			self.interp_11 = Spline1D.from_file(remaps[3])
-			self.interp_111 = Spline3D.from_file(remaps[4])
-			self.element = 
+			self.interp_11 = Spline1D.from_matrix(rs, remaps[3])
+			self.interp_111 = Spline3D.from_matrix(rs, remaps[4])
 		elif len(remaps) == 10:
 			self.monoelement = False
-			self.interp_11 = Spline1D.from_file(remaps[3])
-			self.interp_12 = Spline1D.from_file(remaps[4])
-			self.interp_22 = Spline1D.from_file(remaps[5])
-			self.interp_111 = Spline3D.from_file(remaps[6])
-			self.interp_112 = Spline3D.from_file(remaps[7])
-			self.interp_122 = Spline3D.from_file(remaps[8])
-			self.interp_222 = Spline3D.from_file(remaps[9])
+			self.interp_11 = Spline1D.from_matrix(rs, remaps[3])
+			self.interp_12 = Spline1D.from_matrix(rs, remaps[4])
+			self.interp_22 = Spline1D.from_matrix(rs, remaps[5])
+			self.interp_111 = Spline3D.from_matrix(rs, remaps[6])
+			self.interp_112 = Spline3D.from_matrix(rs, remaps[7])
+			self.interp_122 = Spline3D.from_matrix(rs, remaps[8])
+			self.interp_222 = Spline3D.from_matrix(rs, remaps[9])
 		else:
 			print("Number of mapped force fields does not match mono or bi-elemental systems, please check %s" %(remap_name))
 			quit()

@@ -1,6 +1,8 @@
 from ase.io import extxyz
 import numpy as np
-from ase.calculators.neighborlist import NeighborList
+
+from ase import Atom, Atoms
+
 from ase.geometry import find_mic
 
 from ase.io import iread
@@ -10,83 +12,112 @@ from asap3 import FullNeighborList
 from ase.neighborlist import NeighborList
 
 
-def get_confs(atoms, r_cut):
-    cutoffs = np.ones(len(atoms)) * r_cut / 2
-    nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
-    nl.build(atoms)
+class Confs(object):
+    def __init__(self, atomic_numbers, positions,
+                 forces=None,
+                 potential_energy=None):
+        """
 
-    cell = atoms.get_cell()
+        Args:
+            atomic_numbers (ndarray):
+            positions (ndarray):
+            forces (ndarray):
+            potential_energy (float):
+        """
 
-    for atom in atoms:
-        indices, offsets = nl.get_neighbors(atom.index)
-        confs = atoms.positions[indices, :] + np.dot(offsets, cell) - atom.position
+        self.atomic_number = atomic_numbers
+        self.positions = positions
+        self.forces = forces
+        self.potential_energy = potential_energy
 
-        yield confs
+    @classmethod
+    def from_atoms(cls, atoms, r_cut, index=None):
+        atomic_numbers = atoms.get_array('numbers', copy=False)
+        # positions = atoms.get_array('positions', copy=False)
+
+        confs = []
+        atomic_numbers = []
+        forces = []
+        for atomic_number, conf, force in cls.get_confs_cKDTree(atoms, r_cut):
+            atomic_numbers.append(atomic_number)
+            confs.append(conf)
 
 
-def get_confs_asap(atoms, r_cut):
-    # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
-    nl = FullNeighborList(r_cut, atoms=atoms)
-    for atom in atoms:
-        inds, confs, ds = nl.get_neighbors(atom.index)
 
-        yield confs
+        return cls(atomic_numbers, confs)
 
-
-def get_confs_cKDTree(atoms, r_cut):
-    # https://docs.scipy.org/doc/scipy-1.0.0/reference/generated/scipy.spatial.cKDTree.html
-    positions = atoms.get_positions(wrap=True)
-    box = np.diag(atoms.cell)
-
-    tree = spatial.cKDTree(positions, boxsize=box)
-    nl = tree.query_ball_point(positions, r_cut)
-
-    for index, indices in enumerate(nl):
-        indices.remove(index)
-
-        confs = positions[indices] - positions[index]
-
-        # fixing periodic boundary
-        confs = np.where(abs(confs) < abs(confs - box), confs, confs - box)
-        confs = np.where(abs(confs) < abs(confs + box), confs, confs + box)
-
-        yield confs
-
-    # for index, position in enumerate(positions):
-    #     indices = tree.query_ball_point(position, r_cut)
-    #     indices.remove(index)
+    # @staticmethod
+    # def get_confs(atoms, r_cut):
+    #     cutoffs = np.ones(len(atoms)) * r_cut / 2
+    #     nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
+    #     nl.build(atoms)
     #
-    #     confs = positions[indices] - position
+    #     cell = atoms.get_cell()
     #
-    #     # fixing periodic boundary
-    #     confs = np.where(abs(confs) < abs(confs - box), confs, confs - box)
-    #     confs = np.where(abs(confs) < abs(confs + box), confs, confs + box)
+    #     for atom in atoms:
+    #         indices, offsets = nl.get_neighbors(atom.index)
+    #         confs = atoms.positions[indices, :] + np.dot(offsets, cell) - atom.position
     #
-    #     yield confs
+    #         yield confs
+
+    @staticmethod
+    def get_confs_asap(atoms, r_cut):
+        # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
+
+        atomic_numbers = atoms.get_array('numbers', copy=False)
+        nl = FullNeighborList(r_cut, atoms=atoms)
+
+        for atom in atoms:
+            inds, confs, ds = nl.get_neighbors(atom.index)
 
 
-class Conf(object):
+
+            yield atomic_numbers[inds], confs, force
+
+    @staticmethod
+    def get_confs_cKDTree(atoms, r_cut):
+        # https://docs.scipy.org/doc/scipy-1.0.0/reference/generated/scipy.spatial.cKDTree.html
+        atomic_numbers = atoms.get_array('numbers', copy=False)
+        positions = atoms.get_positions(wrap=True)
+        box = np.diag(atoms.cell)
+
+        tree = spatial.cKDTree(positions, boxsize=box)
+        nl = tree.query_ball_point(positions, r_cut)
+
+        for index, indices in enumerate(nl):
+            indices.remove(index)
+
+            confs = positions[indices] - positions[index]
+
+            # fixing periodic boundary
+            confs = np.where(abs(confs) < abs(confs - box), confs, confs - box)
+            confs = np.where(abs(confs) < abs(confs + box), confs, confs + box)
+
+            yield atomic_numbers[indices], confs
+
+
+if __name__ == '__main__':
+    atoms = Atoms('H2',
+                  positions=[[0, 0, 0],
+                             [0, 0, 0.7]])
+
+    confs = Confs.from_atoms(atoms)
+
+
+class Configuration(object):
+    """Class for representing a configuration
     """
-    hello
-    Since Pythagoras, we know that :math:`a^2 + b^2 = c^2`.
 
-    Configurable delimiters — by default \(a^2 + b^2 = c^2\), $$a^2 + b^2 = c^2$$, \[a^2 + b^2 = c^2\]. Smart enough to parse $y = x^2 \hbox{ when $x > 2$}$. as one expression. Supports backslash-escaping to prevent parsing as math.
+    def __init__(self, atomic_number, positions, configurations=None):
+        """
 
-    Recognizes \begin{foo}...\end{foo} without any extra delimiters. Supports macros — recognizes \def..., \newcommand... without any extra delimiters.
+        Args:
+            number: atomic number
+        """
+        self.atomic_number = atomic_number
+        self.positions = np.array(positions, float)
 
-    Can also support MathML and AsciiMath — depends on configuration.
-
-    KaTeX
-    Much faster (and smaller) than MathJax but supports considerably less constructs so far. Doesn't yet recognize math by any delimiter, need to call function per math fragment. Notable for outputting stable HTML+CSS+webfont that work on all modern browsers, so can run during conversion and work without javascript on client. (MathJax 2.5 also has "CommonHTML" output but it's bad quality, only usable as preview; the closest server-side option is MathJax-node outputing SVG.)
-
-    Not yet used much with markdown.
-
-    ikiwiki with mathjax plugin
-    Both display ($$a^2 + b^2 = c^2$$ or [a^2 + b^2 = c^2]) and inline (\$a^2 + b^2 = c^2\$ or \(a^2 + b^2 = c^2\)) math are supported. Just take care that inline math must stay on *one line in your markdown source. A single literal dollar sign in a line does not need to be escaped, but two do.
-
-    """
-
-    def __init__(self):
+        self.configurtions = configurations
         self._distances = None
 
     @property
@@ -97,7 +128,12 @@ class Conf(object):
         return self._distances
 
 
-class Con   fs(object):
+class Configurations(object):
+    """Configurations can represent a list of configurations"""
+    pass
+
+
+class ConfsForce(Configurations):
     """Hello
 
     Args:

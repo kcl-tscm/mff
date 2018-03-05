@@ -44,7 +44,7 @@ A simple example on how to use the package, with typical parameters.
 
 * Claudio Zeni (claudio.zeni@kcl.ac.uk),
 * Aldo Glielmo (aldo.glielmo@kcl.ac.uk),
-* Ádám Fekete (adam@fekete.co.uk).
+* Ádám Fekete (adam.fekete@kcl.ac.uk).
 
 ## References
 

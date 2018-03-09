@@ -31,6 +31,32 @@ f = open(theano_dir+'S3b_ms.save', 'rb')
 threebody_ee_T = cPickle.load(f)
 f.close()
 
+
+
+f = open(theano_dir+'2B_ff_ker_cut.save', 'rb')
+twobody_ff_T_cut = cPickle.load(f)
+f.close()
+
+f = open(theano_dir+'2B_ef_ker_cut.save', 'rb')
+twobody_ef_T_cut = cPickle.load(f)
+f.close()
+
+f = open(theano_dir+'2B_ee_ker_cut.save', 'rb')
+twobody_ee_T_cut = cPickle.load(f)
+f.close()
+
+f = open(theano_dir+'3B_ff_ker_cut.save', 'rb')
+threebody_ff_T_cut = cPickle.load(f)
+f.close()
+
+f = open(theano_dir+'3B_ef_ker_cut.save', 'rb')
+threebody_ef_T_cut = cPickle.load(f)
+f.close()
+
+f = open(theano_dir+'3B_ee_ker_cut.save', 'rb')
+threebody_ee_T_cut= cPickle.load(f)
+f.close()
+
 # Define wrappers around Theano functions
 def twobody_ff(a, b, sig):
     ret = twobody_ff_T(np.zeros(3), np.zeros(3), a, b, sig)
@@ -56,7 +82,31 @@ def threebody_ee(a, b, sig):
     ret = threebody_ee_T(np.zeros(3), np.zeros(3), a, b, sig)
     return ret
      
-     
+
+def twobody_ff_cut(a, b, sig, rc, theta = 0.5):
+    ret = twobody_ff_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+    
+def twobody_ef_cut(a, b, sig, rc, theta = 0.5):
+    ret = twobody_ef_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+    
+def twobody_ee_cut(a, b, sig, rc, theta = 0.5):
+    ret = twobody_ee_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+ 
+def threebody_ff_cut(a, b, sig, rc, theta = 0.5):
+    ret = threebody_ff_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+       
+def threebody_ef_cut(a, b, sig, rc, theta = 0.5):
+    ret = threebody_ef_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+    
+def threebody_ee_cut(a, b, sig, rc, theta = 0.5):
+    ret = threebody_ee_T_cut(np.zeros(3), np.zeros(3), a, b, sig, theta, rc)
+    return ret
+	
 # TODO: Parallelize computation of Gram matrix
 
 # Classes for 2 and 3 body kernels

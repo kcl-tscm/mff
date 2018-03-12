@@ -4,8 +4,8 @@ from ase.calculators.neighborlist import NeighborList
 from ase.geometry import find_mic
 
 def carve_confs(filename, r_cut):
-	
-	### Open file and get number of atoms and steps ###
+
+  	### Open file and get number of atoms and steps ###
 	f = open(filename, 'r')
 	N = int(f.readline())
 	

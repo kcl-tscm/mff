@@ -124,4 +124,6 @@ def carve_confs(filename, r_cut, n_data = 3000):
   print("Minimum number of atoms in a configuration", min(lens))
   print("Average number of atoms in a configuration", np.mean(lens))
 
-carve_confs("C_a/movie.xyz", 3.7)
+  return elements
+
+a = carve_confs("C_a/movie.xyz", 3.7)

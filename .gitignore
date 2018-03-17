@@ -1,3 +1,9 @@
+
+old/
+
+# numpy saved arrays
+*.npy
+
 # Pycharm
 .idea/
 

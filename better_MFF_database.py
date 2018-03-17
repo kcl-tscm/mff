@@ -5,125 +5,144 @@ Created on Fri Mar 09 14:55:57 2018
 @author: k1506329
 """
 
+import logging
+
 from ase.io import read
 import numpy as np
-from ase.calculators.neighborlist import NeighborList
+from asap3 import FullNeighborList
+from ase.neighborlist import NeighborList
+
+logger = logging.getLogger(__name__)
 
 
-def carve_from_snapshot(atoms, atoms_ind, cutoffs):
-  # See if there are forces and energies, get them for the chosen atoms
+class MissingData(Exception):
+    pass
 
-  cell= atoms.get_cell()
-  confs = []
-  errvalue = 0
-  try:
-    forces = atoms.get_array('force')[atoms_ind]
-  except KeyError:
-    print('Forces in the xyz file are not present, or are not called force')
-    forces = None
-    errvalue += 1
-  try:
-    energy = atoms.get_array('energy')
-  except KeyError:
-    print('Energy in the xyz file is not present, or is not called energy')
-    energy = None
-    errvalue += 1
-  if errvalue == 2 :
-    print('Cannot find energy or force values in the xyz file, shitting down')
-    quit()
 
-  nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
-  nl.build(atoms)
+def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
+    # See if there are forces and energies, get them for the chosen atoms
+    forces = atoms.arrays.get(forces_label)
+    energy = atoms.arrays.get(energy_label)
 
-  # Build local configurations for every indexed atom
-  for i in atoms_ind:
-    indices, offsets = nl.get_neighbors(i)
-    offsets = np.dot(offsets, cell)
-    conf = np.zeros((len(indices), 5))
+    if forces is None and energy is None:
+        raise MissingData('Cannot find energy or force values in the xyz file, shitting down')
 
-    for k, (a2, offset) in enumerate(zip(indices, offsets)):
-      d = atoms.positions[a2] + offset - atoms.positions[i]
-      conf[k, :3] = d
-      conf[k, 4] = atoms.get_atomic_numbers()[a2]
+    if forces is not None:
+        forces = forces[atoms_ind]
+        logging.info('Forces in the xyz file are not present, or are not called force')
 
-    conf[:, 3] = atoms.get_atomic_numbers()[i]
-    confs.append(conf)
-    
-  return(confs, forces, energy)
-  
-  
-def carve_confs(filename, r_cut, n_data = 3000):
+    if energy is not None:
+        logging.info('Energy in the xyz file is not present, or is not called energy')
 
-  confs = []
-  forces  = []
-  energies = []
+    # Build local configurations for every indexed atom
+    nl = FullNeighborList(r_cut, atoms=atoms)
 
-  # Open file and get number of atoms and steps
-  f = open(filename, 'r')
-  num_lines = 1 + sum(1 for line in f)
-  atoms = read(filename, index=':', format = 'extxyz')
+    confs = []
+    for i in atoms_ind:
+        indices, positions, distances = nl.get_neighbors(i)
 
-  # Get the atomic number of each atom in the trajectory file
-  atom_number_list = []
-  for i in np.arange(len(atoms)):
-      atom_number_list.append(atoms[i].get_atomic_numbers())
-  flat_atom_number = np.concatenate(atom_number_list).ravel()
-  elements, elements_count = np.unique(flat_atom_number, return_counts=True)
+        atomic_numbers_i = np.ones((len(indices), 1)) * atoms.get_atomic_numbers()[i]
+        atomic_numbers_j = atoms.get_atomic_numbers()[indices].reshape(-1, 1)
 
-  # Calculate the ratios of occurrence of central atoms based on their atomic number
-  ratios = np.zeros(len(elements))
-  for i in np.arange(len(elements)):
-    ratios[i] = np.sqrt(float(elements_count[i]))
-  ratios = ratios/(np.sum(ratios))
+        confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
 
-  # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
-  indices = []
-  for i in np.arange(len(elements)):
-    indices.append(np.linspace(0, elements_count[i], int(ratios[i]*n_data) - 1))
-    indices[i] = map(int, indices[i])  # This is the n-th atom of that type you have to pick
+    # # Build local configurations for every indexed atom
+    # cutoffs = np.ones(len(atoms)) * r_cut / 2.
+    # nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
+    # nl.build(atoms)
+    #
+    # confs = []
+    # cell = atoms.get_cell()
+    #
+    # for i in atoms_ind:
+    #     indices, offsets = nl.get_neighbors(i)
+    #     offsets = np.dot(offsets, cell)
+    #     conf = np.zeros((len(indices), 5))
+    #
+    #     for k, (a2, offset) in enumerate(zip(indices, offsets)):
+    #         d = atoms.positions[a2] + offset - atoms.positions[i]
+    #         conf[k, :3] = d
+    #         conf[k, 4] = atoms.get_atomic_numbers()[a2]
+    #
+    #     conf[:, 3] = atoms.get_atomic_numbers()[i]
+    #     confs.append(conf)
 
-  # Go through each trajectory step and find where the chosen indexes for all different elements are
-  element_ind_count = np.zeros(len(elements))
-  element_ind_count_prev = np.zeros(len(elements))
-  for j in np.arange(len(atoms)):
-    print("Reading traj step %i" %(j))
-    this_ind = []
-    for k in np.arange(len(elements)):
-      count_el_atoms = sum(atom_number_list[j] ==  elements[k])
-      element_ind_count[k] += count_el_atoms
-      temp_ind = np.asarray([x for i,x in enumerate(indices[k] - element_ind_count_prev[k])
-                       if (0 <= x < count_el_atoms)])
-      temp_ind = temp_ind.astype(int)
-      this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
-      element_ind_count_prev[k] += count_el_atoms
-    this_ind = np.concatenate(this_ind).ravel()
+    return confs, forces, energy
 
-    # Call the carve_from_snapshot function on the chosen atoms
-    if len(this_ind) > 0:
-      cutoffs = np.ones(len(atom_number_list[j])) * r_cut / 2.
-      this_conf, this_force, this_energy = carve_from_snapshot(atoms[j], this_ind, cutoffs)
-      confs.append(this_conf)
-      forces.append(this_force)
-      energies.append(this_energy)
 
-  # Reshape everything so that confs is a list of numpy arrays, forces is a numpy array and energies is a numpy array
-  confs = [item for sublist in confs for item in sublist]
-  forces = [item for sublist in forces for item in sublist]
+def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energies'):
+    confs, forces, energies = [], [], []
 
-  forces = np.asarray(forces)
-  energies = np.asarray(energies)
+    # Get the atomic number of each atom in the trajectory file
+    atom_number_list = [atom.get_atomic_numbers() for atom in atoms]
+    flat_atom_number = np.concatenate(atom_number_list)
+    elements, elements_count = np.unique(flat_atom_number, return_counts=True)
 
-  np.save("confs_cut=%.2f.npy" % (r_cut), confs)
-  np.save("forces_cut=%.2f.npy" % (r_cut), forces)
-  np.save("energies_cut=%.2f.npy" % (r_cut), energies)
-  lens = []
-  for i in np.arange(len(confs)):
-    lens.append(len(confs[i]))
+    # Calculate the ratios of occurrence of central atoms based on their atomic number
+    ratios = np.sqrt(elements_count / np.sum(elements_count))
 
-  print("Maximum number of atoms in a configuration", max(lens))
-  print("Minimum number of atoms in a configuration", min(lens))
-  print("Average number of atoms in a configuration", np.mean(lens))
+    # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
+    indices = [np.linspace(0, elc, int(ratio * n_data) - 1) for elc, ratio in zip(elements_count, ratios)]
 
-  return elements
+    # Go through each trajectory step and find where the chosen indexes for all different elements are
+    element_ind_count = np.zeros_like(elements)
+    element_ind_count_prev = np.zeros_like(elements)
 
-a = carve_confs("C_a/movie.xyz", 3.7)
+    for j in np.arange(len(atoms)):
+        logging.info('Reading traj step {}'.format(j))
+
+        this_ind = []
+
+        for k in np.arange(len(elements)):
+            count_el_atoms = sum(atom_number_list[j] == elements[k])
+            element_ind_count[k] += count_el_atoms
+            temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
+                                dtype=np.int)
+
+            this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
+            element_ind_count_prev[k] += count_el_atoms
+
+        this_ind = np.concatenate(this_ind).ravel()
+
+        # Call the carve_from_snapshot function on the chosen atoms
+        if this_ind.size > 0:
+            this_conf, this_force, this_energy = \
+                carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label)
+            confs.append(this_conf)
+            forces.append(this_force)
+            energies.append(this_energy)
+
+    # Reshape everything so that confs is a list of numpy arrays, forces is a numpy array and energies is a numpy array
+    confs = [item for sublist in confs for item in sublist]
+    forces = [item for sublist in forces for item in sublist]
+
+    forces = np.asarray(forces)
+    energies = np.asarray(energies)
+
+    return elements, confs, forces, energies
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
+    r_cut = 3.7
+    n_data = 3000
+
+    # Open file and get number of atoms and steps
+    filename = 'test/data/C_a/data_C.xyz'
+    traj = read(filename, index=slice(0, 240), format='extxyz')
+
+    elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='DFT_force')
+
+    np.save('confs_cut={:.2f}.npy'.format(r_cut), confs)
+    np.save('forces_cut={:.2f}.npy'.format(r_cut), forces)
+    np.save('energies_cut={:.2f}.npy'.format(r_cut), energies)
+
+    lens = [len(conf) for conf in confs]
+
+    logging.info('\n'.join((
+        'Number of atoms in a configuration:',
+        '   maximum: {}'.format(np.max(lens)),
+        '   minimum: {}'.format(np.min(lens)),
+        '   average: {:.4}'.format(np.mean(lens))
+    )))

@@ -9,9 +9,11 @@ import logging
 
 from ase.io import read
 import numpy as np
+
 from asap3 import FullNeighborList
 from ase.neighborlist import NeighborList
 
+USE_ASAP = True
 logger = logging.getLogger(__name__)
 
 
@@ -34,38 +36,40 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
     if energy is not None:
         logging.info('Energy in the xyz file is not present, or is not called energy')
 
-    # Build local configurations for every indexed atom
-    nl = FullNeighborList(r_cut, atoms=atoms)
+    if USE_ASAP:
+        # Build local configurations for every indexed atom
+        nl = FullNeighborList(r_cut, atoms=atoms)
 
-    confs = []
-    for i in atoms_ind:
-        indices, positions, distances = nl.get_neighbors(i)
+        confs = []
+        for i in atoms_ind:
+            indices, positions, distances = nl.get_neighbors(i)
 
-        atomic_numbers_i = np.ones((len(indices), 1)) * atoms.get_atomic_numbers()[i]
-        atomic_numbers_j = atoms.get_atomic_numbers()[indices].reshape(-1, 1)
+            atomic_numbers_i = np.ones((len(indices), 1)) * atoms.get_atomic_numbers()[i]
+            atomic_numbers_j = atoms.get_atomic_numbers()[indices].reshape(-1, 1)
 
-        confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
+            confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
+    else:
 
-    # # Build local configurations for every indexed atom
-    # cutoffs = np.ones(len(atoms)) * r_cut / 2.
-    # nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
-    # nl.build(atoms)
-    #
-    # confs = []
-    # cell = atoms.get_cell()
-    #
-    # for i in atoms_ind:
-    #     indices, offsets = nl.get_neighbors(i)
-    #     offsets = np.dot(offsets, cell)
-    #     conf = np.zeros((len(indices), 5))
-    #
-    #     for k, (a2, offset) in enumerate(zip(indices, offsets)):
-    #         d = atoms.positions[a2] + offset - atoms.positions[i]
-    #         conf[k, :3] = d
-    #         conf[k, 4] = atoms.get_atomic_numbers()[a2]
-    #
-    #     conf[:, 3] = atoms.get_atomic_numbers()[i]
-    #     confs.append(conf)
+        # Build local configurations for every indexed atom
+        cutoffs = np.ones(len(atoms)) * r_cut / 2.
+        nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
+        nl.build(atoms)
+
+        confs = []
+        cell = atoms.get_cell()
+
+        for i in atoms_ind:
+            indices, offsets = nl.get_neighbors(i)
+            offsets = np.dot(offsets, cell)
+            conf = np.zeros((len(indices), 5))
+
+            for k, (a2, offset) in enumerate(zip(indices, offsets)):
+                d = atoms.positions[a2] + offset - atoms.positions[i]
+                conf[k, :3] = d
+                conf[k, 4] = atoms.get_atomic_numbers()[a2]
+
+            conf[:, 3] = atoms.get_atomic_numbers()[i]
+            confs.append(conf)
 
     return confs, forces, energy
 

@@ -33,15 +33,16 @@ if __name__ == '__main__':
     else:
         print("Kernel order not understood, use 2 for two-body and 3 for three-body")
         quit()
+
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
     gp_name = 'gp_ker=%s_ntr=%i_sig=%.2f_cut=%.2f' % (nbodies, ntr, sigma, r_cut)
 
-    if os.path.isfile(directory+'/'+gp_name):
-        gp.load(directory+'/'+gp_name)
+    if os.path.isfile(directory + '/' + gp_name):
+        gp.load(directory + '/' + gp_name)
 
     else:
         gp.fit(tr_confs, tr_forces)
-        gp.save(directory+'/'+gp_name)
+        gp.save(directory + '/' + gp_name)
 
     # Test the GP performance
     if (ntest > 0):
@@ -52,4 +53,5 @@ if __name__ == '__main__':
             gp_forces[i, :] = gp.predict(np.reshape(tst_confs[i], (1, len(tst_confs[i]), 5)))
             gp_error[i, :] = gp_forces[i, :] - tst_forces[i, :]
         print("MAEF on forces: %.4f +- %.4f" % (
-        np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))), np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
+            np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))),
+            np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))

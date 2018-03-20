@@ -15,11 +15,11 @@ if __name__ == '__main__':
     r_cut = 100
     n_data = 3000
 
-    filename = '../test/data/BIP_300/movie.xyz'
-    directory = 'confs/BIP_300'
+    filename = 'data/BIP_300/movie.xyz'
+    directory = 'data/BIP_300'
 
     # Open file and get number of atoms and steps
-    traj = read(filename, index=slice(None), format='extxyz')
+    traj = read(filename, index=slice(0, 10), format='extxyz')
 
     # fixing cell settings
     for atoms in traj:

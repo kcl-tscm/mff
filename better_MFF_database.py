@@ -14,8 +14,11 @@ from ase.neighborlist import NeighborList
 
 USE_ASAP = False
 
-if USE_ASAP:
+try:
     from asap3 import FullNeighborList
+except:
+    pass
+
 
 logger = logging.getLogger(__name__)
 

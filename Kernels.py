@@ -1,60 +1,64 @@
 import numpy as np
 import theano
-import cPickle
+try:
+    import cPickle
+except:
+    import _pickle as cPickle
+
 import os
 
 # Import Theano functions
 
 theano_dir = os.path.dirname(os.path.abspath(__file__))+'/theano_funcs/'
 
-f = open(theano_dir+'H2b_ms.save', 'rb')
-twobody_ff_T = cPickle.load(f)
-f.close()
-
-f = open(theano_dir+'G2b_ms.save', 'rb')
-twobody_ef_T = cPickle.load(f)
-f.close()
-
-f = open(theano_dir+'S2b_ms.save', 'rb')
-twobody_ee_T = cPickle.load(f)
-f.close()
-
-f = open(theano_dir+'H3b_ms.save', 'rb')
-threebody_ff_T = cPickle.load(f)
-f.close()
-
-f = open(theano_dir+'G3b_ms.save', 'rb')
-threebody_ef_T = cPickle.load(f)
-f.close()
-
-f = open(theano_dir+'S3b_ms.save', 'rb')
-threebody_ee_T = cPickle.load(f)
-f.close()
-
-
+# f = open(theano_dir+'H2b_ms.save', 'rb')
+# twobody_ff_T = cPickle.load(f)
+# f.close()
+#
+# f = open(theano_dir+'G2b_ms.save', 'rb')
+# twobody_ef_T = cPickle.load(f)
+# f.close()
+#
+# f = open(theano_dir+'S2b_ms.save', 'rb')
+# twobody_ee_T = cPickle.load(f)
+# f.close()
+#
+# f = open(theano_dir+'H3b_ms.save', 'rb')
+# threebody_ff_T = cPickle.load(f)
+# f.close()
+#
+# f = open(theano_dir+'G3b_ms.save', 'rb')
+# threebody_ef_T = cPickle.load(f)
+# f.close()
+#
+# f = open(theano_dir+'S3b_ms.save', 'rb')
+# threebody_ee_T = cPickle.load(f)
+# f.close()
+#
+#
 
 f = open(theano_dir+'2B_ff_cut.save', 'rb')
-twobody_ff_T_cut = cPickle.load(f)
+twobody_ff_T_cut = cPickle.load(f, encoding='latin1')
 f.close()
 
 f = open(theano_dir+'2B_ef_cut.save', 'rb')
-twobody_ef_T_cut = cPickle.load(f)
+twobody_ef_T_cut = cPickle.load(f, encoding='latin1')
 f.close()
 
 f = open(theano_dir+'2B_ee_cut.save', 'rb')
-twobody_ee_T_cut = cPickle.load(f)
+twobody_ee_T_cut = cPickle.load(f, encoding='latin1')
 f.close()
 
 f = open(theano_dir+'3B_ff_cut.save', 'rb')
-threebody_ff_T_cut = cPickle.load(f)
+threebody_ff_T_cut = cPickle.load(f, encoding='latin1')
 f.close()
 
 f = open(theano_dir+'3B_ef_cut.save', 'rb')
-threebody_ef_T_cut = cPickle.load(f)
+threebody_ef_T_cut = cPickle.load(f, encoding='latin1')
 f.close()
 
 f = open(theano_dir+'3B_ee_cut.save', 'rb')
-threebody_ee_T_cut= cPickle.load(f)
+threebody_ee_T_cut= cPickle.load(f, encoding='latin1')
 f.close()
 
 # Define wrappers around Theano functions

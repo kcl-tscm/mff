@@ -15,11 +15,11 @@ if __name__ == '__main__':
     r_cut = 3.7
     n_data = 3000
 
-    filename = '../test/data/C_a/data_C.xyz'
+    filename = '../test/data/C_a/movie.xyz'
     directory = 'confs/C_a'
 
     # Open file and get number of atoms and steps
-    traj = read(filename, index=slice(None), format='extxyz')
+    traj = read(filename, index=slice(0, 10), format='extxyz')
 
     elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='DFT_force')
 

@@ -303,14 +303,8 @@ class GaussianProcess:
         n_restarts_optimizer = self.n_restarts_optimizer
         alpha_ = self.alpha_
         K = self.K
-		
-        output = []
-        output.append(kernel)
-        output.append(noise)
-        output.append(optimizer)
-        output.append(n_restarts_optimizer)
-        output.append(alpha_)
-        output.append(K)
+
+        output = [kernel, noise, optimizer, n_restarts_optimizer, alpha_, K]
      
         np.save('%s' % name, output)
         print('Saved Gaussian process with name:', name) 

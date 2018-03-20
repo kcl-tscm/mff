@@ -33,27 +33,27 @@ f.close()
 
 
 
-f = open(theano_dir+'2B_ff_ker_cut.save', 'rb')
+f = open(theano_dir+'2B_ff_cut.save', 'rb')
 twobody_ff_T_cut = cPickle.load(f)
 f.close()
 
-f = open(theano_dir+'2B_ef_ker_cut.save', 'rb')
+f = open(theano_dir+'2B_ef_cut.save', 'rb')
 twobody_ef_T_cut = cPickle.load(f)
 f.close()
 
-f = open(theano_dir+'2B_ee_ker_cut.save', 'rb')
+f = open(theano_dir+'2B_ee_cut.save', 'rb')
 twobody_ee_T_cut = cPickle.load(f)
 f.close()
 
-f = open(theano_dir+'3B_ff_ker_cut.save', 'rb')
+f = open(theano_dir+'3B_ff_cut.save', 'rb')
 threebody_ff_T_cut = cPickle.load(f)
 f.close()
 
-f = open(theano_dir+'3B_ef_ker_cut.save', 'rb')
+f = open(theano_dir+'3B_ef_cut.save', 'rb')
 threebody_ef_T_cut = cPickle.load(f)
 f.close()
 
-f = open(theano_dir+'3B_ee_ker_cut.save', 'rb')
+f = open(theano_dir+'3B_ee_cut.save', 'rb')
 threebody_ee_T_cut= cPickle.load(f)
 f.close()
 

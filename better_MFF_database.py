@@ -10,10 +10,13 @@ import logging
 from ase.io import read
 import numpy as np
 
-from asap3 import FullNeighborList
 from ase.neighborlist import NeighborList
 
-USE_ASAP = True
+USE_ASAP = False
+
+if USE_ASAP:
+    from asap3 import FullNeighborList
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,9 +34,10 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
 
     if forces is not None:
         forces = forces[atoms_ind]
+    else:
         logging.info('Forces in the xyz file are not present, or are not called force')
 
-    if energy is not None:
+    if energy is None:
         logging.info('Energy in the xyz file is not present, or is not called energy')
 
     if USE_ASAP:
@@ -83,7 +87,8 @@ def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energ
     elements, elements_count = np.unique(flat_atom_number, return_counts=True)
 
     # Calculate the ratios of occurrence of central atoms based on their atomic number
-    ratios = np.sqrt(elements_count / np.sum(elements_count))
+    ratios = np.sqrt(1.0*elements_count) / np.sum(elements_count)
+    ratios /= np.sum(ratios)
 
     # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
     indices = [np.linspace(0, elc, int(ratio * n_data) - 1) for elc, ratio in zip(elements_count, ratios)]
@@ -129,18 +134,19 @@ def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energ
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
-    r_cut = 3.7
+    r_cut = 100.0
     n_data = 3000
 
     # Open file and get number of atoms and steps
-    filename = 'test/data/C_a/data_C.xyz'
-    traj = read(filename, index=slice(0, 240), format='extxyz')
+    directory = 'test/data/BIP_300/'
+    filename = 'movie.xyz'
+    traj = read(directory+'/'+filename, index=slice(0, 240), format='extxyz')
 
-    elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='DFT_force')
+    elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='force')
 
-    np.save('confs_cut={:.2f}.npy'.format(r_cut), confs)
-    np.save('forces_cut={:.2f}.npy'.format(r_cut), forces)
-    np.save('energies_cut={:.2f}.npy'.format(r_cut), energies)
+    np.save(directory+'/'+'confs_cut={:.2f}.npy'.format(r_cut), confs)
+    np.save(directory+'/'+'forces_cut={:.2f}.npy'.format(r_cut), forces)
+    np.save(directory+'/'+'energies_cut={:.2f}.npy'.format(r_cut), energies)
 
     lens = [len(conf) for conf in confs]
 

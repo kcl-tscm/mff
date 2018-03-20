@@ -9,7 +9,6 @@ if __name__ == '__main__':
     r_cut = 100.0
     nbodies = 2
     sigma = 1.0
-    gamma = 2.0
     noise = 0.00001
     ntr = 10
     ntest = 100
@@ -34,7 +33,7 @@ if __name__ == '__main__':
     else:
         print("Kernel order not understood, use 2 for two-body and 3 for three-body")
         quit()
-    gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=1e-5, optimizer=None)
+    gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
     gp_name = 'gp_ker=%s_ntr=%i_sig=%.2f_cut=%.2f' % (nbodies, ntr, sigma, r_cut)
 
     if os.path.isfile(directory+'/'+gp_name):

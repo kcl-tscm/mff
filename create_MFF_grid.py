@@ -1,8 +1,4 @@
 import numpy as np
-import io, json
-from scipy import interpolate
-from itertools import combinations
-from mlfmapping import Spline1D, Spline3D
 
 
 class Grids_building:

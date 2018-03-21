@@ -15,8 +15,8 @@ if __name__ == '__main__':
     r_cut = 4.5
     n_data = 3000
 
-    filename = '../test/data/HNi/h_esa500.xyz'
-    directory = 'confs/HNi'
+    filename = 'data/HNi/movie.xyz'
+    directory = 'data/HNi'
 
     # Open file and get number of atoms and steps
     traj = read(filename, index=slice(None), format='extxyz')

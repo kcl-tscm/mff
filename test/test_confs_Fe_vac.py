@@ -12,14 +12,14 @@ logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
 
-    r_cut = 4.5
+    r_cut = 4.45
     n_data = 3000
 
-    filename = '../test/data/Fe_vac/vaca_iron500.xyz'
-    directory = 'confs/Fe_vac'
+    filename = 'data/Fe_vac/movie.xyz'
+    directory = 'data/Fe_vac'
 
     # Open file and get number of atoms and steps
-    traj = read(filename, index=slice(None), format='extxyz')
+    traj = read(filename, index=slice(0, 10), format='extxyz')
 
     elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='force')
 

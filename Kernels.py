@@ -1,9 +1,8 @@
 import numpy as np
 import theano
-try:
-    import cPickle
-except:
-    import _pickle as cPickle
+# import six
+# from six.moves import cPickle
+import _pickle as cPickle
 
 import os
 
@@ -11,31 +10,29 @@ import os
 
 theano_dir = os.path.dirname(os.path.abspath(__file__))+'/theano_funcs/'
 
-# f = open(theano_dir+'H2b_ms.save', 'rb')
-# twobody_ff_T = cPickle.load(f)
-# f.close()
-#
-# f = open(theano_dir+'G2b_ms.save', 'rb')
-# twobody_ef_T = cPickle.load(f)
-# f.close()
-#
-# f = open(theano_dir+'S2b_ms.save', 'rb')
-# twobody_ee_T = cPickle.load(f)
-# f.close()
-#
-# f = open(theano_dir+'H3b_ms.save', 'rb')
-# threebody_ff_T = cPickle.load(f)
-# f.close()
-#
-# f = open(theano_dir+'G3b_ms.save', 'rb')
-# threebody_ef_T = cPickle.load(f)
-# f.close()
-#
-# f = open(theano_dir+'S3b_ms.save', 'rb')
-# threebody_ee_T = cPickle.load(f)
-# f.close()
-#
-#
+f = open(theano_dir+'H2b_ms.save', 'rb')
+twobody_ff_T = cPickle.load(f, encoding='latin1')
+f.close()
+
+f = open(theano_dir+'G2b_ms.save', 'rb')
+twobody_ef_T = cPickle.load(f, encoding='latin1')
+f.close()
+
+f = open(theano_dir+'S2b_ms.save', 'rb')
+twobody_ee_T = cPickle.load(f, encoding='latin1')
+f.close()
+
+f = open(theano_dir+'H3b_ms.save', 'rb')
+threebody_ff_T = cPickle.load(f, encoding='latin1')
+f.close()
+
+f = open(theano_dir+'G3b_ms.save', 'rb')
+threebody_ef_T = cPickle.load(f, encoding='latin1')
+f.close()
+
+f = open(theano_dir+'S3b_ms.save', 'rb')
+threebody_ee_T = cPickle.load(f, encoding='latin1')
+f.close()
 
 f = open(theano_dir+'2B_ff_cut.save', 'rb')
 twobody_ff_T_cut = cPickle.load(f, encoding='latin1')

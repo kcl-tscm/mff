@@ -1,6 +1,3 @@
-
-old/
-
 # numpy saved arrays
 *.npy
 
@@ -109,6 +106,6 @@ ENV/
 # mypy
 .mypy_cache/
 
-# other
+# OS X files
 .DS_Store
-../.DS_Store
+

@@ -19,7 +19,7 @@ if __name__ == '__main__':
     directory = 'data/C_a'
 
     # Open file and get number of atoms and steps
-    traj = read(filename, index=slice(0, 10), format='extxyz')
+    traj = read(filename, index=slice(None), format='extxyz')
 
     elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label='DFT_force')
 

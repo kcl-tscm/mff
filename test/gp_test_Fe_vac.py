@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     # Parameters
     r_cut = 4.45
-    nbodies = 3
+    nbodies = 2
     sigma = 1.0
     noise = 0.00001
     ntr = 10

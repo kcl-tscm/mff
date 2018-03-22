@@ -7,7 +7,7 @@ import Kernels
 # Parameters
 grid_start = 1.5
 cutoff = 4.45
-nbodies = 2
+nbodies = 3
 grid_spacing = 0.1
 ntr = 10
 sigma = 1.0

@@ -4,8 +4,8 @@ import logging
 import numpy as np
 from ase.io import read
 
-import better_MFF_database
-from better_MFF_database import carve_confs
+from original import better_MFF_database
+from original.better_MFF_database import carve_confs
 
 better_MFF_database.USE_ASAP = False
 logging.basicConfig(level=logging.INFO)
@@ -15,8 +15,8 @@ if __name__ == '__main__':
     r_cut = 3.7
     n_data = 3000
 
-    filename = 'data/C_a/movie.xyz'
-    directory = 'data/C_a'
+    directory = 'data/C_a/'
+    filename = directory + 'movie.xyz'
 
     # Open file and get number of atoms and steps
     traj = read(filename, index=slice(None), format='extxyz')

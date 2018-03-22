@@ -1,7 +1,7 @@
 import os
 import numpy as np
-import GP_for_MFF
-import Kernels
+from original import GP_for_MFF
+from original import Kernels
 
 if __name__ == '__main__':
 

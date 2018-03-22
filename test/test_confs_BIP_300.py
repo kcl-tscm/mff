@@ -4,8 +4,8 @@ import logging
 import numpy as np
 from ase.io import read
 
-import better_MFF_database
-from better_MFF_database import carve_confs
+from original import better_MFF_database
+from original.better_MFF_database import carve_confs
 
 better_MFF_database.USE_ASAP = True
 logging.basicConfig(level=logging.INFO)
@@ -15,11 +15,11 @@ if __name__ == '__main__':
     r_cut = 100
     n_data = 3000
 
-    filename = 'data/BIP_300/movie.xyz'
-    directory = 'data/BIP_300'
+    directory = 'data/BIP_300/'
+    filename = directory + 'movie.xyz'
 
     # Open file and get number of atoms and steps
-    traj = read(filename, index=slice(0, 10), format='extxyz')
+    traj = read(filename, index=slice(None), format='extxyz')
 
     # fixing cell settings
     for atoms in traj:

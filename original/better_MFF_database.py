@@ -141,7 +141,7 @@ if __name__ == '__main__':
     n_data = 3000
 
     # Open file and get number of atoms and steps
-    directory = 'test/data/BIP_300/'
+    directory = '../test/data/BIP_300/'
     filename = 'movie.xyz'
     traj = read(directory+'/'+filename, index=slice(0, 240), format='extxyz')
 

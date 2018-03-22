@@ -1,7 +1,7 @@
 import numpy as np
-import create_MFF_grid
-import GP_for_MFF
-import Kernels
+from original import create_MFF_grid
+from original import GP_for_MFF
+from original import Kernels
 
 
 # Parameters

@@ -3,6 +3,7 @@ import better_MFF_database
 import create_MFF_grid
 import GP_for_MFF
 import Kernels
+from ase.io import read
 from interpolate_MFF import MBExp
 
 
@@ -18,7 +19,8 @@ def create_MFF(filename, cutoff, nbodies=3, ntr=500, ntest=500, sigma=1.0, grid_
 
     # LAUNCH CONF AND FORCE EXTRACTION #
     print("Extracting database from XYZ file")
-    elementslist = create_MFF_database.carve_confs(filename, cutoff)
+    traj = read(filename, index=slice(0, 240), format='extxyz')
+    elementslist = better_MFF_database.carve_confs(traj, cutoff, 3000, forces_label='DFT_force')
 
     # IMPORT CONFS & FORCES #
     forces = np.load("forces_cut=%.2f.npy" % (cutoff))
@@ -83,4 +85,5 @@ def create_MFF(filename, cutoff, nbodies=3, ntr=500, ntest=500, sigma=1.0, grid_
         np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))), np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
 
 
-create_MFF(filename="movie_2.xyz", cutoff=4.0, nbodies=3, ntr=5, ntest=10, sigma=1.2, grid_start=1.5, grid_spacing=0.1)
+create_MFF(filename="test/data/C_a/movie.xyz", cutoff=4.0, nbodies=3, ntr=5, ntest=10, sigma=1.2, grid_start=1.5,
+           grid_spacing=0.1)

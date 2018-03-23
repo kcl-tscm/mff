@@ -16,6 +16,7 @@ class Model(metaclass=ABCMeta):
         self.r_cut = r_cut
 
     def save(self, jsonfile):
+        #
         parameters = {
             'parameters': {
                 'cutoff': self.r_cut,
@@ -33,7 +34,7 @@ class Model(metaclass=ABCMeta):
             'remappedpotential': {
                 'type': 'single_species_two_body',
                 'r_min': 1.5,
-                'r_cut': 3.2,
+                'r_max': 3.2,
                 'r_len': 12,
                 'filenames': {
                     '1_1': 'data/grid_1_1.npy',

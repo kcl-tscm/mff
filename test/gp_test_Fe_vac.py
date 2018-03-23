@@ -7,10 +7,10 @@ if __name__ == '__main__':
 
     # Parameters
     r_cut = 4.45
-    nbodies = 2
+    nbodies = 3
     sigma = 1.0
     noise = 0.00001
-    ntr = 10
+    ntr = 3
     ntest = 100
     directory = 'data/Fe_vac'
 
@@ -27,9 +27,9 @@ if __name__ == '__main__':
 
     # Load, or train, the GP
     if nbodies == 3:
-        ker = Kernels.ThreeBody(theta=[sigma, r_cut / 10.0])
+        ker = Kernels.ThreeBody(theta=[sigma, r_cut / 10.0, r_cut])
     elif nbodies == 2:
-        ker = Kernels.TwoBody(theta=[sigma, r_cut / 10.0])
+        ker = Kernels.TwoBody(theta=[sigma, r_cut / 10.0, r_cut])
     else:
         print("Kernel order not understood, use 2 for two-body and 3 for three-body")
         quit()

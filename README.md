@@ -23,6 +23,18 @@ How to install the package, eventually we would like something like
 $ python setup.py install
 ```
 
+To install from source, uncompress the source files and, from the directory containing `setup.py`, run the following command:
+    
+    python setup.py install
+
+Or, to build in place, run:
+    
+    python setup.py build_ext --inplace
+
+If you build in place, you will also need to add your eqtools folder to your PYTHONPATH shell variable:
+    
+    export PYTHONPATH=$PYTHONPATH:/path/to/where/you/put/
+
 ## Usage
 
 Description on how to use the package.

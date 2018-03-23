@@ -2,7 +2,7 @@ from __future__ import division, print_function
 from itertools import combinations
 import numpy as np
 
-import _tricub
+from . import _tricub
 
 
 class BaseSpline3D(object):
@@ -155,7 +155,7 @@ class Spline3DAngle(BaseSpline3D):
         dphi_dr0 = - 1. / (np.sqrt(1 - cosphi ** 2)) * (
                 (r1_hat / r2 + r2_hat / r1) - cosphi * (r1_hat / r1 + r2_hat / r2))
 
-        tri_force = -(de_dr1 * r1_hat + de_dr2 * r2_hat )
+        tri_force = -(de_dr1 * r1_hat + de_dr2 * r2_hat)
 
         tri_force = np.sum(tri_force, axis=0)
 
@@ -248,5 +248,5 @@ class Spline3DAngle(BaseSpline3D):
 
 
 if __name__ == '__main__':
-    a = _tricub.reg_ev_energy()
+    # a = _tricub.reg_ev_energy()
     pass

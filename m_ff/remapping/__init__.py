@@ -1,4 +1,4 @@
 from .spline1d import Spline1D
-from .spline3d import Spline3D
+from .spline3d import BaseSpline3D
 
-__all__ = [Spline1D, Spline3D]
+Spline3D = BaseSpline3D

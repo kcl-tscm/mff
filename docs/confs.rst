@@ -1,4 +1,4 @@
-.. module:: m_ff.confs
+.. module:: m_ff.configurations
 
 Configurations
 ==============
@@ -6,9 +6,7 @@ Configurations
 aaa
 
 
-.. autoclass:: Confs
+.. autoclass:: Configurations
    :members:
 
-.. autoclass:: Conf
-   :members:
 

@@ -1,8 +1,8 @@
 import numpy as np
-import better_MFF_database
-import create_MFF_grid
-import GP_for_MFF
-import Kernels
+from original import better_MFF_database
+from original import create_MFF_grid
+from original import GP_for_MFF
+from original import Kernels
 from interpolate_MFF import MBExp
 
 
@@ -18,7 +18,7 @@ def create_MFF(filename, cutoff, nbodies=3, ntr=500, ntest=500, sigma=1.0, grid_
 
     # LAUNCH CONF AND FORCE EXTRACTION #
     print("Extracting database from XYZ file")
-    elementslist = create_MFF_database.carve_confs(filename, cutoff)
+    elementslist = better_MFF_database.carve_confs(filename, cutoff)
 
     # IMPORT CONFS & FORCES #
     forces = np.load("forces_cut=%.2f.npy" % (cutoff))

@@ -69,11 +69,17 @@ def threebody_ee(a, b, sig):
 
 # Classes for 2 and 3 body kernels
 class TwoBody:
-    """Two body kernel.
+    """Two body kernel
     
-    Parameters
-    ----------
-    theta[0]: lengthscale
+    This kernel models any force as a sum of pairwise contributions.
+    It can be combined with a three body kernel for a richer description.
+    
+    Args:
+        theta (array): Array containing the hyperparameters of the kernel. 
+            theta[0] is the lenghtscale
+            theta[1] is the cutoff hardness
+            theta[1] is the cutoff radius
+        bounds (list): To be used for marginal likelihood optimization, not implemented.
     """
 
     def __init__(self, theta=[1.], bounds=(1e-2, 1e2)):
@@ -139,12 +145,16 @@ class TwoBody:
 
 
 class ThreeBody:
-    """Three body kernel.
-
-    Parameters
-    ----------
-    theta[0]: lengthscale
-    theta[1]: hardness of cutoff function (to be implemented)
+    """Three body kernel
+    
+    This kernel models any force as a sum of contributions coming from triplets of atoms
+    
+    Args:
+        theta (array): Array containing the hyperparameters of the kernel. 
+            theta[0] is the lenghtscale
+            theta[1] is the cutoff hardness
+            theta[1] is the cutoff radius
+        bounds (list): To be used for marginal likelihood optimization, not implemented.
     """
 
     def __init__(self, theta=[None, None], bounds=[(1e-2, 1e2), (1e-2, 1e2)]):

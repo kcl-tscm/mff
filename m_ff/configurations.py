@@ -111,7 +111,7 @@ if __name__ == '__main__':
     testfiles = {
         'BIP_300': '../test/data/BIP_300/movie.xyz',
         'C_a': '../test/data/C_a/data_C.xyz',
-        'Fe_vac': '../test/data/Fe_vac/vaca_iron500.xyz',
+        'Fe_vac': '../test/data/Fe_vac/movie.xyz',
         'HNi': '../test/data/HNI/h_ase500.xyz'
     }
 

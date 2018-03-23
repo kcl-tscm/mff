@@ -54,6 +54,16 @@ class SingleSpecies(Exception):
 # result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
 
 
+class Factory(object):
+
+    def __init__(self, adsfasldfjdsf,dsfld,):
+        pass
+
+    @classmethod
+    def from_json(cls, filename):
+        # return with right calculator object
+        pass
+
 class RemappedPotential(Calculator, metaclass=ABCMeta):
 
     def __init__(self, r_cut, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):

@@ -1,0 +1,22 @@
+{
+    "parameters": {
+        "cutoff": 3.7,
+        "elements": [
+            11
+        ]
+    },
+    "configurations:": {
+        "target_number": 3000
+    },
+    "gaussianprocess": {
+        "noise_level": 0.0001
+    },
+    "remappedpotential": {
+        "type": "single_species_two_body",
+        "r_start": 1.5,
+        "r_num": 23,
+        "filenames": {
+            "grid_1_1": "MFF_2b_ntr_10_sig_1.00_cut_3.70.npy"
+        }
+    }
+}

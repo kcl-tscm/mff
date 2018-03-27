@@ -10,8 +10,8 @@ if __name__ == '__main__':
     nbodies = 3
     sigma = 1.0
     noise = 0.00001
-    ntr = 3
-    ntest = 100
+    ntr = 10
+    ntest = 10
     directory = 'data/Fe_vac'
 
     # Get configurations and forces from file

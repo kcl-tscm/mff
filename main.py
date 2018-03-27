@@ -1,51 +1,66 @@
+import json
+from collections import defaultdict
 from ase import Atoms
+from ase.io import read
 from m_ff.calculators import Calculator
-from m_ff.configurations import ConfsSingleForces
-from m_ff.sampling import LinspaceSamplingSingle
+from m_ff.configurations import ConfsTwoBodySingleForces
+from m_ff.sampling import SamplingLinspaceSingle
+from m_ff import Kernels
+from m_ff.gp import GaussianProcess
 
 if __name__ == '__main__':
 
-    traj = [Atoms(), Atoms()]
+    filename = 'test/data/Fe_vac/movie.xyz'
+    traj = read(filename, index=slice(0, 10))
 
-    parameter = {
-        "configurations:": {},
-        "gaussianprocess": {},
-        "remappedpotential": {}
-    }
+    # Storing parameters
+    jsonfile = 'data.json'
+    p = defaultdict(dict)
 
     # keeping track of the parameters manually
-    parameter['r_cut'] = 4.5
-    parameter['configurations']['n_target'] = 25
+    p['r_cut'] = 4.5
+    p['configurations']['n_target'] = 25
 
+    # ------------------------------
     # Carving
-    confs = ConfsTwoBodySingleForces(r_cut=4.5)
-    for atoms, atom_inds in LinspaceSamplingSingle(traj, n_target=25):
+    # ------------------------------
+
+    confs = ConfsTwoBodySingleForces(r_cut=p['r_cut'])
+
+    for atoms, atom_inds in SamplingLinspaceSingle(traj, n_target=p['configurations']['n_target']):
         confs.append(atoms, atom_inds)
 
-    confs.save(numpyfilename='sadfasdf')
-    #
+    confs.save(filename_conf='aaa', filename_force='aaa')
 
+    # ------------------------------
     # GP
-    kernel = TwoBodySingle(...)
-    gp = GP(kernel= kernel, theta=..., noise=...)
+    # ------------------------------
+
+    kernel = Kernels.TwoBodySingleSpecies()
+
+    # gp = GaussianProcess(kernel=kernel, theta=..., noise=...)
+    gp = GaussianProcess()
 
     gp.fit(confs)
     gp.save(filename='.npy')
 
-    # Remapping
+    # ------------------------------
+    # Mapped
+    # ------------------------------
 
-    grid = MapTwoBodySingle(gp)
+    grid = MapoedTwoBodySingleSpecies(gp)
     grid.save(filename='.npy')
 
-    with open(jsonfile) as file:
-        json.dumps(file, parameter)
+    with open(jsonfile, 'w') as file:
+        json.dumps(file, p)
 
+    # ------------------------------
     # Calculator
+    # ------------------------------
 
     atoms = Atoms()
 
     filename = 'sadfsd.json'
-    calc = Calculator(model)
     calc = Calculator.from_json(filename)
 
     atoms.set_calculator(calc)
@@ -58,3 +73,5 @@ if __name__ == '__main__':
 #     model.confs.append(atoms, atom_inds)
 #
 # model.savejson()
+
+# calc = Calculator(model)

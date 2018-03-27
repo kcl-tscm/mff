@@ -3,7 +3,8 @@ import warnings
 import numpy as np
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
-np.set_printoptions(precision = 3)
+
+np.set_printoptions(precision=3)
 
 
 class GaussianProcess:
@@ -22,17 +23,16 @@ class GaussianProcess:
     alpha_: The coefficients obtained during training
     L_: The lower triangular matrix from cholesky decomposition of gram matrix
     """
-    
+
     # optimizers "fmin_l_bfgs_b"
-    
+
     def __init__(self, kernel=None, noise=1e-10,
                  optimizer=None, n_restarts_optimizer=0):
-                 
+
         self.kernel = kernel
         self.noise = noise
         self.optimizer = optimizer
         self.n_restarts_optimizer = n_restarts_optimizer
-
 
     def fit(self, X, y):
         """Fit Gaussian process regression model.
@@ -48,7 +48,7 @@ class GaussianProcess:
         self.kernel_ = self.kernel
 
         self.X_train_ = X
-        self.y_train_ = np.reshape(y, (y.shape[0]*3, 1))
+        self.y_train_ = np.reshape(y, (y.shape[0] * 3, 1))
 
         if self.optimizer is not None:
             # Choose hyperparameters based on maximizing the log-marginal
@@ -103,7 +103,7 @@ class GaussianProcess:
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-            
+
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)  # Line 3
         self.K = K
         return self
@@ -140,7 +140,7 @@ class GaussianProcess:
                 return y_mean, np.sqrt(y_var)
             else:
                 return y_mean
-                
+
         else:  # Predict based on GP posterior
             K_trans = self.kernel_.calc(X, self.X_train_)
 
@@ -152,11 +152,11 @@ class GaussianProcess:
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
                 K_inv = L_inv.dot(L_inv.T)
                 # Compute variance of predictive distribution
-                
+
                 y_var = self.kernel_.calc_diag(X)
                 fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
                 y_var -= fit
-                
+
                 # Check if any of the variances is negative because of
                 # numerical issues. If yes: set the variance to 0.
                 y_var_negative = y_var < 0
@@ -164,11 +164,10 @@ class GaussianProcess:
                     warnings.warn("Predicted variances smaller than 0. "
                                   "Setting those variances to 0.")
                     y_var[y_var_negative] = 0.0
-                return np.reshape(y_mean, (int(y_mean.shape[0]/3), 3)), np.sqrt(y_var)
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.sqrt(y_var)
             else:
-                return np.reshape(y_mean, (int(y_mean.shape[0]/3), 3))
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
-                                  
     def predict_energy(self, X, return_std=False):
         """
         This function evaluates the GP energies at X.
@@ -177,7 +176,7 @@ class GaussianProcess:
         -------
         y : array_like
         """
-        
+
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             e_mean = np.zeros(X.shape[0])
@@ -186,7 +185,7 @@ class GaussianProcess:
                 return e_mean, np.sqrt(e_var)
             else:
                 return e_mean
-                
+
         else:  # Predict based on GP posterior
             K_trans = self.kernel_.calc_ef(X, self.X_train_)
             e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
@@ -200,7 +199,7 @@ class GaussianProcess:
                 e_var = self.kernel_.calc_diag_e(X)
                 fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
                 e_var -= fit
-                
+
                 # Check if any of the variances is negative because of
                 # numerical issues. If yes: set the variance to 0.
                 e_var_negative = e_var < 0
@@ -211,7 +210,6 @@ class GaussianProcess:
                 return e_mean, np.sqrt(e_var)
             else:
                 return e_mean
-        
 
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         """Returns log-marginal likelihood of theta for training data.
@@ -240,10 +238,10 @@ class GaussianProcess:
                     "Gradient can only be evaluated for theta!=None")
             return self.log_marginal_likelihood_value_
 
-        #kernel = self.kernel_.clone_with_theta(theta)
+        # kernel = self.kernel_.clone_with_theta(theta)
         kernel = self.kernel
         kernel.theta = theta
-        
+
         if eval_gradient:
             K, K_gradient = kernel.calc_gram(self.X_train_, eval_gradient=True)
         else:
@@ -296,26 +294,26 @@ class GaussianProcess:
 
         return theta_opt, func_min
 
-    def save(self, name):
-        kernel = self.kernel
-        noise = self.noise
-        optimizer = self.optimizer
-        n_restarts_optimizer = self.n_restarts_optimizer
-        alpha_ = self.alpha_
-        K = self.K
+    def save(self, filename):
 
-        output = [kernel, noise, optimizer, n_restarts_optimizer, alpha_, K]
-     
-        np.save('%s' % name, output)
-        print('Saved Gaussian process with name:', name) 
-		
-    def load(self, in_data):
-        a = np.load(in_data)
-        self.kernel = a[0]
-        self.noise = a[1]
-        self.optimizer = a[2]
-        self.n_restarts_optimizer = a[3]
-        self.alpha_ = a[4]
-        self.K = a[5]
+        output = [self.kernel,
+                  self.noise,
+                  self.optimizer,
+                  self.n_restarts_optimizer,
+                  self.alpha_,
+                  self.K,
+                  self.X_train_]
+
+        np.save(filename, output)
+        print('Saved Gaussian process with name:', name)
+
+    def load(self, filename):
+        self.kernel, \
+        self.noise, \
+        self.optimizer, \
+        self.n_restarts_optimizer, \
+        self.alpha_, \
+        self.K, \
+        self.X_train_ = np.load(filename)
 
         print('Loaded GP from file')

@@ -43,6 +43,6 @@ else:
     quit()
 
 all_grids = mapping.build_grids()
-remap_name = ("MFF_%ib_ntr_%i_sig_%.2f_cut_%.2f.npy" % (nbodies, ntr, sigma, r_cut))
+remap_name = 'MFF_%ib_ntr_%i_sig_%.2f_cut_%.2f.npy' % (nbodies, ntr, sigma, r_cut)
 np.save(directory+'/'+remap_name, all_grids)
 print('Saved mapping with name %s' % remap_name)

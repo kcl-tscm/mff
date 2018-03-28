@@ -296,7 +296,7 @@ class GaussianProcess:
 
     def save(self, filename):
 
-        output = [self.kernel,
+        output = [self.kernel_,
                   self.noise,
                   self.optimizer,
                   self.n_restarts_optimizer,
@@ -305,10 +305,10 @@ class GaussianProcess:
                   self.X_train_]
 
         np.save(filename, output)
-        print('Saved Gaussian process with name:', name)
+        print('Saved Gaussian process with name:', filename)
 
     def load(self, filename):
-        self.kernel, \
+        self.kernel_, \
         self.noise, \
         self.optimizer, \
         self.n_restarts_optimizer, \

@@ -20,10 +20,10 @@ class Grids_building:
         b = np.zeros(shape)
         b[:, :, :, 0] = a[:, :, :, 0]  # x1
         b[:, :, :, 1] = (np.square(a[:, :, :, 0]) + np.square(a[:, :, :, 1]) - np.square(a[:, :, :, 2])) / (
-                    2.0 * a[:, :, :, 0])  # x2
+                2.0 * a[:, :, :, 0])  # x2
         b[:, :, :, 2] = a[:, :, :, 1] * np.sin(np.arccos(
             (np.square(a[:, :, :, 0]) + np.square(a[:, :, :, 1]) - np.square(a[:, :, :, 2])) / (
-                        2.0 * a[:, :, :, 0] * a[:, :, :, 1])))  # y2
+                    2.0 * a[:, :, :, 0] * a[:, :, :, 1])))  # y2
 
         for i in np.arange(len(b[:, 0, 0, 0])):  # Do this to take away triplets that are not physical
             for j in np.arange(len(b[0, :, 0, 0])):
@@ -59,7 +59,7 @@ class Grids_building:
             result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2,
                       grid_2_2_2]
 
-        return (result)
+        return result
 
     ### Function that builds and ppredicts energies on a line of values ###
     def build_2_grid(self, d0, df, nr, el_1, el_2):
@@ -89,6 +89,12 @@ class Grids_building:
         coords[:, :, :, 0] = rs[:, None, None]
         coords[:, :, :, 1] = rs[None, :, None]
         coords[:, :, :, 2] = rs[None, None, :]
+
+        # Note: strange order of axis
+        # X, Y, Z = np.meshgrid(rs, rs, rs)
+        # np.allclose(coords[:, :, :, 0], Y)
+        # np.allclose(coords[:, :, :, 1], X)
+        # np.allclose(coords[:, :, :, 2], Z)
 
         badgrid = self.from_r_to_xy(coords)  # Convert the coords into a x1 x2 y2 grid
 

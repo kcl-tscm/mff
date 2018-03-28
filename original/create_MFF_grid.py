@@ -90,12 +90,6 @@ class Grids_building:
         coords[:, :, :, 1] = rs[None, :, None]
         coords[:, :, :, 2] = rs[None, None, :]
 
-        # Note: strange order of axis
-        # X, Y, Z = np.meshgrid(rs, rs, rs)
-        # np.allclose(coords[:, :, :, 0], Y)
-        # np.allclose(coords[:, :, :, 1], X)
-        # np.allclose(coords[:, :, :, 2], Z)
-
         badgrid = self.from_r_to_xy(coords)  # Convert the coords into a x1 x2 y2 grid
 
         confs[:, 0, 0] = np.reshape(badgrid[:, :, :, 0], nr ** 3)  # Reshape into confs shape: this is x1

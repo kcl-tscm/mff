@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     # Parameters
     r_cut = 4.45
-    nbodies = 3
+    nbodies = 2
     sigma = 1.0
     noise = 0.00001
     ntr = 10
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         gp.save(directory + '/' + gp_name)
 
     # Test the GP performance
-    if (ntest > 0):
+    if ntest > 0:
         print("Testing the GP module")
         gp_forces = np.zeros((ntest, 3))
         gp_error = np.zeros((ntest, 3))

@@ -151,7 +151,7 @@ class Grid(object, metaclass=ABCMeta):
         return inds, r1_x, r2_x, r2_y
 
 
-class SingleScecies(Grid):
+class SingleSpecies(Grid):
     def __init__(self, gp, start, stop, num, element1):
         super().__init__(gp, start, stop, num)
         self.element1 = element1

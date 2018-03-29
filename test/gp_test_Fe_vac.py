@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import numpy as np
 from original import GP_for_MFF
 from original import Kernels
@@ -7,16 +8,17 @@ if __name__ == '__main__':
 
     # Parameters
     r_cut = 4.45
-    nbodies = 2
+    nbodies = 3
     sigma = 1.0
     noise = 0.00001
     ntr = 10
     ntest = 10
-    directory = 'data/Fe_vac/'
+    directory = Path('data/Fe_vac/')
 
     # Get configurations and forces from file
-    confs = np.load('{:s}/confs_cut={:.2f}.npy'.format(directory, r_cut))
-    forces = np.load('{:s}/forces_cut={:.2f}.npy'.format(directory, r_cut))
+    confs = np.load(str(directory / 'confs_cut={:.2f}.npy'.format(r_cut)))
+    forces = np.load(str(directory / 'forces_cut={:.2f}.npy'.format(r_cut)))
+
     numconfs = len(forces)
     ind = np.arange(numconfs)
     ind_tot = np.random.choice(ind, size=ntr + ntest, replace=False)
@@ -36,8 +38,12 @@ if __name__ == '__main__':
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
     gp_name = 'gp_ker={}_ntr={}_sig={:.2f}_cut={:.2f}'.format(nbodies, ntr, sigma, r_cut)
 
-    gp.fit(tr_confs, tr_forces)
-    gp.save(directory + gp_name)
+    if os.path.isfile(str(directory / gp_name)):
+        gp.load(str(directory / gp_name))
+
+    else:
+        gp.fit(tr_confs, tr_forces)
+        gp.save(str(directory / gp_name))
 
     # Test the GP performance
     if ntest:
@@ -54,3 +60,10 @@ if __name__ == '__main__':
             np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))),
             np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
 
+# Saved Gaussian process with name: data/Fe_vac/gp_ker=2_ntr=10_sig=1.00_cut=4.45
+# Testing the GP module
+# MAEF on forces: 0.3387 +- 0.2625
+
+# Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=10_sig=1.00_cut=4.45
+# Testing the GP module
+# MAEF on forces: 0.2377 +- 0.1257

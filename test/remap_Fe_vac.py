@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     start, stop, num = grid_start, r_cut, int(1 + (r_cut - grid_start) / grid_spacing)
 
-    mapping = create_MFF_grid.SingleScecies(gp, start, stop, num, elementslist[0])
+    mapping = create_MFF_grid.SingleSpecies(gp, start, stop, num, elementslist[0])
     all_grids = mapping.build_grids()
 
     remap_name = 'MFF_{}b_ntr_{}_sig_{:.2f}_cut_{:.2f}.npy'.format(nbodies, ntr, sigma, r_cut)

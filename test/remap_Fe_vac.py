@@ -23,8 +23,8 @@ if __name__ == '__main__':
     elif nbodies == 2:
         ker = Kernels.TwoBody(theta=[sigma, r_cut / 10.0, r_cut])
     else:
-        print("Kernel order not understood, use 2 for two-body and 3 for three-body")
-        quit()
+        raise NotImplementedError("Kernel order not understood, use 2 for two-body and 3 for three-body")
+
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
     gp_name = 'gp_ker=%s_ntr=%i_sig=%.2f_cut=%.2f.npy' % (nbodies, ntr, sigma, r_cut)
     gp.load(directory + '/' + gp_name)

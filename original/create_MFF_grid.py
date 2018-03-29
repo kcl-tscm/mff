@@ -138,15 +138,15 @@ class Grid(object, metaclass=ABCMeta):
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
-        # Valid triangles according to triangle inequality
+        # Valid triangles according to triangle inequality (!?! <= is not sufficient)
         inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Element on the x axis
-        r1_x = d_ij[inds].ravel()
+        r1_x = d_ki[inds].ravel()
 
         # Element on the xy plane
-        r2_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
-        r2_y = np.sqrt(d_ki[inds] ** 2 - r2_x ** 2)
+        r2_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ki[inds])
+        r2_y = np.sqrt(np.abs(d_ij[inds] ** 2 - r2_x ** 2))     # using abs to avoid numerical error
 
         return inds, r1_x, r2_x, r2_y
 
@@ -224,11 +224,11 @@ class TwoSpecies(Grid):
                 self.grid_1_1, self.grid_1_2, self.grid_2_2,
                 self.grid_1_1_1, self.grid_1_1_2, self.grid_1_2_2, self.grid_2_2_2)
 
-    def build_2_grid(self, rs):
+    def build_2_grid(self, dists):
         """Function that builds and predicts energies on a line of values"""
 
-        confs = np.zeros((len(rs), 1, 5))
-        confs[:, 0, 0] = rs
+        confs = np.zeros((self.num, 1, 5))
+        confs[:, 0, 0] = dists
 
         confs[:, 0, 3], confs[:, 0, 4] = self.element1, self.element1
         self.grid_1_1 = self.gp.predict_energy(confs)

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     noise = 0.00001
     ntr = 10
     ntest = 10
-    directory = 'data/Fe_vac'
+    directory = 'data/Fe_vac/'
 
     # Get configurations and forces from file
     confs = np.load('{:s}/confs_cut={:.2f}.npy'.format(directory, r_cut))
@@ -31,27 +31,26 @@ if __name__ == '__main__':
     elif nbodies == 2:
         ker = Kernels.TwoBody(theta=[sigma, r_cut / 10.0, r_cut])
     else:
-        print("Kernel order not understood, use 2 for two-body and 3 for three-body")
-        quit()
+        NotImplementedError('Kernel order not understood, use 2 for two-body and 3 for three-body')
 
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
-    gp_name = 'gp_ker=%s_ntr=%i_sig=%.2f_cut=%.2f' % (nbodies, ntr, sigma, r_cut)
+    gp_name = 'gp_ker={}_ntr={}_sig={:.2f}_cut={:.2f}'.format(nbodies, ntr, sigma, r_cut)
 
-    if os.path.isfile(directory + '/' + gp_name):
-        gp.load(directory + '/' + gp_name)
-
-    else:
-        gp.fit(tr_confs, tr_forces)
-        gp.save(directory + '/' + gp_name)
+    gp.fit(tr_confs, tr_forces)
+    gp.save(directory + gp_name)
 
     # Test the GP performance
-    if ntest > 0:
-        print("Testing the GP module")
+    if ntest:
+        print('Testing the GP module')
+
         gp_forces = np.zeros((ntest, 3))
         gp_error = np.zeros((ntest, 3))
+
         for i in np.arange(ntest):
             gp_forces[i, :] = gp.predict(np.reshape(tst_confs[i], (1, len(tst_confs[i]), 5)))
             gp_error[i, :] = gp_forces[i, :] - tst_forces[i, :]
-        print("MAEF on forces: %.4f +- %.4f" % (
+
+        print('MAEF on forces: {:.4f} +- {:.4f}'.format(
             np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))),
             np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
+

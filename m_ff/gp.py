@@ -27,11 +27,7 @@ from scipy.optimize import fmin_l_bfgs_b
 np.set_printoptions(precision=3)
 
 
-class GP(object):
-    pass
-
-
-class GaussianProcess:
+class GaussianProcess(object):
     """ Gaussian process class
     Class of GP regression of QM energies and forces
 
@@ -312,16 +308,16 @@ class GaussianProcess:
 
         return theta_opt, func_min
 
-    def save(self, name):
+    def save(self, filename):
         """Dump the current GP model for later use
         
         Args:
-            name (str): name of the file where to save the GP
+            filename (str): name of the file where to save the GP
         
         Todo:
             * Need to decide the way to store a GP
         """
-        
+
         kernel = self.kernel
         noise = self.noise
         optimizer = self.optimizer
@@ -337,8 +333,8 @@ class GaussianProcess:
         output.append(alpha_)
         output.append(K)
 
-        np.save('%s' % name, output)
-        print('Saved Gaussian process with name:', name)
+        np.save('%s' % filename, output)
+        print('Saved Gaussian process with name:', filename)
 
     def load(self, name):
         """Load a saved GP model
@@ -349,7 +345,7 @@ class GaussianProcess:
         Todo:
             * Need to decide the way to store a GP
         """
-        
+
         a = np.load(name)
         self.kernel = a[0]
         self.noise = a[1]

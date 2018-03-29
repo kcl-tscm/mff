@@ -15,7 +15,7 @@
         "noise level": 0.0001,
         "mean prior": 0.4,
         "filename": {
-            "coefs":
+            "coefs":''
         }
     },
     "remappedpotential": {

@@ -1,5 +1,5 @@
 import logging
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
@@ -19,9 +19,12 @@ class MissingData(Exception):
 class Configurations(metaclass=ABCMeta):
     """Configurations can represent a list of configurations"""
 
+    @abstractmethod
     def __init__(self, confs=None):
-        super().__init__()
         self.confs = confs if confs else []
+
+    def save(self, filename):
+        pass
 
 
 class SingleSpecies(metaclass=ABCMeta):
@@ -32,17 +35,19 @@ class MultiSpecies(metaclass=ABCMeta):
     pass
 
 
-class Forces(metaclass=ABCMeta):
-    def __init__(self, forces=None):
+class Forces(Configurations, metaclass=ABCMeta):
+    def __init__(self, confs=None, forces=None):
+        super().__init__(confs)
         self.forces = forces if forces else []
 
 
-class Energies(metaclass=ABCMeta):
-    def __init__(self, energy=None):
+class Energies(Configurations, metaclass=ABCMeta):
+    def __init__(self, confs=None, energy=None):
+        super().__init__(confs)
         self.energy = energy if energy else []
 
 
-class ConfsSingleForces(Configurations, SingleSpecies, Forces):
+class ConfsTwoBodySingleForces(Forces, SingleSpecies):
     def __init__(self, r_cut):
         super().__init__()
 
@@ -73,7 +78,7 @@ class ConfsSingleForces(Configurations, SingleSpecies, Forces):
         np.save(filename_force, self.forces)
 
 
-class ConfsTwoForces(Configurations, SingleSpecies, Forces):
+class ConfsTwoForces(Forces, SingleSpecies ):
     def __init__(self, r_cut):
         super().__init__()
 
@@ -106,7 +111,7 @@ class ConfsTwoForces(Configurations, SingleSpecies, Forces):
 
 if __name__ == '__main__':
     from ase.io import read
-    from m_ff.sampling import LinspaceSamplingSingle, RandomSamplingSingle
+    from m_ff.sampling import SamplingLinspaceSingle, SamplingRandomSingle
 
     testfiles = {
         'BIP_300': '../test/data/BIP_300/movie.xyz',
@@ -119,8 +124,8 @@ if __name__ == '__main__':
     traj = read(filename, index=slice(0, 4))
     print(traj)
 
-    confs = ConfsSingleForces(r_cut=4.5)
-    for atoms, atom_inds in RandomSamplingSingle(traj, n_target=25):
+    confs = ConfsTwoBodySingleForces(r_cut=4.5)
+    for atoms, atom_inds in SamplingRandomSingle(traj, n_target=25):
         confs.append(atoms, atom_inds)
 
 #

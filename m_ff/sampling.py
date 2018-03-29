@@ -27,7 +27,7 @@ class TwoSpecies(Sampling, metaclass=ABCMeta):
         super().__init__()
 
 
-class LinspaceSamplingSingle(SingleSpecies):
+class SamplingLinspaceSingle(SingleSpecies):
     def __init__(self, traj, n_target):
         super().__init__()
 
@@ -71,7 +71,7 @@ class LinspaceSamplingSingle(SingleSpecies):
             # elements, elements_count = np.unique(flat_atom_number, return_counts=True)
 
 
-class RandomSamplingSingle(SingleSpecies):
+class SamplingRandomSingle(SingleSpecies):
     def __init__(self, traj, n_target):
         super().__init__()
 
@@ -146,5 +146,5 @@ if __name__ == '__main__':
 
     test_data = np.arange(100).reshape(10, -1)
 
-    for data, local_inds in RandomSamplingSingle(test_data, 10):
+    for data, local_inds in SamplingRandomSingle(test_data, 10):
         print(data, local_inds)

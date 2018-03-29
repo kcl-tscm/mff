@@ -12,6 +12,7 @@ from asap3 import FullNeighborList
 from ase.neighborlist import NeighborList
 
 
+
 class Confs(object):
     def __init__(self, atomic_numbers, positions,
                  forces=None,

@@ -21,7 +21,7 @@ Example
 
 ...
 """
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 import json
 from pathlib import Path
 from itertools import combinations, islice
@@ -33,10 +33,14 @@ from ase.calculators.calculator import Calculator, all_changes
 # from ase.neighborlist import NeighborList
 from asap3 import FullNeighborList
 
-from m_ff.remapping import Spline1D, Spline3D
+from m_ff.interpolation import Spline1D, Spline3D
 
 logger = logging.getLogger(__name__)
 
+
+# TODO: defining the final/proper grid object
+# TODO: testing basic operation on single species 2 and 3 body
+# TODO: implementation of two species (idea: sum of element index)
 
 # from pathos.multiprocessing import ProcessingPool
 # from ase.data import chemical_symbols, atomic_numbers
@@ -56,7 +60,7 @@ class SingleSpecies(Exception):
 
 class Factory(object):
 
-    def __init__(self, adsfasldfjdsf,dsfld,):
+    def __init__(self, adsfasldfjdsf, dsfld, ):
         pass
 
     @classmethod
@@ -64,8 +68,9 @@ class Factory(object):
         # return with right calculator object
         pass
 
-class RemappedPotential(Calculator, metaclass=ABCMeta):
 
+class RemappedPotential(Calculator, metaclass=ABCMeta):
+    @abstractmethod
     def __init__(self, r_cut, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):
         super().__init__(restart, ignore_bad_restart_file, label, atoms, **kwargs)
 
@@ -168,39 +173,39 @@ class TwoBodySingleSpecies(RemappedPotential):
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
 
-        # todo: proper numpy itereator with enumaration
+        # TODO: proper numpy itereator with enumaration
         for i in range(len(self.atoms)):
-            inds, pos, dists = self.nl.get_neighbors(i)
+            inds, pos, dists2 = self.nl.get_neighbors(i)
 
-            energy_local = self.grid_1_1(dists, nu=0)
-            fs_scalars = - self.grid_1_1(dists, nu=1)
+            energy_local = self.grid_1_1(np.sqrt(dists2), nu=0)
+            fs_scalars = - self.grid_1_1(np.sqrt(dists2), nu=1)
 
             potential_energies[i] = np.sum(energy_local, axis=0)
-            forces[i] = np.sum(fs_scalars.reshape(-1, 1) * pos, axis=0)
+            forces[i] = np.sum(pos * fs_scalars[:, np.newaxis], axis=0)
 
         self.results = {'energy': np.sum(potential_energies),
                         'forces': forces}
 
-    @classmethod
-    def from_json(cls, filename):
-        with open(filename) as file:
-            p = json.load(file)
-
-        rs = np.linspace(p['remappedpotential']['r_start'], p['parameters']['cutoff'], p['remappedpotential']['r_num'])
-
-        grid_1_1_filename = p['remappedpotential']['filenames']['grid_1_1']
-
-        # directory =
-        rs, element1, element2, grid_1_1, grid_1_1_1 = np.load(directory + grid_1_1_filename)
-        # grid_1_1_data = np.load(grid_1_1_filename)
-
-        # grid_1_1 = Spline1D(rs, grid_1_1_data)
-        # return cls(r_cut)
-
-    @classmethod
-    def from_numpy(cls, filename):
-        r_cut = 3.2
-        return cls(r_cut)
+    # @classmethod
+    # def from_json(cls, filename):
+    #     with open(filename) as file:
+    #         p = json.load(file)
+    #
+    #     rs = np.linspace(p['remappedpotential']['r_start'], p['parameters']['cutoff'], p['remappedpotential']['r_num'])
+    #
+    #     grid_1_1_filename = p['remappedpotential']['filenames']['grid_1_1']
+    #
+    #     # directory =
+    #     rs, element1, element2, grid_1_1, grid_1_1_1 = np.load(directory + grid_1_1_filename)
+    #     # grid_1_1_data = np.load(grid_1_1_filename)
+    #
+    #     # grid_1_1 = Spline1D(rs, grid_1_1_data)
+    #     # return cls(r_cut)
+    #
+    # @classmethod
+    # def from_numpy(cls, filename):
+    #     r_cut = 3.2
+    #     return cls(r_cut)
 
 
 class ThreeBodySingleSpecies(RemappedPotential):
@@ -213,11 +218,10 @@ class ThreeBodySingleSpecies(RemappedPotential):
     # 'Default parameters'
     default_parameters = {}
 
-    def __init__(self, r_cut, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):
+    def __init__(self, r_cut, grid_1_1_1, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):
         super().__init__(r_cut, restart, ignore_bad_restart_file, label, atoms, **kwargs)
 
-        self.grid_1_1_1 = Spline3D(np.linspace(0, 10, 100), np.linspace(0, 10, 100), np.linspace(0, 10, 100),
-                                   np.linspace(0, 10, 100 ** 3).reshape(100, 100, 100))
+        self.grid_1_1_1 = grid_1_1_1
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
         """Do the calculation.
@@ -252,11 +256,12 @@ class ThreeBodySingleSpecies(RemappedPotential):
 
         indices, distances, positions = self.find_triplets()
 
-        mapped = self.grid_1_1_1._ev_all(*np.hsplit(distances, 3))
+        xi, yi, zi = np.hsplit(distances, 3)
+        mapped = self.grid_1_1_1.ev_all(xi, yi, zi)
 
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
-        for (i, j, k), (energy, dE_ij, dE_jk, dE_ki) in zip(indices, mapped):
+        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):
             forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki
             forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij
             forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk
@@ -274,20 +279,20 @@ class ThreeBodySingleSpecies(RemappedPotential):
 
         for i in range(len(atoms)):
 
-            inds, pos, dists = nl.get_neighbors(i)
+            inds, pos, dists2 = nl.get_neighbors(i)
 
             # Limitation
             assert len(inds) is len(np.unique(inds)), "There are repetitive indices!\n{}".format(inds)
 
             # ignoring already visited atoms
-            inds, pos, dists = inds[inds > i], pos[inds > i, :], dists[inds > i]
+            inds, pos, dists2 = inds[inds > i], pos[inds > i, :], dists2[inds > i]
 
-            for local_ind, (j, pos_ij, dist_ij) in enumerate(zip(inds, pos, dists)):
+            for local_ind, (j, pos_ij, dist_ij) in enumerate(zip(inds, pos, dists2)):
 
                 # Caching local displacement vectors
                 positions[(i, j)], positions[(j, i)] = pos_ij, -pos_ij
 
-                for k, dist_ik in islice(zip(inds, dists), local_ind + 1, None):
+                for k, dist_ik in islice(zip(inds, dists2), local_ind + 1, None):
 
                     try:
                         jk_ind = list(nl[j]).index(k)
@@ -332,10 +337,10 @@ class ThreeBodySingleSpecies(RemappedPotential):
 
         return np.array(indices), np.sqrt(np.array(distances)), positions
 
-    @classmethod
-    def from_numpy(cls, filename):
-        r_cut = 3.2
-        return cls(r_cut)
+    # @classmethod
+    # def from_numpy(cls, filename):
+    #     r_cut = 3.2
+    #     return cls(r_cut)
 
 
 class TwoBodyTwoSpecies(Calculator):
@@ -349,119 +354,32 @@ class ThreeBodyTwoSpecies(Calculator):
 if __name__ == '__main__':
     # from ase import Atoms
     from ase.io import read
+    # import matplotlib.pyplot as plt
 
     logging.basicConfig(level=logging.INFO)
 
-    directory = '../test/data/C_a/'
-    filename = Path(directory + 'movie.xyz')
+    directory = Path('../test/data/Fe_vac')
 
+    filename = directory / 'movie.xyz'
     traj = read(str(filename), index=slice(None))
-    calc = TwoBodySingleSpecies(r_cut=3.7, grid_1_1=None)
 
-    TwoBodySingleSpecies.from_json(directory + 'test.json')
-    # int(1 + (cutoff - grid_start) / grid_spacing)
-    rs, element1, element2, grid_1_1, grid_1_1_1 = np.load(directory + 'MFF_2b_ntr_10_sig_1.00_cut_3.70.npy')
+    rs, element1, _, _, grid_1_1_1 = np.load(str(directory / 'MFF_3b_ntr_10_sig_1.00_cut_4.45.npy'))
+    grid_1_1_1 = Spline3D(rs, rs, rs, grid_1_1_1)
 
-    print(rs.shape, element1, element2, grid_1_1.shape)
+    calc = ThreeBodySingleSpecies(r_cut=3.7, grid_1_1_1=grid_1_1_1)
 
-    # MFF_2b_ntr_10_sig_1.00_cut_3.70
-    # rs, element1, element2, grid_1_1, grid_1_1_1
-    # test get_forces
-    # print('forces for a = {0}'.format(a0))
-    # print(calc.get_forces(bulk))
-    # # single points for various lattice constants
-    # bulk.set_calculator(calc)
-    # for n in range(-5, 5, 1):
-    #     a = a0 * (1 + n / 100.0)
-    #     bulk.set_cell([a] * 3)
-    #     print('a : {0} , total energy : {1}'.format(
-    #         a, bulk.get_potential_energy()))
+    a = traj[0]
+    a.set_calculator(calc)
 
-# class MLCalculator_local:
-#
-#     def __init__(self, ff, ef, nl):
-#         self.nl = nl
-#         self.ff = ff
-#         self.ef = ef
-#
-#     def get_potential_energy(self, atoms):
-#         n = len(atoms)
-#         nl = self.nl
-#         nl.update(atoms)
-#         cell = atoms.get_cell()
-#         confs = []
-#         ef = self.ef
-#
-#         for a in np.arange(n):
-#             indices, offsets = nl.get_neighbors(a)
-#             offsets = np.dot(offsets, cell)
-#             conf = np.zeros((len(indices), 3))
-#             for i, (a2, offset) in enumerate(zip(indices, offsets)):
-#                 d = atoms.positions[a2] + offset - atoms.positions[a]
-#                 conf[i] = d
-#             confs.append(conf)
-#
-#         confs = np.array(confs)
-#
-#         ### MULTIPROCESSING ###
-#
-#         if False:  ### Using the remapped energy ###
-#             nods = 2
-#             pool = ProcessingPool(nodes=nods)
-#             splitind = np.zeros(nods + 1)
-#             factor = (n + (nods - 1)) / nods
-#             splitind[1:-1] = [(i + 1) * factor for i in np.arange(nods - 1)]
-#             splitind[-1] = n
-#             splitind = splitind.astype(int)
-#             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nods)]
-#             result_energy = np.array(pool.map(ef, clist))
-#             result_energy = np.concatenate(result_energy)
-#
-#         else:
-#             result_energy = ef(confs)
-#
-#         energies = np.reshape(result_energy, n)
-#         energy = -np.sum(energies)
-#         return energy
-#
-#     def get_forces(self, atoms):
-#
-#         ff = self.ff
-#
-#         n = len(atoms)
-#         nl = self.nl
-#         nl.update(atoms)
-#         cell = atoms.get_cell()
-#         confs = []
-#
-#         for a in np.arange(n):
-#             indices, offsets = nl.get_neighbors(a)
-#             offsets = np.dot(offsets, cell)
-#             conf = np.zeros((len(indices), 3))
-#             for i, (a2, offset) in enumerate(zip(indices, offsets)):
-#                 d = atoms.positions[a2] + offset - atoms.positions[a]
-#                 conf[i] = d
-#             confs.append(conf)
-#
-#         confs = np.array(confs)
-#
-#         ### MULTIPROCESSING ###
-#
-#         if False:  ### Using the remapped energy ###
-#             nods = 2
-#             pool = ProcessingPool(nodes=nods)
-#             splitind = np.zeros(nods + 1)
-#             factor = (n + (nods - 1)) / nods
-#             splitind[1:-1] = [(i + 1) * factor for i in np.arange(nods - 1)]
-#             splitind[-1] = n
-#             splitind = splitind.astype(int)
-#             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nods)]
-#             result_force = np.array(pool.map(ff, clist))
-#             result_force = np.concatenate(result_force)
-#
-#         else:
-#             result_force = ff(confs)
-#
-#         forces = np.reshape(result_force, (n, 3))
-#         return forces
-#
+    f = a.get_forces()
+    rms = np.sqrt(np.sum(np.square(a.arrays['force'] - a.get_forces()), axis=1))
+    print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
+
+    # for atoms in traj:
+    #     atoms.set_calculator(calc)
+    #
+    #     rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
+    #     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
+    #
+    # pass
+

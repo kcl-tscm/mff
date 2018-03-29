@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 
-class BaseSpline1D(InterpolatedUnivariateSpline):
+class Spline1D(InterpolatedUnivariateSpline):
 
     def __init__(self, x0, f):
         """
@@ -13,17 +13,17 @@ class BaseSpline1D(InterpolatedUnivariateSpline):
         :param f: 1-dimensional array
         """
 
-        super(BaseSpline1D, self).__init__(x0, f, k=3, ext=3)
+        super(Spline1D, self).__init__(x0, f, k=3, ext=3)
 
     def ev_all(self, x):
         return self.ev_energy(x), self.ev_forces(x)
 
     def ev_forces(self, x):
-        fs_scalars = super(BaseSpline1D, self).__call__(x, nu=1)
+        fs_scalars = super(Spline1D, self).__call__(x, nu=1)
         return fs_scalars
 
     def ev_energy(self, x):
-        energy_single = super(BaseSpline1D, self).__call__(x, nu=0)
+        energy_single = super(Spline1D, self).__call__(x, nu=0)
         return energy_single
 
     @classmethod
@@ -34,7 +34,7 @@ class BaseSpline1D(InterpolatedUnivariateSpline):
         return cls(x_range, energies)
 
 
-class Spline1D(BaseSpline1D):
+class Spline1DAngle(Spline1D):
 
     def __init__(self, x0, f):
         """

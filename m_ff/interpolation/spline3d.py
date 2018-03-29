@@ -2,10 +2,11 @@ from __future__ import division, print_function
 from itertools import combinations
 import numpy as np
 
+# noinspection PyUnresolvedReferences
 from . import _tricub
 
 
-class BaseSpline3D(object):
+class Spline3D(object):
 
     def __init__(self, x, y, z, f):
 
@@ -109,7 +110,7 @@ class BaseSpline3D(object):
         return self.ev_all_fast(x, y, z)
 
 
-class Spline3DAngle(BaseSpline3D):
+class Spline3DAngle(Spline3D):
 
     def ev_energy(self, rs, **kwargs):
         # Vectorize
@@ -155,7 +156,7 @@ class Spline3DAngle(BaseSpline3D):
         dphi_dr0 = - 1. / (np.sqrt(1 - cosphi ** 2)) * (
                 (r1_hat / r2 + r2_hat / r1) - cosphi * (r1_hat / r1 + r2_hat / r2))
 
-        tri_force = -(de_dr1 * r1_hat + de_dr2 * r2_hat)
+        tri_force = -(de_dr1 * r1_hat + de_dr2 * r2_hat + de_dphi * dphi_dr0)
 
         tri_force = np.sum(tri_force, axis=0)
 
@@ -202,7 +203,7 @@ class Spline3DAngle(BaseSpline3D):
         rs_hat = rs / ds
         # rs_hat = np.einsum('nd, n -> nd', rs, 1. / ds)
 
-        r1, r2, r1_hat, r2_hat = Spline3D.combinations(ds, rs_hat)
+        r1, r2, r1_hat, r2_hat = Spline3DAngle.combinations(ds, rs_hat)
 
         cosphi = np.clip(np.einsum('nd, nd -> n', r1_hat, r2_hat), -1, 1).reshape(-1, 1)
 

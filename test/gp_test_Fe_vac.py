@@ -60,46 +60,71 @@ if __name__ == '__main__':
             np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))),
             np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
 
-# Saved Gaussian process with name: data/Fe_vac/gp_ker=2_ntr=10_sig=1.00_cut=4.45
-# Testing the GP module
-# MAEF on forces: 0.3387 +- 0.2625
+    # Saved Gaussian process with name: data/Fe_vac/gp_ker=2_ntr=10_sig=1.00_cut=4.45
+    # Testing the GP module
+    # MAEF on forces: 0.3387 +- 0.2625
 
-# Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=10_sig=1.00_cut=4.45
-# Testing the GP module
-# MAEF on forces: 0.2377 +- 0.1257
+    # Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=10_sig=1.00_cut=4.45
+    # Testing the GP module
+    # MAEF on forces: 0.2377 +- 0.1257
 
-# Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=20_sig=1.00_cut=4.45
-# Testing the GP module
-# MAEF on forces: 0.1626 +- 0.0593
+    # Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=20_sig=1.00_cut=4.45
+    # Testing the GP module
+    # MAEF on forces: 0.1626 +- 0.0593
 
+    if True:
+        print('gp.predict(tst_confs[0][np.newaxis,0:1,:]) - {}'.format(
+            gp.predict(tst_confs[0][np.newaxis, 0:1, :])))
+        print('gp.predict(tr_confs[0][np.newaxis,0:1,:]): {}'.format(
+            gp.predict(tr_confs[0][np.newaxis, 0:1, :])))
+        print('gp.predict_energy(tr_confs[0][np.newaxis,0:1,:]): {}'.format(
+            gp.predict_energy(tr_confs[0][np.newaxis, 0:1, :])))
 
-# in the case of a single distance (2-body) always returns with zero force vector
-# gp.predict(tst_confs[0][np.newaxis,0:1,:])
-# Out[10]: array([[0., 0., 0.]])
-# gp.predict(tr_confs[0][np.newaxis,0:1,:])
-# Out[11]: array([[0., 0., 0.]])
-# gp.predict_energy(tr_confs[0][np.newaxis,0:1,:])
-# Out[12]: array([[0.]])
+        print('gp.predict(tst_confs[0][np.newaxis,0:2,:]): {}'.format(
+            gp.predict(tst_confs[0][np.newaxis, 0:2, :])))
+        print('gp.predict(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]]): {}'.format(
+            gp.predict(tst_confs[0][np.newaxis, 0:2, [1, 0, 2, 3, 4, ]])))
 
-# forces are looking perfect (in the case of 3-body)
-# gp.predict(tst_confs[0][np.newaxis,0:2,:])
-# Out[7]: array([[0.089, 0.247, 0.009]])
-# gp.predict(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]])
-# Out[8]: array([[0.247, 0.089, 0.009]])
+        print('gp.predict_energy(tst_confs[0][np.newaxis,...]): {}'.format(
+            gp.predict_energy(tst_confs[0][np.newaxis, ...])))
+        print('gp.predict_energy(tst_confs[1][np.newaxis,...]): {}'.format(
+            gp.predict_energy(tst_confs[1][np.newaxis, ...])))
+        print('gp.predict_energy(tst_confs[2][np.newaxis,...]): {}'.format(
+            gp.predict_energy(tst_confs[2][np.newaxis, ...])))
+        print('gp.predict_energy(tst_confs[3][np.newaxis,...]): {}'.format(
+            gp.predict_energy(tst_confs[3][np.newaxis, ...])))
 
-# weird energies (huge magnitudes, depends on the number of trainset)
-# gp.predict_energy(tst_confs[0][np.newaxis,...])
-# Out[2]: array([[-34011.54]])
-# gp.predict_energy(tst_confs[1][np.newaxis,...])
-# Out[3]: array([[17301.706]])
-# gp.predict_energy(tst_confs[3][np.newaxis,...])
-# Out[4]: array([[87888.376]])
-# gp.predict_energy(tst_confs[4][np.newaxis,...])
-# Out[5]: array([[131479.773]])
+        print('gp.predict_energy(tst_confs[0][np.newaxis,0:2,:]): {}'.format(
+            gp.predict_energy(tst_confs[0][np.newaxis, 0:2, :])))
+        print('gp.predict_energy(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]]): {}'.format(
+            gp.predict_energy(tst_confs[0][np.newaxis, 0:2, [1, 0, 2, 3, 4, ]])))
 
-# energies are not permutation invariants
-# gp.predict_energy(tst_confs[0][np.newaxis,0:2,:])
-# Out[9]: array([[-3062.721]])
-# gp.predict_energy(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]])
-# Out[10]: array([[1453.469]])
+        # in the case of a single distance (2-body) always returns with zero force vector
+        # gp.predict(tst_confs[0][np.newaxis,0:1,:])
+        # Out[10]: array([[0., 0., 0.]])
+        # gp.predict(tr_confs[0][np.newaxis,0:1,:])
+        # Out[11]: array([[0., 0., 0.]])
+        # gp.predict_energy(tr_confs[0][np.newaxis,0:1,:])
+        # Out[12]: array([[0.]])
 
+        # forces are looking perfect (in the case of 3-body)
+        # gp.predict(tst_confs[0][np.newaxis,0:2,:])
+        # Out[7]: array([[0.089, 0.247, 0.009]])
+        # gp.predict(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]])
+        # Out[8]: array([[0.247, 0.089, 0.009]])
+
+        # weird energies (huge magnitudes, depends on the number of trainset)
+        # gp.predict_energy(tst_confs[0][np.newaxis,...])
+        # Out[2]: array([[-34011.54]])
+        # gp.predict_energy(tst_confs[1][np.newaxis,...])
+        # Out[3]: array([[17301.706]])
+        # gp.predict_energy(tst_confs[3][np.newaxis,...])
+        # Out[4]: array([[87888.376]])
+        # gp.predict_energy(tst_confs[4][np.newaxis,...])
+        # Out[5]: array([[131479.773]])
+
+        # energies are not permutation invariants
+        # gp.predict_energy(tst_confs[0][np.newaxis,0:2,:])
+        # Out[9]: array([[-3062.721]])
+        # gp.predict_energy(tst_confs[0][np.newaxis,0:2,[1,0,2,3,4,]])
+        # Out[10]: array([[1453.469]])

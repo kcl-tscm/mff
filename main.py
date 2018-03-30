@@ -1,12 +1,14 @@
 import json
 from collections import defaultdict
+
 from ase import Atoms
 from ase.io import read
-from m_ff.calculators import Calculator
+
 from m_ff.configurations import ConfsTwoBodySingleForces
 from m_ff.sampling import SamplingLinspaceSingle
-from m_ff import Kernels
 from m_ff.gp import GaussianProcess
+from m_ff import Kernels
+from m_ff.calculators import Calculator
 
 if __name__ == '__main__':
 
@@ -48,7 +50,7 @@ if __name__ == '__main__':
     # Mapped
     # ------------------------------
 
-    grid = MapoedTwoBodySingleSpecies(gp)
+    grid = MappedTwoBodySingleSpecies(gp)
     grid.save(filename='.npy')
 
     with open(jsonfile, 'w') as file:

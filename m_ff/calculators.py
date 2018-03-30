@@ -21,8 +21,8 @@ Example
 
 ...
 """
+
 from abc import ABCMeta, abstractmethod
-import json
 from pathlib import Path
 from itertools import combinations, islice
 
@@ -30,10 +30,7 @@ import numpy as np
 import logging
 
 from ase.calculators.calculator import Calculator, all_changes
-# from ase.neighborlist import NeighborList
 from asap3 import FullNeighborList
-
-from m_ff.interpolation import Spline1D, Spline3D
 
 logger = logging.getLogger(__name__)
 
@@ -41,35 +38,13 @@ logger = logging.getLogger(__name__)
 # TODO: defining the final/proper grid object
 # TODO: testing basic operation on single species 2 and 3 body
 # TODO: implementation of two species (idea: sum of element index)
-
-# from pathos.multiprocessing import ProcessingPool
-# from ase.data import chemical_symbols, atomic_numbers
-# from ase.units import Bohr
-# from ase.neighborlist import NeighborList
+# TODO: Factory method
 
 class SingleSpecies(Exception):
     pass
 
 
-# If single element, build only a 2- and  3-body grid
-# result = [rs, element1, element2, grid_1_1, grid_1_1_1]
-
-# If two elements, build three 2- and four 3-body grids
-# result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
-
-
-class Factory(object):
-
-    def __init__(self, adsfasldfjdsf, dsfld, ):
-        pass
-
-    @classmethod
-    def from_json(cls, filename):
-        # return with right calculator object
-        pass
-
-
-class RemappedPotential(Calculator, metaclass=ABCMeta):
+class MappedPotential(Calculator, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, r_cut, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):
         super().__init__(restart, ignore_bad_restart_file, label, atoms, **kwargs)
@@ -124,7 +99,7 @@ class RemappedPotential(Calculator, metaclass=ABCMeta):
             self.reset()
 
 
-class TwoBodySingleSpecies(RemappedPotential):
+class TwoBodySingleSpecies(MappedPotential):
     """A remapped 2-body calculator for ase
     """
 
@@ -186,29 +161,8 @@ class TwoBodySingleSpecies(RemappedPotential):
         self.results = {'energy': np.sum(potential_energies),
                         'forces': forces}
 
-    # @classmethod
-    # def from_json(cls, filename):
-    #     with open(filename) as file:
-    #         p = json.load(file)
-    #
-    #     rs = np.linspace(p['remappedpotential']['r_start'], p['parameters']['cutoff'], p['remappedpotential']['r_num'])
-    #
-    #     grid_1_1_filename = p['remappedpotential']['filenames']['grid_1_1']
-    #
-    #     # directory =
-    #     rs, element1, element2, grid_1_1, grid_1_1_1 = np.load(directory + grid_1_1_filename)
-    #     # grid_1_1_data = np.load(grid_1_1_filename)
-    #
-    #     # grid_1_1 = Spline1D(rs, grid_1_1_data)
-    #     # return cls(r_cut)
-    #
-    # @classmethod
-    # def from_numpy(cls, filename):
-    #     r_cut = 3.2
-    #     return cls(r_cut)
 
-
-class ThreeBodySingleSpecies(RemappedPotential):
+class ThreeBodySingleSpecies(MappedPotential):
     """A remapped 3-body calculator for ase
     """
 
@@ -218,7 +172,8 @@ class ThreeBodySingleSpecies(RemappedPotential):
     # 'Default parameters'
     default_parameters = {}
 
-    def __init__(self, r_cut, grid_1_1_1, restart=None, ignore_bad_restart_file=False, label=None, atoms=None, **kwargs):
+    def __init__(self, r_cut, grid_1_1_1, restart=None, ignore_bad_restart_file=False, label=None, atoms=None,
+                 **kwargs):
         super().__init__(r_cut, restart, ignore_bad_restart_file, label, atoms, **kwargs)
 
         self.grid_1_1_1 = grid_1_1_1
@@ -254,13 +209,13 @@ class ThreeBodySingleSpecies(RemappedPotential):
 
         super().calculate(atoms, properties, system_changes)
 
-        indices, distances, positions = self.find_triplets()
+        forces = np.zeros((len(self.atoms), 3))
+        potential_energies = np.zeros((len(self.atoms), 1))
 
+        indices, distances, positions = self.find_triplets()
         xi, yi, zi = np.hsplit(distances, 3)
         mapped = self.grid_1_1_1.ev_all(xi, yi, zi)
 
-        forces = np.zeros((len(self.atoms), 3))
-        potential_energies = np.zeros((len(self.atoms), 1))
         for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):
             forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki
             forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij
@@ -337,11 +292,6 @@ class ThreeBodySingleSpecies(RemappedPotential):
 
         return np.array(indices), np.sqrt(np.array(distances)), positions
 
-    # @classmethod
-    # def from_numpy(cls, filename):
-    #     r_cut = 3.2
-    #     return cls(r_cut)
-
 
 class TwoBodyTwoSpecies(Calculator):
     pass
@@ -352,9 +302,8 @@ class ThreeBodyTwoSpecies(Calculator):
 
 
 if __name__ == '__main__':
-    # from ase import Atoms
     from ase.io import read
-    # import matplotlib.pyplot as plt
+    from m_ff.interpolation import Spline3D
 
     logging.basicConfig(level=logging.INFO)
 
@@ -368,11 +317,11 @@ if __name__ == '__main__':
 
     calc = ThreeBodySingleSpecies(r_cut=3.7, grid_1_1_1=grid_1_1_1)
 
-    a = traj[0]
-    a.set_calculator(calc)
+    atoms = traj[0]
+    atoms.set_calculator(calc)
 
-    f = a.get_forces()
-    rms = np.sqrt(np.sum(np.square(a.arrays['force'] - a.get_forces()), axis=1))
+    f = atoms.get_forces()
+    rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
 
     # for atoms in traj:
@@ -382,4 +331,12 @@ if __name__ == '__main__':
     #     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
     #
     # pass
+
+# If single element, build only a 2- and  3-body grid
+# result = [rs, element1, element2, grid_1_1, grid_1_1_1]
+
+# If two elements, build three 2- and four 3-body grids
+# result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
+
+
 

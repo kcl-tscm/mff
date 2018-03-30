@@ -1,5 +1,5 @@
+# import theano
 import numpy as np
-import theano
 import _pickle as cPickle
 
 import os
@@ -146,7 +146,7 @@ def threebody_ee_cut(a, b, sig, rc, gamma):
 
 
 # Classes for 2 and 3 body kernels
-class TwoBody:
+class TwoBody(object):
     """Two body kernel.
 
     Parameters
@@ -213,21 +213,21 @@ class TwoBody:
 
         return diag
 
-    def calc_ef_single(self, X1, X2):
+    def calc_ef(self, X1, X2):
 
         K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = twobody_ef(X1[i], X2[j], self.theta[0])
+                K_trans[i, 3 * j:3 * j + 3] = twobody_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
 
-    def calc_ef(self, X1, X2):
+    def calc_ef_future(self, X1, X2):
 
         K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
 
-        K_trans = twobody_for_ff(X, X, self.theta[0], self.theta[1], self.theta[2])
+        K_trans = twobody_for_ff(X1, X2, self.theta[0], self.theta[1], self.theta[2])
         K_trans = np.reshape(K_trans.swapaxes(1, 2),
                              (K_trans.shape[0] * K_trans.shape[2], K_trans.shape[1] * K_trans.shape[2]))
         return K_trans
@@ -244,7 +244,7 @@ class TwoBody:
         return diag
 
 
-class ThreeBody:
+class ThreeBody(object):
     """Three body kernel.
 
     Parameters
@@ -294,7 +294,7 @@ class ThreeBody:
         diag = np.zeros((X.shape[0] * 3))
 
         for i in np.arange(X.shape[0]):
-            diag[i * 3:(i + 1) * 3] = np.diag(threebody_ff(X[i], X[i], self.theta[0]))
+            diag[i * 3:(i + 1) * 3] = np.diag(threebody_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
 
         return diag
 
@@ -304,7 +304,7 @@ class ThreeBody:
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = threebody_ef(X1[i], X2[j], self.theta[0])
+                K_trans[i, 3 * j:3 * j + 3] = threebody_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
 
@@ -313,6 +313,6 @@ class ThreeBody:
         diag = np.zeros((X.shape[0]))
 
         for i in np.arange(X.shape[0]):
-            diag[i] = threebody_ee(X[i], X[i], self.theta[0])
+            diag[i] = threebody_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag

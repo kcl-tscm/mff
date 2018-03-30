@@ -4,11 +4,10 @@ import numpy as np
 from ase.io import read
 from pathlib import Path
 
-from m_ff.calculators import Spline1D, TwoBodySingleSpecies
+from m_ff.interpolation import Spline1D
+from m_ff.calculators import TwoBodySingleSpecies
 
 logging.basicConfig(level=logging.INFO)
-
-# import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
@@ -17,13 +16,13 @@ if __name__ == '__main__':
     print('========== Load trajectory ==========')
 
     filename = directory / 'movie.xyz'
-    traj = read(str(filename), index=slice(None))
+    traj = read(str(filename), index=slice(0, 5))
 
     print('========== TwoBodySingleSpecies ==========')
 
     # future: TwoBodySingleSpecies.from_json(directory / 'test.json')
-    rs, element1, _, grid_1_1, _ = np.load(str(directory / 'MFF_2b_ntr_10_sig_1.00_cut_4.45.npy'))
-    grid_1_1 = Spline1D(rs, grid_1_1)
+    rs, element1, _, grid_data_1_1, _ = np.load(str(directory / 'MFF_2b_ntr_10_sig_1.00_cut_4.45.npy'))
+    grid_1_1 = Spline1D(rs, grid_data_1_1)
 
     calc = TwoBodySingleSpecies(r_cut=3.7, grid_1_1=grid_1_1)
 
@@ -42,7 +41,6 @@ if __name__ == '__main__':
         rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
         print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
         print('energy: {}'.format(atoms.get_potential_energy()))
-
 
     # ========== TwoBodySingleSpecies ==========
     # INFO:m_ff.calculators:numbers is in system_changes
@@ -75,5 +73,3 @@ if __name__ == '__main__':
     # MAEF on forces: 1.0267 +- 0.4612
     # MAEF on forces: 1.0190 +- 0.4648
     # MAEF on forces: 1.0101 +- 0.4676
-
-

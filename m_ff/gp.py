@@ -1,23 +1,3 @@
-# -*- coding: utf-8 -*-
-"""Gaussian Process
-
-Simple Gaussian process regression module suited to learn energies and forces
-
-Example:
-
-        $  gp = GaussianProcess(kenrel, noise)
-        $  gp.fit(train_configurations, train_forces)
-        $  gp.predict(test_configurations)
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
-
 import warnings
 
 import numpy as np
@@ -28,18 +8,20 @@ np.set_printoptions(precision=3)
 
 
 class GaussianProcess(object):
-    """ Gaussian process class
+    """ GaussianProcess
     Class of GP regression of QM energies and forces
 
-    Args:
-        kernel (obj): A kernel object (typically a two or three body)
-        noise (foat): The regularising noise level (typically named \sigma_n^2)
-        optimizer (str): The kind of optimization of marginal likelihood (not implemented yet)
+    Parameters
+    ----------
+    kernel: A kernel object, typically a two or three body
+    noise: The regularising noise level (\sigma_n^2)
+    optimizer: The kind of optimization of marginal likelihood (not implemented)
 
-    Attributes:
-        X_train_ (list): The configurations used for training
-        alpha_ (array): The coefficients obtained during training
-        L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
+    Attributes
+    ----------
+    X_train_: The configurations used for training
+    alpha_: The coefficients obtained during training
+    L_: The lower triangular matrix from cholesky decomposition of gram matrix
     """
 
     # optimizers "fmin_l_bfgs_b"
@@ -53,12 +35,15 @@ class GaussianProcess(object):
         self.n_restarts_optimizer = n_restarts_optimizer
 
     def fit(self, X, y):
-        """Fit a Gaussian process regression model.
-        
-        Args:
-            X (list): training configurations
-            y (array): training forces
+        """Fit Gaussian process regression model.
+        Parameters
+        ----------
+        X :
+        y :
 
+        Returns
+        -------
+        self : returns an instance of self.
         """
         self.kernel_ = self.kernel
 
@@ -125,21 +110,26 @@ class GaussianProcess(object):
 
     def predict(self, X, return_std=False):
         """Predict using the Gaussian process regression model
-        
         We can also predict based on an unfitted model by using the GP prior.
         In addition to the mean of the predictive distribution, also its
         standard deviation (return_std=True)
-        
-        Args:
-            X (array): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the 
-                predictive distribution of the target configurations is 
-                returned along with the mean.
-
-        Returns:
-            y_mean (array): Mean of predictive distribution at target configurations.
-            y_std (array): Standard deviation of predictive distribution at target 
-                configurations. Only returned when return_std is True.
+        Parameters
+        ----------
+        X : array-like, shape = (n_samples, n_features)
+            Query points where the GP is evaluated
+        return_std : bool, default: False
+            If True, the standard-deviation of the predictive distribution at
+            the query points is returned along with the mean.
+        return_cov : bool, default: False
+            If True, the covariance of the joint predictive distribution at
+            the query points is returned along with the mean
+        Returns
+        -------
+        y_mean : array, shape = (n_samples, [n_output_dims])
+            Mean of predictive distribution a query points
+        y_std : array, shape = (n_samples,), optional
+            Standard deviation of predictive distribution at query points.
+            Only returned when return_std is True.
         """
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
@@ -179,16 +169,12 @@ class GaussianProcess(object):
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
     def predict_energy(self, X, return_std=False):
-        """Predict energies using the Gaussian process regression model
-        
-        This function evaluates the GP energies for a set of test configurations.
+        """
+        This function evaluates the GP energies at X.
 
-        Args:
-            X (list): Target configurations where the GP is evaluated
-        
-        Returns:
-            y_mean (array): Predicted energies
-            y_std (array): Predicted error on the energies
+        Returns
+        -------
+        y : array_like
         """
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
@@ -227,24 +213,24 @@ class GaussianProcess(object):
 
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         """Returns log-marginal likelihood of theta for training data.
-        
-        Args:
-            theta : array-like, shape = (n_kernel_params,) or None
-                Kernel hyperparameters for which the log-marginal likelihood is
-                evaluated. If None, the precomputed log_marginal_likelihood
-                of ``self.kernel_.theta`` is returned.
-            eval_gradient : bool, default: False
-                If True, the gradient of the log-marginal likelihood with respect
-                to the kernel hyperparameters at position theta is returned
-                additionally. If True, theta must not be None.
-        
-        Returns:
-            log_likelihood : float
-                Log-marginal likelihood of theta for training data.
-            log_likelihood_gradient : array, shape = (n_kernel_params,), optional
-                Gradient of the log-marginal likelihood with respect to the kernel
-                hyperparameters at position theta.
-                Only returned when eval_gradient is True.
+        Parameters
+        ----------
+        theta : array-like, shape = (n_kernel_params,) or None
+            Kernel hyperparameters for which the log-marginal likelihood is
+            evaluated. If None, the precomputed log_marginal_likelihood
+            of ``self.kernel_.theta`` is returned.
+        eval_gradient : bool, default: False
+            If True, the gradient of the log-marginal likelihood with respect
+            to the kernel hyperparameters at position theta is returned
+            additionally. If True, theta must not be None.
+        Returns
+        -------
+        log_likelihood : float
+            Log-marginal likelihood of theta for training data.
+        log_likelihood_gradient : array, shape = (n_kernel_params,), optional
+            Gradient of the log-marginal likelihood with respect to the kernel
+            hyperparameters at position theta.
+            Only returned when eval_gradient is True.
         """
         if theta is None:
             if eval_gradient:
@@ -309,48 +295,25 @@ class GaussianProcess(object):
         return theta_opt, func_min
 
     def save(self, filename):
-        """Dump the current GP model for later use
-        
-        Args:
-            filename (str): name of the file where to save the GP
-        
-        Todo:
-            * Need to decide the way to store a GP
-        """
 
-        kernel = self.kernel
-        noise = self.noise
-        optimizer = self.optimizer
-        n_restarts_optimizer = self.n_restarts_optimizer
-        alpha_ = self.alpha_
-        K = self.K
+        output = [self.kernel_,
+                  self.noise,
+                  self.optimizer,
+                  self.n_restarts_optimizer,
+                  self.alpha_,
+                  self.K,
+                  self.X_train_]
 
-        output = []
-        output.append(kernel)
-        output.append(noise)
-        output.append(optimizer)
-        output.append(n_restarts_optimizer)
-        output.append(alpha_)
-        output.append(K)
-
-        np.save('%s' % filename, output)
+        np.save(filename, output)
         print('Saved Gaussian process with name:', filename)
 
-    def load(self, name):
-        """Load a saved GP model
-        
-        Args:
-            name (str): name of the file where the GP is saved
-        
-        Todo:
-            * Need to decide the way to store a GP
-        """
+    def load(self, filename):
+        self.kernel_, \
+        self.noise, \
+        self.optimizer, \
+        self.n_restarts_optimizer, \
+        self.alpha_, \
+        self.K, \
+        self.X_train_ = np.load(filename)
 
-        a = np.load(name)
-        self.kernel = a[0]
-        self.noise = a[1]
-        self.optimizer = a[2]
-        self.n_restarts_optimizer = a[3]
-        self.alpha_ = a[4]
-        self.K = a[5]
         print('Loaded GP from file')

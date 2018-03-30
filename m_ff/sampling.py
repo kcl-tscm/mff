@@ -2,7 +2,6 @@ import logging
 import random
 from abc import ABCMeta, abstractmethod
 
-USE_ASAP = True
 logger = logging.getLogger(__name__)
 
 

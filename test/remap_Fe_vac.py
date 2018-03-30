@@ -8,9 +8,9 @@ if __name__ == '__main__':
     # Parameters
     grid_start = 1.5
     r_cut = 4.45
-    nbodies = 2
+    nbodies = 3
     grid_spacing = 0.1
-    ntr = 10
+    ntr = 20
     sigma = 1.0
     processors = 1
     noise = 0.00001
@@ -26,7 +26,7 @@ if __name__ == '__main__':
         raise NotImplementedError("Kernel order not understood, use 2 for two-body and 3 for three-body")
 
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
-    gp_name = 'gp_ker=%s_ntr=%i_sig=%.2f_cut=%.2f.npy' % (nbodies, ntr, sigma, r_cut)
+    gp_name = 'gp_ker={}_ntr={}_sig={:.2f}_cut={:.2f}.npy'.format(nbodies, ntr, sigma, r_cut)
     gp.load(directory + '/' + gp_name)
 
     # Build mapped grids

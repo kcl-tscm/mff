@@ -11,7 +11,7 @@ if __name__ == '__main__':
     nbodies = 3
     sigma = 1.0
     noise = 0.00001
-    ntr = 10
+    ntr = 20
     ntest = 10
     directory = Path('data/Fe_vac/')
 
@@ -67,3 +67,16 @@ if __name__ == '__main__':
 # Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=10_sig=1.00_cut=4.45
 # Testing the GP module
 # MAEF on forces: 0.2377 +- 0.1257
+
+# Saved Gaussian process with name: data/Fe_vac/gp_ker=3_ntr=20_sig=1.00_cut=4.45
+# Testing the GP module
+# MAEF on forces: 0.1626 +- 0.0593
+#
+# gp.predict_energy(tst_confs[0][np.newaxis,...])
+# Out[2]: array([[-34011.54]])
+# gp.predict_energy(tst_confs[1][np.newaxis,...])
+# Out[3]: array([[17301.706]])
+# gp.predict_energy(tst_confs[3][np.newaxis,...])
+# Out[4]: array([[87888.376]])
+# gp.predict_energy(tst_confs[4][np.newaxis,...])
+# Out[5]: array([[131479.773]])

@@ -1,12 +1,8 @@
-.. module:: m_ff.configurations
-
 Configurations
 ==============
 
 aaa
 
 
-.. autoclass:: Configurations
+.. automodule:: m_ff.configurations
    :members:
-
-

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Gaussian Process
+================
 
 Simple Gaussian process regression module suited to learn energies and forces
 
 Example:
 
-        $  gp = GaussianProcess(kenrel, noise)
-        $  gp.fit(train_configurations, train_forces)
-        $  gp.predict(test_configurations)
+    $  gp = GaussianProcess(kenrel, noise)
+    $  gp.fit(train_configurations, train_forces)
+    $  gp.predict(test_configurations)
 
 Todo:
     * For module TODOs

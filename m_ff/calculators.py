@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Remapped potential
 ==================
 
@@ -337,6 +338,3 @@ if __name__ == '__main__':
 
 # If two elements, build three 2- and four 3-body grids
 # result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
-
-
-

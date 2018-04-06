@@ -17,17 +17,14 @@ USE_ASAP = False
 try:
     from asap3 import FullNeighborList
 except:
-    pass
-
-
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
 
 class MissingData(Exception):
     pass
 
 
-def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
+def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label, USE_ASAP):
     # See if there are forces and energies, get them for the chosen atoms
     forces = atoms.arrays.get(forces_label)
     energy = atoms.arrays.get(energy_label)
@@ -60,7 +57,7 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
         # Build local configurations for every indexed atom
         cutoffs = np.ones(len(atoms)) * r_cut / 2.
         nl = NeighborList(cutoffs, skin=0., sorted=False, self_interaction=False, bothways=True)
-        nl.build(atoms)
+        nl.update(atoms)
 
         confs = []
         cell = atoms.get_cell()
@@ -81,7 +78,7 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label, energy_label):
     return confs, forces, energy
 
 
-def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energies'):
+def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energies', USE_ASAP = False):
     confs, forces, energies = [], [], []
 
     # Get the atomic number of each atom in the trajectory file
@@ -119,7 +116,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energ
         # Call the carve_from_snapshot function on the chosen atoms
         if this_ind.size > 0:
             this_conf, this_force, this_energy = \
-                carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label)
+                carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label, USE_ASAP)
             confs.append(this_conf)
             forces.append(this_force)
             energies.append(this_energy)

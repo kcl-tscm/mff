@@ -8,9 +8,9 @@ if __name__ == '__main__':
     # Parameters
     grid_start = 1.5
     r_cut = 4.45
-    nbodies = 3
-    grid_spacing = 0.1
-    ntr = 20
+    nbodies = 2
+    grid_spacing = 0.01
+    ntr = 2
     sigma = 1.0
     processors = 1
     noise = 0.00001

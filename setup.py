@@ -1,6 +1,6 @@
 from numpy.distutils.core import setup, Extension
 
-tricub = Extension('m_ff.remapping._tricub', sources=['m_ff/remapping/_tricub.pyf', 'm_ff/remapping/_tricub.c'])
+tricub = Extension('m_ff.interpolation._tricub', sources=['m_ff/interpolation/_tricub.pyf', 'm_ff/interpolation/_tricub.c'])
 
 setup(
     name='m_ff',

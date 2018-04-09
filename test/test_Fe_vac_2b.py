@@ -21,7 +21,7 @@ if __name__ == '__main__':
     print('========== TwoBodySingleSpecies ==========')
 
     # future: TwoBodySingleSpecies.from_json(directory / 'test.json')
-    rs, element1, _, grid_data_1_1, _ = np.load(str(directory / 'MFF_2b_ntr_10_sig_1.00_cut_4.45.npy'))
+    rs, element1, _, grid_data_1_1, _ = np.load(str(directory / 'MFF_2b_ntr_2_sig_1.00_cut_4.45.npy'))
     grid_1_1 = Spline1D(rs, grid_data_1_1)
 
     calc = TwoBodySingleSpecies(r_cut=3.7, grid_1_1=grid_1_1)
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     atoms.set_calculator(calc)
 
     rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
+    MF = np.mean(np.linalg.norm(tst_forces, axis = 1))
     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
-    print(atoms.get_potential_energy())
 
     print('========== Calculate MAEF for each steps ==========')
 

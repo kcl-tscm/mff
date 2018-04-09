@@ -8,10 +8,10 @@ if __name__ == '__main__':
 
     # Parameters
     r_cut = 4.45
-    nbodies = 3
+    nbodies = 2
     sigma = 1.0
     noise = 0.00001
-    ntr = 20
+    ntr = 2
     ntest = 10
     directory = Path('data/Fe_vac/')
 
@@ -56,9 +56,13 @@ if __name__ == '__main__':
             gp_forces[i, :] = gp.predict(np.reshape(tst_confs[i], (1, len(tst_confs[i]), 5)))
             gp_error[i, :] = gp_forces[i, :] - tst_forces[i, :]
 
-        print('MAEF on forces: {:.4f} +- {:.4f}'.format(
-            np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1))),
-            np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))))
+        MAEF = np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1)))
+        SMAEF = np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))
+        MF = np.mean(np.linalg.norm(tst_forces, axis = 1))
+
+        print('MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF, SMAEF))
+        print('Relative MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF/MF, SMAEF/MF))
+
 
     # Saved Gaussian process with name: data/Fe_vac/gp_ker=2_ntr=10_sig=1.00_cut=4.45
     # Testing the GP module

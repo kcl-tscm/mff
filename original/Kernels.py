@@ -1,7 +1,4 @@
 import numpy as np
-import theano
-# import six
-# from six.moves import cPickle
 import _pickle as cPickle
 
 import os
@@ -80,8 +77,8 @@ class TwoBody:
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
         self.theta = theta
         self.bounds = bounds
-        from original.kernels_source import compile_twobody
 
+        from original.kernels_source import compile_twobody
         self.k2_ee, self.k2_ef, self.k2_ff = compile_twobody()
 
     def calc(self, X1, X2):

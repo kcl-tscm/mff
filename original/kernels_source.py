@@ -36,9 +36,8 @@ def compile_twobody():
 
 	# RELATIVE DISTANCES TO CENTRAL VECTOR
 
-	# first configuration
+	# first and second configuration
 	r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-	# second configuration
 	r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
 	# CHEMICAL SPECIES MASK
@@ -54,7 +53,6 @@ def compile_twobody():
 	delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
 
 	# Cutoff function
-
 	k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / sig) * (
 				delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2))
 
@@ -135,3 +133,6 @@ def compile_twobody():
 		return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
 	return k2_ee, k2_ef, k2_ff
+
+
+def compile_twobody():

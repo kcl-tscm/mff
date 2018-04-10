@@ -1,68 +1,4 @@
 import numpy as np
-import _pickle as cPickle
-
-import os
-
-### Import Theano functions ###
-
-theano_dir = os.path.dirname(os.path.abspath(__file__)) + '/theano_funcs/'
-
-# three body
-f = open(theano_dir + 'H3b_ms.save', 'rb')
-threebody_ff_T = cPickle.load(f, encoding='latin1')
-f.close()
-
-f = open(theano_dir + 'G3b_ms.save', 'rb')
-threebody_ef_T = cPickle.load(f, encoding='latin1')
-f.close()
-
-f = open(theano_dir + 'S3b_ms.save', 'rb')
-threebody_ee_T = cPickle.load(f, encoding='latin1')
-f.close()
-
-f = open(theano_dir + '3B_ff_cut.save', 'rb')
-threebody_ff_T_cut = cPickle.load(f, encoding='latin1')
-f.close()
-
-f = open(theano_dir + '3B_ef_cut.save', 'rb')
-threebody_ef_T_cut = cPickle.load(f, encoding='latin1')
-f.close()
-
-f = open(theano_dir + '3B_ee_cut.save', 'rb')
-threebody_ee_T_cut = cPickle.load(f, encoding='latin1')
-f.close()
-
-
-# three body
-
-def threebody_ff(a, b, sig, theta, rc):
-    ret = threebody_ff_T(np.zeros(3), np.zeros(3), a, b, sig)
-    return ret
-
-
-def threebody_ef(a, b, sig, theta, rc):
-    ret = threebody_ef_T(np.zeros(3), np.zeros(3), a, b, sig)
-    return ret
-
-
-def threebody_ee(a, b, sig, theta, rc):
-    ret = threebody_ee_T(np.zeros(3), np.zeros(3), a, b, sig)
-    return ret
-
-
-def threebody_ff_cut(a, b, sig, rc, gamma):
-    ret = threebody_ff_T_cut(np.zeros(3), np.zeros(3), a, b, sig, gamma, rc)
-    return ret
-
-
-def threebody_ef_cut(a, b, sig, rc, gamma):
-    ret = threebody_ef_T_cut(np.zeros(3), np.zeros(3), a, b, sig, gamma, rc)
-    return ret
-
-
-def threebody_ee_cut(a, b, sig, rc, gamma):
-    ret = threebody_ee_T_cut(np.zeros(3), np.zeros(3), a, b, sig, gamma, rc)
-    return ret
 
 
 # Classes for 2 and 3 body kernels
@@ -75,6 +11,7 @@ class TwoBody:
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+        self.kernel_name = 'TwoBody'
         self.theta = theta
         self.bounds = bounds
 
@@ -110,7 +47,6 @@ class TwoBody:
                                                                             self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
-
             return gram
 
     def calc_diag(self, X):
@@ -153,8 +89,12 @@ class ThreeBody:
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+        self.kernel_name = 'ThreeBody'
         self.theta = theta
         self.bounds = bounds
+
+        from original.kernels_source import compile_threebody
+        self.k3_ee, self.k3_ef, self.k3_ff = compile_threebody()
 
     def calc(self, X1, X2):
 
@@ -162,7 +102,7 @@ class ThreeBody:
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = threebody_ff(X1[i], X2[j], self.theta[0],
+                K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X1[i], X2[j], self.theta[0],
                                                                          self.theta[1], self.theta[2])
 
         return K_trans
@@ -178,10 +118,10 @@ class ThreeBody:
         else:
 
             for i in np.arange(X.shape[0]):
-                diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = threebody_ff(X[i], X[i], self.theta[0],
+                diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = self.k3_ff(X[i], X[i], self.theta[0],
                                                                       self.theta[1], self.theta[2])
                 for j in np.arange(i):
-                    off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = threebody_ff(X[i], X[j], self.theta[0],
+                    off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X[i], X[j], self.theta[0],
                                                                               self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
@@ -193,7 +133,7 @@ class ThreeBody:
         diag = np.zeros((X.shape[0] * 3))
 
         for i in np.arange(X.shape[0]):
-            diag[i * 3:(i + 1) * 3] = np.diag(threebody_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
+            diag[i * 3:(i + 1) * 3] = np.diag(self.k3_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
 
         return diag
 
@@ -203,7 +143,7 @@ class ThreeBody:
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = threebody_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+                K_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
 
@@ -212,6 +152,6 @@ class ThreeBody:
         diag = np.zeros((X.shape[0]))
 
         for i in np.arange(X.shape[0]):
-            diag[i] = threebody_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+            diag[i] = self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag

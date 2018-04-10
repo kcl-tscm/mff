@@ -10,21 +10,46 @@ confs = np.random.normal(0, 0.5, (N, M, 5))
 confs[:, :, 3:5] = 1.
 
 # Test two body
+#
+# theta_v = [1., 1., 1.]
+#
+# two = K.TwoBody(theta=theta_v)
+#
+# new = two.calc(confs, confs)
+#
+# print(new)
+#
+# rho1n = np.array([[[1, 2, 3, 1, 3],
+#                    [1, 2, 4, 1, 4],
+#                    [1, 2, 1, 1, 1]]])
+#
+# rho2n = np.array([[[1.2, 2.1, 3.3, 1, 3],
+#                    [1.7, 2.1, 4.6, 1, 4],
+#                    [1.2, 2.1, 1.2, 1, 1]]])
+#
+# print(two.calc(rho1n, rho2n))
+#
 
-theta_v = [1., 1., 1.]
+# Test three body
 
-two = K.TwoBody(theta = theta_v)
+
+theta = [1., 0.001, 10000.]
+
+two = K.ThreeBody(theta=theta)
+
+old = two.calc_old(confs, confs)
 
 new = two.calc(confs, confs)
 
-print(new)
+print(np.allclose(new,old))
 
 rho1n = np.array([[[1, 2, 3, 1, 3],
-                  [1, 2, 4, 1, 4],
-                  [1, 2, 1, 1, 1]]])
+                   [1, 2, 4, 1, 4],
+                   [1, 2, 1, 1, 1]]])
 
 rho2n = np.array([[[1.2, 2.1, 3.3, 1, 3],
-                  [1.7, 2.1, 4.6, 1, 4],
-                  [1.2, 2.1, 1.2, 1, 1]]])
+                   [1.7, 2.1, 4.6, 1, 4],
+                   [1.2, 2.1, 1.2, 1, 1]]])
 
 print(two.calc(rho1n, rho2n))
+print(two.calc_old(rho1n, rho2n))

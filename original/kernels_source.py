@@ -16,9 +16,10 @@ def compile_twobody():
 		k2_ff (func): force-force kernel
 	"""
 
-	print("Started compilation of theano kernels")
-
+	print("Started compilation of theano two body kernels")
+	# --------------------------------------------------
 	# INITIAL DEFINITIONS
+	# --------------------------------------------------
 
 	# positions of central atoms
 	r1, r2 = T.dvectors('r1d', 'r2d')
@@ -38,13 +39,17 @@ def compile_twobody():
 	alpha_j = rho1[:, 4:5].flatten()
 	alpha_m = rho2[:, 4:5].flatten()
 
+	# --------------------------------------------------
 	# RELATIVE DISTANCES TO CENTRAL VECTOR
+	# --------------------------------------------------
 
 	# first and second configuration
 	r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
 	r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
+	# --------------------------------------------------
 	# CHEMICAL SPECIES MASK
+	# --------------------------------------------------
 
 	# numerical kronecker
 	def delta_alpha2(a1j, a2m):
@@ -66,7 +71,9 @@ def compile_twobody():
 	# kernel
 	k = T.sum(k_ij)
 
+	# --------------------------------------------------
 	# FINAL FUNCTIONS
+	# --------------------------------------------------
 
 	# energy energy kernel
 	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k, allow_input_downcast=False, on_unused_input='warn')
@@ -83,7 +90,9 @@ def compile_twobody():
 	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, allow_input_downcast=False,
 	                    on_unused_input='warn')
 
+	# --------------------------------------------------
 	# WRAPPERS (we don't want to plug the position of the central element every time)
+	# --------------------------------------------------
 
 	def k2_ee(conf1, conf2, sig, theta, rc):
 		"""
@@ -136,7 +145,7 @@ def compile_twobody():
 
 		return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
-	print("Ended compilation of theano kernels")
+	print("Ended compilation of theano two body kernels")
 
 	return k2_ee, k2_ef, k2_ff
 
@@ -154,7 +163,7 @@ def compile_threebody():
 		k3_ff (func): force-force kernel
 	"""
 
-	print("Started compilation of theano kernels")
+	print("Started compilation of theano three body kernels")
 
 	# --------------------------------------------------
 	# INITIAL DEFINITIONS
@@ -299,17 +308,17 @@ def compile_threebody():
 	# --------------------------------------------------
 
 	# energy energy kernel
-	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_cutoff)
+	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_cutoff, on_unused_input='warn')
 
 	# energy force kernel
 	k_ef_cut = T.grad(k_cutoff, r2)
-	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut)
+	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='warn')
 
 	# force force kernel
 	k_ff_cut = T.grad(k_cutoff, r1)
-	k_ff_cut_der, updates = theano.scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
-	                                    sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
-	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der)
+	k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
+	                             sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
+	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='warn')
 
 	# WRAPPERS (we don't want to plug the position of the central element every time)
 
@@ -364,6 +373,6 @@ def compile_threebody():
 
 		return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
-	print("Ended compilation of theano kernels")
+	print("Ended compilation of theano three body kernels")
 
 	return k3_ee, k3_ef, k3_ff

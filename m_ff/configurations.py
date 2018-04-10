@@ -53,13 +53,14 @@ class ConfsTwoBodySingleForces(Forces, SingleSpecies):
 
         self.r_cut = r_cut
 
-    def append(self, atoms, atom_inds=None, forces_label='force'):
+    def append(self, atoms, atom_inds=None, forces_label=None):
 
         if atom_inds is None:
             atom_inds = range(len(atoms))
 
         # See if there are forces and energies, get them for the chosen atoms
-        forces = atoms.arrays.get(forces_label)
+        # forces = atoms.arrays.get(forces_label)
+        forces = atoms.arrays.get(forces_label) if forces_label else atoms.get_forces()
 
         if forces is None:
             raise MissingData('Forces in the Atoms objects under {} label are not present.'.format(forces_label))

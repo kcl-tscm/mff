@@ -296,7 +296,7 @@ class GaussianProcess:
 
     def save(self, filename):
 
-        output = [self.kernel_,
+        output = [self.kernel_.kernel_name,
                   self.noise,
                   self.optimizer,
                   self.n_restarts_optimizer,
@@ -308,7 +308,7 @@ class GaussianProcess:
         print('Saved Gaussian process with name:', filename)
 
     def load(self, filename):
-        self.kernel_, \
+        self.kernel_.kernel_name, \
         self.noise, \
         self.optimizer, \
         self.n_restarts_optimizer, \

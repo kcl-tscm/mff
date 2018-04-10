@@ -11,7 +11,7 @@ if __name__ == '__main__':
     nbodies = 2
     sigma = 1.0
     noise = 0.00001
-    ntr = 2
+    ntr = 10
     ntest = 10
     directory = Path('data/Fe_vac/')
 
@@ -38,12 +38,12 @@ if __name__ == '__main__':
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
     gp_name = 'gp_ker={}_ntr={}_sig={:.2f}_cut={:.2f}'.format(nbodies, ntr, sigma, r_cut)
 
-    if os.path.isfile(str(directory / gp_name)):
+    if False:#os.path.isfile(str(directory / gp_name)):
         gp.load(str(directory / gp_name))
 
     else:
         gp.fit(tr_confs, tr_forces)
-        gp.save(str(directory / gp_name))
+        #gp.save(str(directory / gp_name))
 
     # Test the GP performance
     if ntest:

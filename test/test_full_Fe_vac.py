@@ -1,11 +1,8 @@
-import os
 import logging
 
 import numpy as np
-from ase.io import read
 
 from original import better_MFF_database
-from original.better_MFF_database import carve_confs
 from original import Kernels
 from original import GP_for_MFF
 
@@ -13,8 +10,8 @@ better_MFF_database.USE_ASAP = False
 logging.basicConfig(level=logging.INFO)
 
 # Parameters
-directory = 'data/ZrO2/'
-r_cut = 3.5
+directory = 'data/Fe_vac/'
+r_cut = 4.45
 
 # ----------------------------------------
 # Construct a configuration database
@@ -24,7 +21,7 @@ if False:
 
     n_data = 400
 
-    filename = directory + 'train.xyz'
+    filename = directory + 'movie.xyz'
 
     traj = read(filename, index=slice(None), format='extxyz')
 
@@ -53,8 +50,8 @@ if False:
 if True:
     # Parameters
     sigma = 0.4
-    noise = 0.000001
-    ntr = 300
+    noise = 0.00001
+    ntr = 5
     ntest = 50
 
     # Get configurations and forces from file

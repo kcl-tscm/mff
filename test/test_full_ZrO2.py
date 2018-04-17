@@ -2,6 +2,7 @@ import os
 import logging
 
 import numpy as np
+import matplotlib.pyplot as plt
 from ase.io import read
 
 from original import better_MFF_database
@@ -15,14 +16,27 @@ logging.basicConfig(level=logging.INFO)
 # Parameters
 directory = 'data/ZrO2/'
 r_cut = 3.5
+<<<<<<< Updated upstream
+=======
+
+# GP Parameters
+sigma = .5
+noise = 0.1
+ntest = 200
+
+>>>>>>> Stashed changes
 
 # ----------------------------------------
 # Construct a configuration database
 # ----------------------------------------
 
-if False:
+if True:
 
+<<<<<<< Updated upstream
     n_data = 400
+=======
+	n_data = 1000000
+>>>>>>> Stashed changes
 
     filename = directory + 'train.xyz'
 
@@ -47,15 +61,20 @@ if False:
     )))
 
 # ----------------------------------------
-# Test a simple GP on the built database
+# Test GP on the built database
 # ----------------------------------------
 
 if True:
+<<<<<<< Updated upstream
     # Parameters
     sigma = 0.4
     noise = 0.000001
     ntr = 300
     ntest = 50
+=======
+
+	ntr = 100
+>>>>>>> Stashed changes
 
     # Get configurations and forces from file
     confs = np.load(str(directory + 'confs_cut={:.2f}.npy'.format(r_cut)))
@@ -64,6 +83,7 @@ if True:
     ind = np.arange(numconfs)
     ind_tot = np.random.choice(ind, size=ntr + ntest, replace=False)
 
+<<<<<<< Updated upstream
     # Separate into testing and training dataset
     tr_confs, tr_forces = confs[ind[:ntr]], forces[ind[:ntr]]
     tst_confs, tst_forces = confs[ind[ntr:]], forces[ind[ntr:]]
@@ -71,6 +91,19 @@ if True:
     ker = Kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
 
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
+=======
+	numconfs = len(forces)
+	ind = np.arange(numconfs)
+	ind_tot = np.random.choice(ind, size=ntr + ntest, replace=False)
+	print(confs.shape)
+	print(confs)
+	1/0
+	# Separate into testing and training dataset
+	tr_confs, tr_forces = confs[ind[:ntr]], forces[ind[:ntr]]
+	tst_confs, tst_forces = confs[ind[ntr:]], forces[ind[ntr:]]
+
+	ker = Kernels.TwoBody(theta=[sigma, r_cut /5.0, r_cut])
+>>>>>>> Stashed changes
 
     print('Training GP')
 
@@ -93,6 +126,62 @@ if True:
     print(gp_forces)
     print('MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF, SMAEF))
     print('Relative MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF / MF, SMAEF / MF))
+
+
+# ----------------------------------------
+# Learning curve
+# ----------------------------------------
+
+if True:
+
+	ker = Kernels.TwoBody(theta=[sigma, r_cut / 5.0, r_cut])
+	gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
+
+	ntrs = [2, 5, 10, 20, 50, 100]
+
+	errors = []
+
+	for ntr in ntrs:
+
+		# Get configurations and forces from file
+		confs = np.load(str(directory + 'confs_cut={:.2f}.npy'.format(r_cut)))
+		forces = np.load(str(directory + 'forces_cut={:.2f}.npy'.format(r_cut)))
+
+		numconfs = len(forces)
+		ind = np.arange(numconfs)
+		ind_tot = np.random.choice(ind, size=ntr + ntest, replace=False)
+
+		# Separate into testing and training dataset
+		tr_confs, tr_forces = confs[ind[:ntr]], forces[ind[:ntr]]
+		tst_confs, tst_forces = confs[ind[ntr:]], forces[ind[ntr:]]
+
+		print('Training GP')
+
+		gp.fit(tr_confs, tr_forces)
+
+		# Test the GP performance
+		print('Testing GP')
+
+		gp_forces = np.zeros((ntest, 3))
+		gp_error = np.zeros((ntest, 3))
+
+		for i in np.arange(ntest):
+			gp_forces[i, :] = gp.predict(np.reshape(tst_confs[i], (1, len(tst_confs[i]), 5)))
+			gp_error[i, :] = gp_forces[i, :] - tst_forces[i, :]
+
+		MAEF = np.mean(np.sqrt(np.sum(np.square(gp_error), axis=1)))
+		SMAEF = np.std(np.sqrt(np.sum(np.square(gp_error), axis=1)))
+		MF = np.mean(np.linalg.norm(tst_forces, axis=1))
+
+		print('MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF, SMAEF))
+		print('Relative MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF / MF, SMAEF / MF))
+
+		errors.append(MAEF / MF)
+
+
+	plt.plot(ntrs, errors)
+	plt.xscale('log')
+	plt.show()
 
 # ----------------------------------------
 # Map the GP on an M-FF

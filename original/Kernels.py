@@ -231,6 +231,7 @@ class ThreeBody:
 
         return diag
 
+
 class ThreeBodySingleSpecies:
     """Three body kernel.
 

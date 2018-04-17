@@ -26,7 +26,7 @@ ntest = 200
 # Construct a configuration database
 # ----------------------------------------
 
-if True:
+if False:
 
 	n_data = 400
 	filename = directory + 'train.xyz'

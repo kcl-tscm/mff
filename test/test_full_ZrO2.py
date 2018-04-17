@@ -14,7 +14,7 @@ better_MFF_database.USE_ASAP = False
 logging.basicConfig(level=logging.INFO)
 
 # Parameters
-directory = 'data/ZrO2/'
+directory = 'data/BIP_300/'
 r_cut = 3.5
 
 # GP Parameters
@@ -26,14 +26,14 @@ ntest = 200
 # Construct a configuration database
 # ----------------------------------------
 
-if False:
+if True:
 
-	n_data = 400
-	filename = directory + 'train.xyz'
+	n_data = 1000000
+	filename = directory + 'movie.xyz'
 
 	traj = read(filename, index=slice(None), format='extxyz')
 
-	elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, USE_ASAP=False)
+	elements, confs, forces, energies = carve_confs(traj, r_cut, n_data, forces_label= 'force', energy_label = 'energy', USE_ASAP=False)
 
 	if not os.path.exists(directory):
 		os.makedirs(directory)
@@ -55,12 +55,11 @@ if False:
 # Test GP on the built database
 # ----------------------------------------
 
-if True:
+if False:
 	# Parameters
-	sigma = 0.4
-	noise = 0.000001
-	ntr = 300
+	ntr = 3
 	ntest = 50
+	ntest = 200
 
 	# Get configurations and forces from file
 	confs = np.load(str(directory + 'confs_cut={:.2f}.npy'.format(r_cut)))
@@ -108,7 +107,7 @@ if True:
 	ker = Kernels.TwoBody(theta=[sigma, r_cut / 5.0, r_cut])
 	gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
 
-	ntrs = [2, 5, 10, 20, 50, 100]
+	ntrs = [10, 20, 50, 100, 200, 400]
 
 	errors = []
 
@@ -120,7 +119,7 @@ if True:
 
 		numconfs = len(forces)
 		ind = np.arange(numconfs)
-		ind_tot = np.random.choice(ind, size=ntr + ntest, replace=False)
+		ind_tot = np.random.choice(ind, size = ntr + ntest, replace=False)
 
 		# Separate into testing and training dataset
 		tr_confs, tr_forces = confs[ind[:ntr]], forces[ind[:ntr]]

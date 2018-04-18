@@ -43,7 +43,7 @@ def compile_twobody_singlespecies():
 	r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
 	# Cutoff function
-	k_ij = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / sig)
+	k_ij = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 /(2* sig**2))
 
 	cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
 	         (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
@@ -191,7 +191,7 @@ def compile_twobody():
 	delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
 
 	# Cutoff function
-	k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / sig) * (
+	k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 /(2* sig **2)) * (
 			delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2))
 
 	cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \

@@ -43,7 +43,7 @@ def compile_twobody_singlespecies():
 	r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
 	# Cutoff function
-	k_ij = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 /(2* sig**2))
+	k_ij = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
 
 	cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
 	         (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
@@ -191,13 +191,13 @@ def compile_twobody():
 	delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
 
 	# Cutoff function
-	k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 /(2* sig **2)) * (
+	k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2)) * (
 			delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2))
 
 	cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
 	         (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
 
-	k_ij = k_ij #* cut_ij
+	k_ij = k_ij  # * cut_ij
 
 	# kernel
 	k = T.sum(k_ij)
@@ -534,7 +534,7 @@ def compile_threebody():
 	delta_alphas_k21m = delta_alphask2[:, None] * delta_alphas1m[None, :]
 
 	delta_perm3 = delta_alphas_k21m[None, :, :, None] * delta_alphasjn[:, None, None, :]
-	# delta_perm3 = delta_alphas_k21m[:, None, :, None] * delta_alphasjn[None, :, None, :]
+	#delta_perm3 = delta_alphas_k21m[:, None, :, None] * delta_alphasjn[None, :, None, :]
 
 	# permutation 4
 	delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
@@ -542,8 +542,8 @@ def compile_threebody():
 	delta_alphaskn = delta_alpha2(alpha_k[:, None], alpha_n[None, :])
 	delta_alphas_j21m = delta_alphasj2[:, None] * delta_alphas1m[None, :]
 
-	# delta_perm4 = delta_alphas_j21m[:, None, :, None] * delta_alphaskn[None, :, None, :]
 	delta_perm4 = delta_alphas_j21m[:, None, :, None] * delta_alphaskn[None, :, None, :]
+	#delta_perm4 = delta_alphas_j21m[:, None, :, None] * delta_alphaskn[None, :, None, :]
 
 	# permutation 5
 	delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
@@ -560,8 +560,8 @@ def compile_threebody():
 	delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
 	delta_alphas_k21n = delta_alphask2[:, None] * delta_alphas1n[None, :]
 
-	# delta_perm6 = delta_alphas_k21n[:, None, :, None] * delta_alphasjm[None, :, None, :]
-	delta_perm6 = delta_alphas_k21n[None, :, None, :] * delta_alphasjm[:, None, :, None]
+	delta_perm6 = delta_alphas_k21n[:, None, :, None] * delta_alphasjm[None, :, None, :]
+	#delta_perm6 = delta_alphas_k21n[None, :, None, :] * delta_alphasjm[:, None, :, None]
 
 	# --------------------------------------------------
 	# BUILD THE KERNEL
@@ -605,13 +605,17 @@ def compile_threebody():
 	                   (0.5 * (T.sgn(rc - rjk[:, :, None, None]) + 1)) *
 	                   (0.5 * (T.sgn(rc - rmn[None, None, :, :]) + 1)))
 
-	ker_jkmn_withcutoff = ker_jkmn #* cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
+	ker_jkmn_withcutoff = ker_jkmn  # * cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
 
 	# --------------------------------------------------
 	# REMOVE DIAGONAL ELEMENTS
 	# --------------------------------------------------
 
-	mask_jk = T.ones_like(rjk) - T.identity_like(rjk)
+	# remove diagonal elements AND lower triangular ones from first configuration
+
+	mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
+
+	# remove diagonal elements from second configuration
 	mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
 
 	mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
@@ -635,6 +639,7 @@ def compile_threebody():
 	                             sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
 	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
 
+
 	# WRAPPERS (we don't want to plug the position of the central element every time)
 
 	def k3_ee(conf1, conf2, sig, theta, rc):
@@ -654,6 +659,7 @@ def compile_threebody():
 		"""
 		return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
+
 	def k3_ef(conf1, conf2, sig, theta, rc):
 		"""
 		Two body kernel for energy-force correlation
@@ -671,6 +677,7 @@ def compile_threebody():
 
 		return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
+
 	def k3_ff(conf1, conf2, sig, theta, rc):
 		"""
 		Two body kernel for force-force correlation
@@ -687,6 +694,7 @@ def compile_threebody():
 		"""
 
 		return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
 
 	print("Ended compilation of theano three body kernels")
 

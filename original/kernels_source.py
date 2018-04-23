@@ -197,7 +197,7 @@ def compile_twobody():
 	cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
 	         (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
 
-	k_ij = k_ij * cut_ij
+	k_ij = k_ij #* cut_ij
 
 	# kernel
 	k = T.sum(k_ij)
@@ -207,19 +207,21 @@ def compile_twobody():
 	# --------------------------------------------------
 
 	# energy energy kernel
-	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k, allow_input_downcast=False, on_unused_input='warn')
+	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
+	                    allow_input_downcast=False, on_unused_input='ignore')
 
 	# energy force kernel
 	k_ef = T.grad(k, r2)
-	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef, allow_input_downcast=False, on_unused_input='warn')
+	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+	                    allow_input_downcast=False, on_unused_input='ignore')
 
 	# force force kernel
 	k_ff = T.grad(k, r1)
 	k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
 	                         sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
-	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, allow_input_downcast=False,
-	                    on_unused_input='warn')
+	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
+	                    allow_input_downcast=False, on_unused_input='ignore')
 
 	# --------------------------------------------------
 	# WRAPPERS (we don't want to plug the position of the central element every time)
@@ -603,7 +605,7 @@ def compile_threebody():
 	                   (0.5 * (T.sgn(rc - rjk[:, :, None, None]) + 1)) *
 	                   (0.5 * (T.sgn(rc - rmn[None, None, :, :]) + 1)))
 
-	ker_jkmn_withcutoff = ker_jkmn * cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
+	ker_jkmn_withcutoff = ker_jkmn #* cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
 
 	# --------------------------------------------------
 	# REMOVE DIAGONAL ELEMENTS
@@ -621,17 +623,17 @@ def compile_threebody():
 	# --------------------------------------------------
 
 	# energy energy kernel
-	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_cutoff, on_unused_input='warn')
+	k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_cutoff, on_unused_input='ignore')
 
 	# energy force kernel
 	k_ef_cut = T.grad(k_cutoff, r2)
-	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='warn')
+	k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
 
 	# force force kernel
 	k_ff_cut = T.grad(k_cutoff, r1)
 	k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
 	                             sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
-	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='warn')
+	k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
 
 	# WRAPPERS (we don't want to plug the position of the central element every time)
 

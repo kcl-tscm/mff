@@ -213,7 +213,7 @@ class ThreeBodySingleSpecies(MappedPotential):
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
 
-        indices, distances, positions = self.find_triplets()
+        indices, distances, positions = self.find_triplets2()
         xi, yi, zi = np.hsplit(distances, 3)
         mapped = self.grid_1_1_1.ev_all(xi, yi, zi)
 
@@ -285,7 +285,11 @@ class ThreeBodySingleSpecies(MappedPotential):
                 indices.append([i, j, k])
 
                 # Caching local position vectors
-                positions[(i, j)], positions[(j, i)] = pos[j_ind], -pos[j_ind]
+                positions[(i, j)], positions[(j, i)] = pos[j_ind], -pos[j_ind]    #
+                positions[(i, k)], positions[(k, i)] = pos[k_ind], -pos[k_ind]
+                positions[(j, k)], positions[(k, j)] = arr[j][1][jk_ind[0], :], -arr[j][1][jk_ind[0], :]
+
+                positions[(i, j)], positions[(j, i)] = pos[j_ind], -pos[j_ind]    #
                 positions[(i, k)], positions[(k, i)] = pos[k_ind], -pos[k_ind]
                 positions[(j, k)], positions[(k, j)] = arr[j][1][jk_ind[0], :], -arr[j][1][jk_ind[0], :]
 
@@ -325,12 +329,12 @@ if __name__ == '__main__':
     rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
 
-    # for atoms in traj:
-    #     atoms.set_calculator(calc)
-    #
-    #     rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
-    #     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
-    #
+    for atoms in traj[0:50]:
+        atoms.set_calculator(calc)
+
+        rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
+        print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
+
     # pass
 
 # If single element, build only a 2- and  3-body grid

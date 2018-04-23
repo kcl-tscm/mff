@@ -1,5 +1,5 @@
-! File _tricub.pyf
-python module _tricub
+! File _tricube.pyf
+python module _tricube
 interface
 
    subroutine reg_ev_energy(val,x0,x1,x2,f,fx0,fx1,fx2,ix0,ix1,ix2,ix)
@@ -68,5 +68,5 @@ interface
 
 
 end interface
-end python module _tricub
+end python module _tricube
 		   

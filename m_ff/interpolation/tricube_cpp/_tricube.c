@@ -19,7 +19,7 @@ int clip(int x, int a){
 
 int ijk2n(int i, int j, int k){
     //return i + 4 * j + 16 * k;
-	return i * 16 + j * 4 + k;
+	return i * 4 * 4 + j * 4 + k;
 }
 
 
@@ -189,7 +189,7 @@ void reg_ev_energy(double* val,
 			voxel(fin, f, (int) tempx0[loc], (int) tempx1[loc], (int) tempx2[loc], ix0, ix1, ix2);
 			tricubic_get_coeff_stacked(a, fin);
 		}
-		val[loc] = tricubic_eval(a, dx0[loc], dx1[loc], dx2[loc]);
+		val[loc] = (a, dx0[loc], dx1[loc], dx2[loc]);
 	}
 
 	free(dx0);

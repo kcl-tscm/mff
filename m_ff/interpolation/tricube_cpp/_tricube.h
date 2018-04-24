@@ -70,9 +70,6 @@ static const int A[64][64] = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0
 /* value needed for derivatives, and a lookup table is the easiest/fastest method */
 static const double factorial[4] = {1.0, 1.0, 2.0, 6.0};
 
-
-int fancy_algorithm(double* x, double* y, int n, double* result);
-
 void reg_ev_energy(double* val,
     double* x0, double* x1, double* x2,
     double* f, double* fx0, double* fx1, double* fx2,

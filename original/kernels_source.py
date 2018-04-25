@@ -522,8 +522,10 @@ def compile_threebody():
 	delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
 	delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
 	delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
-	delta_alphas_jnkm = delta_alphasjn[:, None, None, :] * delta_alphaskm[None, :, :, None]
-	# delta_alphas_jnkm = delta_alphasjn[:, None, :, None] * delta_alphaskm[None, :, None,:]
+
+	#THIS HAS THE WRONG ORDER
+	#delta_alphas_jnkm = delta_alphasjn[:, None, None, :] * delta_alphaskm[None, :, :, None]
+	delta_alphas_jnkm = delta_alphasjn[:, None, :, None] * delta_alphaskm[None, :, None,:]
 
 	delta_perm2 = delta_alphas12 * delta_alphas_jnkm
 
@@ -531,7 +533,8 @@ def compile_threebody():
 	delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
 	delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
 	delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
-	delta_alphas_k21m = delta_alphask2[:, None] * delta_alphas1m[None, :]
+	#delta_alphas_k21m = delta_alphask2[:, None] * delta_alphas1m[None, :]
+	delta_alphas_1mk2 =  delta_alphas1m[None, :] * delta_alphask2[:, None]
 
 	delta_perm3 = delta_alphas_k21m[None, :, :, None] * delta_alphasjn[:, None, None, :]
 	#delta_perm3 = delta_alphas_k21m[:, None, :, None] * delta_alphasjn[None, :, None, :]
@@ -612,7 +615,6 @@ def compile_threebody():
 	# --------------------------------------------------
 
 	# remove diagonal elements AND lower triangular ones from first configuration
-
 	mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
 
 	# remove diagonal elements from second configuration

@@ -28,7 +28,6 @@ class TwoBody:
                                                                        self.theta[1], self.theta[2])
         return K_trans
 
-
     def calc_gram(self, X, eval_gradient=False):
 
         diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
@@ -67,7 +66,6 @@ class TwoBody:
                 K_trans[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
-
 
     def calc_diag_e(self, X):
 
@@ -178,7 +176,7 @@ class ThreeBody:
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
                 K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X1[i], X2[j], self.theta[0],
-                                                                         self.theta[1], self.theta[2])
+                                                                       self.theta[1], self.theta[2])
 
         return K_trans
 
@@ -188,7 +186,7 @@ class ThreeBody:
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-	            k[i, j] = self.k3_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+                k[i, j] = self.k3_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return k
 
@@ -197,8 +195,8 @@ class ThreeBody:
         K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
 
         for i in np.arange(X1.shape[0]):
-	        for j in np.arange(X2.shape[0]):
-		        K_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+            for j in np.arange(X2.shape[0]):
+                K_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
 
@@ -214,10 +212,10 @@ class ThreeBody:
 
             for i in np.arange(X.shape[0]):
                 diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = self.k3_ff(X[i], X[i], self.theta[0],
-                                                                      self.theta[1], self.theta[2])
+                                                                    self.theta[1], self.theta[2])
                 for j in np.arange(i):
                     off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X[i], X[j], self.theta[0],
-                                                                              self.theta[1], self.theta[2])
+                                                                            self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
 
@@ -231,8 +229,6 @@ class ThreeBody:
             diag[i * 3:(i + 1) * 3] = np.diag(self.k3_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
 
         return diag
-
-
 
     def calc_diag_e(self, X):
 
@@ -268,7 +264,7 @@ class ThreeBodySingleSpecies:
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
                 K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X1[i], X2[j], self.theta[0],
-                                                                         self.theta[1], self.theta[2])
+                                                                       self.theta[1], self.theta[2])
 
         return K_trans
 
@@ -284,10 +280,10 @@ class ThreeBodySingleSpecies:
 
             for i in np.arange(X.shape[0]):
                 diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = self.k3_ff(X[i], X[i], self.theta[0],
-                                                                      self.theta[1], self.theta[2])
+                                                                    self.theta[1], self.theta[2])
                 for j in np.arange(i):
                     off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X[i], X[j], self.theta[0],
-                                                                              self.theta[1], self.theta[2])
+                                                                            self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
 
@@ -320,3 +316,13 @@ class ThreeBodySingleSpecies:
             diag[i] = self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag
+
+    def calc_ee(self, X1, X2):
+
+        k = np.zeros((X1.shape[0], X2.shape[0]))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+                k[i, j] = self.k3_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return k

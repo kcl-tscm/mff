@@ -25,8 +25,6 @@ import numpy as np
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
 
-np.set_printoptions(precision=3)
-
 
 class GaussianProcess(object):
     """ Gaussian process class

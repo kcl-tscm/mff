@@ -517,13 +517,12 @@ def compile_threebody():
 
     delta_perm1 = delta_alphas12 * delta_alphas_jmkn
 
-    # permutation 2
+    # permutation 2 - not used in the current state
 
     delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
     delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
     delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
 
-    # THIS HAS THE WRONG ORDER
     delta_alphas_jnkm = delta_alphasjn[:, None, None, :] * delta_alphaskm[None, :, :, None]
     # delta_alphas_jnkm = delta_alphasjn[:, None, :, None] * delta_alphaskm[None, :, None, :]
 
@@ -540,7 +539,7 @@ def compile_threebody():
     delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * delta_alphask2[None, :, None,
                                                                                            None]
 
-    # permutation 4
+    # permutation 4 - not used in the current state
     delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
     delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
     delta_alphaskn = delta_alpha2(alpha_k[:, None], alpha_n[None, :])
@@ -560,12 +559,12 @@ def compile_threebody():
     delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * delta_alphasj2[:, None, None,
                                                                                            None]
 
-    # permutation 6
+    # permutation 6 - not used in the current state
     delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
     delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
     delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
-    #delta_alphas_k21n = delta_alphask2[:, None] * delta_alphas1n[None, :]
-    #delta_perm6 = delta_alphas_k21n[:, None, :, None] * delta_alphasjm[None, :, None, :]
+    # delta_alphas_k21n = delta_alphask2[:, None] * delta_alphas1n[None, :]
+    # delta_perm6 = delta_alphas_k21n[:, None, :, None] * delta_alphasjm[None, :, None, :]
     # delta_perm6 = delta_alphas_k21n[None, :, None, :] * delta_alphasjm[:, None, :, None]
     delta_perm6 = delta_alphas1n[None, None, None, :] * delta_alphasjm[:, None, :, None] * delta_alphask2[None, :, None,
                                                                                            None]
@@ -587,7 +586,8 @@ def compile_threebody():
 
     # final shape is M1 M1 M2 M2
 
-    #ker_jkmn = (k1n + k2n + k3n) * (delta_perm1 + delta_perm2 + delta_perm3 + delta_perm4 + delta_perm5 + delta_perm6)
+    # ker_jkmn = (k1n + k2n + k3n) * (delta_perm1 + delta_perm2 + delta_perm3 + delta_perm4 + delta_perm5 + delta_perm6)
+    # Claudio Edit
     ker_jkmn = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
 
     cut_ik = (T.exp(-theta / T.abs_(rc - r1j[:, None])) *

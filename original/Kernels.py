@@ -15,7 +15,7 @@ class TwoBody:
         self.theta = theta
         self.bounds = bounds
 
-        from original.kernels_source import compile_twobody
+        from kernels_source import compile_twobody
         self.k2_ee, self.k2_ef, self.k2_ff = compile_twobody()
 
     def calc(self, X1, X2):
@@ -265,6 +265,26 @@ class ThreeBodySingleSpecies:
             for j in np.arange(X2.shape[0]):
                 K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = self.k3_ff(X1[i], X2[j], self.theta[0],
                                                                        self.theta[1], self.theta[2])
+
+        return K_trans
+
+    def calc_ee(self, X1, X2):
+
+        k = np.zeros((X1.shape[0], X2.shape[0]))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+	            k[i, j] = self.k3_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return k
+
+    def calc_ef(self, X1, X2):
+
+        K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
+
+        for i in np.arange(X1.shape[0]):
+	        for j in np.arange(X2.shape[0]):
+		        K_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
 

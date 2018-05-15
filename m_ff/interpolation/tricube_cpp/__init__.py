@@ -19,8 +19,54 @@ class Spline3D(object):
         self._y = np.pad(y, pad_width=1, mode='constant', constant_values=(2 * y[0] - y[1], 2 * y[-1] - y[-2]))
         self._z = np.pad(z, pad_width=1, mode='constant', constant_values=(2 * z[0] - z[1], 2 * z[-1] - z[-2]))
 
-        # boundary = 'clamped'
-        self._f = np.pad(f, pad_width=1, mode='edge')
+        boundary = 'natural'
+        # self._f = np.pad(f, pad_width=1, mode='edge')
+
+        self._f = np.zeros(np.array(f.shape) + (2, 2, 2))
+        self._f[1:-1, 1:-1, 1:-1] = f  # place f in center, so that it is padded by unfilled values on all sides
+        if boundary == 'clamped':
+            # faces
+            self._f[(0, -1), 1:-1, 1:-1] = f[(0, -1), :, :]
+            self._f[1:-1, (0, -1), 1:-1] = f[:, (0, -1), :]
+            self._f[1:-1, 1:-1, (0, -1)] = f[:, :, (0, -1)]
+            # verticies
+            self._f[(0, 0, -1, -1), (0, -1, 0, -1), 1:-1] = f[(0, 0, -1, -1), (0, -1, 0, -1), :]
+            self._f[(0, 0, -1, -1), 1:-1, (0, -1, 0, -1)] = f[(0, 0, -1, -1), :, (0, -1, 0, -1)]
+            self._f[1:-1, (0, 0, -1, -1), (0, -1, 0, -1)] = f[:, (0, 0, -1, -1), (0, -1, 0, -1)]
+            # corners
+            self._f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)] = \
+                f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)]
+        elif boundary == 'natural':
+            # faces
+            self._f[(0, -1), 1:-1, 1:-1] = 2 * f[(0, -1), :, :] - f[(1, -2), :, :]
+            self._f[1:-1, (0, -1), 1:-1] = 2 * f[:, (0, -1), :] - f[:, (1, -2), :]
+            self._f[1:-1, 1:-1, (0, -1)] = 2 * f[:, :, (0, -1)] - f[:, :, (1, -2)]
+            # verticies
+            self._f[(0, 0, -1, -1), (0, -1, 0, -1), 1:-1] = \
+                4 * f[(0, 0, -1, -1), (0, -1, 0, -1), :] - \
+                f[(1, 1, -2, -2), (0, -1, 0, -1), :] - \
+                f[(0, 0, -1, -1), (1, -2, 1, -2), :] - \
+                f[(1, 1, -2, -2), (1, -2, 1, -2), :]
+            self._f[(0, 0, -1, -1), 1:-1, (0, -1, 0, -1)] = \
+                4 * f[(0, 0, -1, -1), :, (0, -1, 0, -1)] - \
+                f[(1, 1, -2, -2), :, (0, -1, 0, -1)] - \
+                f[(0, 0, -1, -1), :, (1, -2, 1, -2)] - \
+                f[(1, 1, -2, -2), :, (1, -2, 1, -2)]
+            self._f[1:-1, (0, 0, -1, -1), (0, -1, 0, -1)] = \
+                4 * f[:, (0, 0, -1, -1), (0, -1, 0, -1)] - \
+                f[:, (1, 1, -2, -2), (0, -1, 0, -1)] - \
+                f[:, (0, 0, -1, -1), (1, -2, 1, -2)] - \
+                f[:, (1, 1, -2, -2), (1, -2, 1, -2)]
+            # corners
+            self._f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)] = \
+                8 * f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)] - \
+                f[(1, 1, 1, 1, -2, -2, -2, -2), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)] - \
+                f[(0, 0, 0, 0, -1, -1, -1, -1), (1, 1, -2, -2, 1, 1, -2, -2), (0, -1, 0, -1, 0, -1, 0, -1)] - \
+                f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (1, -2, 1, -2, 1, -2, 1, -2)] - \
+                f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2, 1, 1, -2, -2), (0, -1, 0, -1, 0, -1, 0, -1)] - \
+                f[(0, 0, 0, 0, -1, -1, -1, -1), (1, 1, -2, -2, 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)] - \
+                f[(1, 1, 1, 1, -2, -2, -2, -2), (0, 0, -1, -1, 0, 0, -1, -1), (1, -2, 1, -2, 1, -2, 1, -2)] - \
+                f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2, 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)]
 
     def _check_bounds(self, x_new, y_new, z_new):
         """Check the inputs for being in the bounds of the interpolated data.
@@ -108,15 +154,49 @@ class Spline3D(object):
 
 
 if __name__ == '__main__':
-    x, y, z = np.linspace(0, 2, 3), np.linspace(0, 2, 3), np.linspace(0, 2, 3)
-    f = np.linspace(0, 3 ** 3 - 1, 3 ** 3).reshape(3, 3, 3)
+    # x, y, z = np.linspace(0, 2, 3), np.linspace(0, 2, 3), np.linspace(0, 2, 3)
+    # f = np.linspace(0, 3 ** 3 - 1, 3 ** 3).reshape(3, 3, 3)
+    #
+    # print(x, y, z)
+    # print(f)
+    #
+    # s = Spline3D(x, y, z, f)
+    #
+    # print(f[0, 0, 0], s.ev_energy(0, 0, 0))
+    # print(f[0, 0, 1], s.ev_energy(0, 0, 1))
+    #
+    # print(s.ev_energy(0, 0, 0.5))
 
+    # x, y, z = np.linspace(1, 2, 3), np.linspace(1, 3, 3), np.linspace(1, 4, 4)
+    # print(x,y,z)
+    # f = x[:, np.newaxis, np.newaxis] * y[np.newaxis, :, np.newaxis]**2 * z[np.newaxis, np.newaxis, :]**3
+    # print(f.shape)
+    # print(type(f))
+    # print(f)
+    #
+    # s = Spline3D(x, y, z, f)
+    # for xi in range(len(x)):
+    #     for yi in range(len(y)):
+    #         for zi in range(len(z)):
+    #
+    #             print(xi, yi, zi, f[xi, yi, zi], s.ev_energy([x[xi]], [y[yi]], [z[zi]]))
+    #
+    #
+    # print((0*z+x[1])*(0*z+y[1])**2 * z**3)
+    # print(s.ev_energy(0*z+x[1], 0*z+y[1], z))
+
+    x, y, z = np.linspace(1, 4, 4), np.linspace(1, 5, 5), np.linspace(1, 6, 6)
     print(x, y, z)
-    print(f)
+    f = x[:, np.newaxis, np.newaxis] + y[np.newaxis, :, np.newaxis] ** 2 + z[np.newaxis, np.newaxis, :] ** 2
 
     s = Spline3D(x, y, z, f)
 
-    print(f[0, 0, 0], s.ev_energy(0, 0, 0))
-    print(f[0, 0, 1], s.ev_energy(0, 0, 1))
+    for xi in range(len(x)):
+        for yi in range(len(y)):
+            for zi in range(len(z)):
+                dx = 1
+                dy = 2 * y[yi]
+                dz = 2 * z[zi]
+                print(xi, yi, zi, f[xi, yi, zi], dx, dy, dz, *s.ev_all(x[xi], y[yi], z[zi]))
 
-    print(s.ev_energy(0, 0, 0.5))
+    print('asgas')

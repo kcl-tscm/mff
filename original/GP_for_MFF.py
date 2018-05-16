@@ -308,12 +308,15 @@ class GaussianProcess:
         print('Saved Gaussian process with name:', filename)
 
     def load(self, filename):
-        self.kernel_.kernel_name, \
+        # TODO: Proper initialisation of the kernel based on its name
+        self.kernel.kernel_name, \
         self.noise, \
         self.optimizer, \
         self.n_restarts_optimizer, \
         self.alpha_, \
         self.K, \
         self.X_train_ = np.load(filename)
+
+        self.kernel_ = self.kernel
 
         print('Loaded GP from file')

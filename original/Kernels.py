@@ -15,7 +15,7 @@ class TwoBody:
         self.theta = theta
         self.bounds = bounds
 
-        from kernels_source import compile_twobody
+        from original.kernels_source import compile_twobody
         self.k2_ee, self.k2_ef, self.k2_ff = compile_twobody()
 
     def calc(self, X1, X2):

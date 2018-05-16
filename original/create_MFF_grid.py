@@ -138,17 +138,16 @@ class Grid(object, metaclass=ABCMeta):
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
-        # Valid triangles according to triangle inequality (!?! <= is not sufficient)
         inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Element on the x axis
-        r1_x = d_ki[inds].ravel()
+        r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r2_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ki[inds])
-        r2_y = np.sqrt(np.abs(d_ij[inds] ** 2 - r2_x ** 2))     # using abs to avoid numerical error
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))  # using abs to avoid numerical error
 
-        return inds, r1_x, r2_x, r2_y
+        return inds, r_ij_x, r_ki_x, r_ki_y
 
 
 class SingleSpecies(Grid):
@@ -180,13 +179,13 @@ class SingleSpecies(Grid):
     def build_3_grid(self, dists):
         """Function that builds and predicts energies on a cube of values"""
 
-        inds, r1_x, r2_x, r2_y = self.generate_triplets(dists)
+        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists)
 
-        confs = np.zeros((np.sum(inds), 2, 5))
+        confs = np.zeros((len(r_ij_x), 2, 5))
 
-        confs[:, 0, 0] = r1_x  # Element on the x axis
-        confs[:, 1, 0] = r2_x  # Reshape into confs shape: this is x2
-        confs[:, 1, 1] = r2_y  # Reshape into confs shape: this is y2
+        confs[:, 0, 0] = r_ij_x  # Element on the x axis
+        confs[:, 1, 0] = r_ki_x  # Reshape into confs shape: this is x2
+        confs[:, 1, 1] = r_ki_y  # Reshape into confs shape: this is y2
 
         # Permutations of elements
 
@@ -195,7 +194,7 @@ class SingleSpecies(Grid):
         confs[:, 1, 4] = self.element1  # Element on the xy plane is always element 3
 
         self.grid_1_1_1 = np.zeros((self.num, self.num, self.num))
-        self.grid_1_1_1[inds] = self.gp.predict_energy(confs).ravel()
+        self.grid_1_1_1[inds] = self.gp.predict_energy(confs).flatten()
 
 
 class TwoSpecies(Grid):

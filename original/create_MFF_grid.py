@@ -139,6 +139,7 @@ class Grid(object, metaclass=ABCMeta):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
 
         # Element on the x axis
         r_ij_x = d_ij[inds]
@@ -151,18 +152,20 @@ class Grid(object, metaclass=ABCMeta):
 
 
 class SingleSpecies(Grid):
-    def __init__(self, gp, start, stop, num, element1):
+    def __init__(self, gp, start, stop, num, element1, build2donly=True):
         super().__init__(gp, start, stop, num)
         self.element1 = element1
 
         self.grid_1_1 = None
         self.grid_1_1_1 = None
+        self.build2donly = build2donly
 
     def build_grids(self):
         dists = np.linspace(self.start, self.stop, self.num)
 
         self.build_2_grid(dists)
-        self.build_3_grid(dists)
+        if not self.build2donly:
+            self.build_3_grid(dists)
 
         return dists, self.element1, self.element1, self.grid_1_1, self.grid_1_1_1
 
@@ -195,6 +198,15 @@ class SingleSpecies(Grid):
 
         self.grid_1_1_1 = np.zeros((self.num, self.num, self.num))
         self.grid_1_1_1[inds] = self.gp.predict_energy(confs).flatten()
+
+        for ind_i in range(self.num):
+            for ind_j in range(ind_i + 1):
+                for ind_k in range(ind_j + 1):
+                    self.grid_1_1_1[ind_i, ind_k, ind_j] = self.grid_1_1_1[ind_i, ind_j, ind_k]
+                    self.grid_1_1_1[ind_j, ind_i, ind_k] = self.grid_1_1_1[ind_i, ind_j, ind_k]
+                    self.grid_1_1_1[ind_j, ind_k, ind_i] = self.grid_1_1_1[ind_i, ind_j, ind_k]
+                    self.grid_1_1_1[ind_k, ind_i, ind_j] = self.grid_1_1_1[ind_i, ind_j, ind_k]
+                    self.grid_1_1_1[ind_k, ind_j, ind_i] = self.grid_1_1_1[ind_i, ind_j, ind_k]
 
 
 class TwoSpecies(Grid):

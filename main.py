@@ -7,7 +7,7 @@ from ase.io import read
 from m_ff.configurations import ConfsTwoBodySingleForces
 from m_ff.sampling import SamplingLinspaceSingle
 from m_ff.gp import GaussianProcess
-from m_ff import Kernels
+from m_ff import kernels
 from m_ff.calculators import Calculator
 
 if __name__ == '__main__':
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # GP
     # ------------------------------
 
-    kernel = Kernels.TwoBodySingleSpecies()
+    kernel = kernels.TwoBodySingleSpeciesKernel()
 
     # gp = GaussianProcess(kernel=kernel, theta=..., noise=...)
     gp = GaussianProcess()

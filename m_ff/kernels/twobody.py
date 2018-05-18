@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
-from m_ff.Kernels.base import Kernel
+from m_ff.kernels.base import Kernel
 
 import theano.tensor as T
 from theano import function, scan
@@ -83,7 +83,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         return None, None, None
 
 
-class TwoBodySingleSpecies(BaseTwoBody):
+class TwoBodySingleSpeciesKernel(BaseTwoBody):
     """Two body kernel.
 
     Parameters
@@ -226,7 +226,7 @@ class TwoBodySingleSpecies(BaseTwoBody):
         return k2_ee, k2_ef, k2_ff
 
 
-class TwoBody(BaseTwoBody):
+class TwoBodyKernel(BaseTwoBody):
     """Two body kernel.
 
     Parameters

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
-from m_ff.Kernels.base import Kernel
+from m_ff.kernels.base import Kernel
 
 import theano.tensor as T
 from theano import function, scan
@@ -95,7 +95,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         return None, None, None
 
 
-class ThreeBodySingleSpecies(BaseThreeBody):
+class ThreeBodySingleSpeciesKernel(BaseThreeBody):
     """Three body kernel.
 
     Parameters
@@ -273,7 +273,7 @@ class ThreeBodySingleSpecies(BaseThreeBody):
         return k3_ee, k3_ef, k3_ff
 
 
-class ThreeBody(BaseThreeBody):
+class ThreeBodyKernel(BaseThreeBody):
     """Three body kernel.
 
     Parameters

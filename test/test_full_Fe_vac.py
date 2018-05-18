@@ -146,7 +146,7 @@ if False:
 if True:
 
     ker = Kernels.TwoBodySingleSpecies(theta=[sigma/ 2.0, r_cut / 10.0, r_cut])
-    # ker = Kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
+    # ker = kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
 
     ntrs = [10,20, 40, 100, 140, 200]

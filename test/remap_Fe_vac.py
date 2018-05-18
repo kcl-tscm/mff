@@ -4,16 +4,15 @@ from original import GP_for_MFF
 from original import Kernels
 
 if __name__ == '__main__':
-
     # Parameters
     grid_start = 1.5
     r_cut = 4.45
     nbodies = 2
     grid_spacing = 0.01
     ntr = 2
-    sigma = 1.0
+    sigma = 0.6
     processors = 1
-    noise = 0.00001
+    noise = 0.0001
     directory = 'data/Fe_vac'
     elementslist = [26]
 
@@ -21,7 +20,7 @@ if __name__ == '__main__':
     if nbodies == 3:
         ker = Kernels.ThreeBody(theta=[sigma, r_cut / 10.0, r_cut])
     elif nbodies == 2:
-        ker = Kernels.TwoBody(theta=[sigma, r_cut / 10.0, r_cut])
+        ker = Kernels.TwoBody(theta=[sigma / 2.0, r_cut / 10.0, r_cut])
     else:
         raise NotImplementedError("Kernel order not understood, use 2 for two-body and 3 for three-body")
 

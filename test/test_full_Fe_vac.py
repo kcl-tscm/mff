@@ -16,9 +16,11 @@ logging.basicConfig(level=logging.INFO)
 # Parameters
 directory = 'data/Fe_vac/'
 r_cut = 4.45
-sigma = 0.4
+sigma = 0.6
 noise = 0.0001
 ntest = 20
+
+combine_2b_3b = False
 # ----------------------------------------
 # Construct a configuration database
 # ----------------------------------------
@@ -56,8 +58,9 @@ if False:
 
 if False:
     # Parameters
-    ntr = 5
-    ntest = 50
+    # ntr = 100
+    ntr = 10
+    ntest = 10
 
     # Get configurations and forces from file
     confs = np.load(str(directory + 'confs_cut={:.2f}.npy'.format(r_cut)))
@@ -74,7 +77,7 @@ if False:
     tr_confs, tr_forces = confs[:ntr], forces[:ntr]
     tst_confs, tst_forces = confs[-ntest - 1:-1], forces[-ntest - 1:-1]
 
-    two_body_test_forces = np.zeros((ntr, 3))
+    two_body_train_forces = np.zeros((ntr, 3))
 
     if combine_2b_3b:
         # First train with a 2 body
@@ -83,15 +86,22 @@ if False:
         print('Training 2B GP')
         gp_2.fit(tr_confs, tr_forces)
 
+        gp_2_name = 'gp_ker=2_ntr={}_sig={:.2f}_cut={:.2f}'.format(ntr, sigma, r_cut)
+        gp_2.save(directory + gp_2_name)
+
         # Calculate the predictions of the 2body on the training set
         for i in np.arange(ntr):
-            two_body_test_forces[i] = gp_2.predict(np.reshape(tr_confs[i], (1, len(tr_confs[i]), 5)))
+            two_body_train_forces[i] = gp_2.predict(np.reshape(tr_confs[i], (1, len(tr_confs[i]), 5)))
+
 
     # Then train with a 2 body on the difference between tr_force and tr_force obtained with the two body
     ker_3 = Kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
     gp_3 = GP_for_MFF.GaussianProcess(kernel=ker_3, noise=noise, optimizer=None)
     print('Training 3B GP')
-    gp_3.fit(tr_confs, tr_forces - two_body_test_forces)
+    gp_3.fit(tr_confs, tr_forces - two_body_train_forces)
+
+    gp_3_name = 'gp_ker=3_ntr={}_sig={:.2f}_cut={:.2f}'.format(ntr, sigma, r_cut)
+    gp_3.save(directory + gp_3_name)
 
     # Test the GP performance
     print('Testing GP')
@@ -119,16 +129,27 @@ if False:
     print('MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF, SMAEF))
     print('Relative MAEF on forces: {:.4f} +- {:.4f}'.format(MAEF / MF, SMAEF / MF))
 
+
+
+# ----------------------------------------
+# Testing
+# ----------------------------------------
+
+
+
+
+
 # ----------------------------------------
 # Learning curve
 # ----------------------------------------
 
 if True:
 
-    ker = Kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
+    ker = Kernels.TwoBodySingleSpecies(theta=[sigma/ 2.0, r_cut / 10.0, r_cut])
+    # ker = Kernels.ThreeBodySingleSpecies(theta=[sigma, r_cut / 10.0, r_cut])
     gp = GP_for_MFF.GaussianProcess(kernel=ker, noise=noise, optimizer=None)
 
-    ntrs = [10]
+    ntrs = [10,20, 40, 100, 140, 200]
 
     errors = []
     for ntr in ntrs:
@@ -169,7 +190,7 @@ if True:
         errors.append(MAEF / MF)
 
     plt.plot(ntrs, errors)
-    plt.xscale('log')
+    # plt.xscale('log')
     plt.show()
 
 # ----------------------------------------

@@ -1,3 +1,10 @@
+
+
+
+original/cython_funcs/*.c
+original/cython_funcs/*.html
+m_ff/interpolation/tricube_fortran/*.c
+
 # numpy saved arrays
 *.npy
 

@@ -25,6 +25,8 @@ import numpy as np
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
 
+from m_ff import kernels
+
 
 class GaussianProcess(object):
     """ Gaussian process class
@@ -317,7 +319,7 @@ class GaussianProcess(object):
             * Need to decide the way to store a GP
         """
 
-        output = [self.kernel_,
+        output = [self.kernel_.kernel_name,
                   self.noise,
                   self.optimizer,
                   self.n_restarts_optimizer,
@@ -338,6 +340,38 @@ class GaussianProcess(object):
             * Need to decide the way to store a GP
         """
 
-        self.kernel_, self.noise, self.optimizer, self.n_restarts_optimizer, self.alpha_, self.K, self.X_train_ = \
-            np.load(filename)
+        # TODO: Proper initialisation of the kernel based on its name
+
+        self.kernel.kernel_name, \
+        self.noise, \
+        self.optimizer, \
+        self.n_restarts_optimizer, \
+        self.alpha_, \
+        self.K, \
+        self.X_train_ = np.load(filename)
+
+        self.kernel_ = self.kernel
+
         print('Loaded GP from file')
+
+
+class TwoBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.TwoBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+
+class ThreeBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+
+class CombinedSingleSpeciesGP(GaussianProcess):
+    pass

@@ -109,3 +109,36 @@ if __name__ == '__main__':
 
     filename = 'test.json'
     model.save(filename)
+
+# Future structure of json file:
+# {
+#     "nbodies": 2,
+#     "elements": [11],
+#
+#     "configurations:": {
+#         "cutoff": 3.5,
+#         "sampling method": "linspace",
+#         "target number": 3000
+#     },
+#     "gaussianprocess": {
+#         "ntraining": 3,
+#         "cutoff radius": 3.5,
+#         "cutoff decay": 0.4,
+#         "lengthscale": 1.0,
+#         "noise level": 0.0001,
+#         "mean prior": 0.4,
+#         "filename": {
+#             "coefs":''
+#         }
+#     },
+#     "remappedpotential": {
+#         "r_min": 1.5,
+#         "r_max": 3.5,
+#         "r_len": 12,
+#         "filenames": {
+#             "1_1": "data/grid_1_1.npy",
+#             "1_1_1": "data/grid_1_1_1.npy"
+#         }
+#     }
+# }
+#

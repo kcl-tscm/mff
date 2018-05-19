@@ -68,6 +68,10 @@ class Spline3D(object):
                 f[(1, 1, 1, 1, -2, -2, -2, -2), (0, 0, -1, -1, 0, 0, -1, -1), (1, -2, 1, -2, 1, -2, 1, -2)] - \
                 f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2, 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)]
 
+    @property
+    def data(self):
+        return self._f[1:-1, 1:-1, 1:-1]
+
     def _check_bounds(self, x_new, y_new, z_new):
         """Check the inputs for being in the bounds of the interpolated data.
 
@@ -152,6 +156,14 @@ class Spline3D(object):
 
         return self.ev_all_fast(x, y, z)
 
+    def __call__(self, xi, yi, zi, nu=0):
+        if nu == 0:
+            return self.ev_energy(xi, yi, zi)
+        elif nu == 1:
+            return self.ev_forces(xi, yi, zi)
+        else:
+            raise NotImplementedError()
+
 
 if __name__ == '__main__':
     # x, y, z = np.linspace(0, 2, 3), np.linspace(0, 2, 3), np.linspace(0, 2, 3)
@@ -198,5 +210,3 @@ if __name__ == '__main__':
                 dy = 2 * y[yi]
                 dz = 2 * z[zi]
                 print(xi, yi, zi, f[xi, yi, zi], dx, dy, dz, *s.ev_all(x[xi], y[yi], z[zi]))
-
-    print('asgas')

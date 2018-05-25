@@ -187,7 +187,6 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
     def build_grid(self, start, num_2b, num_3b):
         """Function that builds and predicts energies on a cube of values"""
         dists_2b = np.linspace(start, self.r_cut, num_2b)
-        dists_3b = np.linspace(start, self.r_cut, num_3b)
 
         confs = np.zeros((num_2b, 1, 5))
         confs[:, 0, 0] = dists_2b
@@ -197,7 +196,7 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         grid_2b = interpolation.Spline1D(dists_2b, grid_data)
 
         # Mapping 3 body part
-
+        dists_3b = np.linspace(start, self.r_cut, num_3b)
         inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists_3b)
 
         confs = np.zeros((len(r_ij_x), 2, 5))
@@ -211,7 +210,7 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
-        grid_3b[inds] = self.predict_energy(confs).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
@@ -371,7 +370,7 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
         return inds, r_ij_x, r_ki_x, r_ki_y
 
 
-class CombinedTwoSpeciesModel(SingleSpeciesModel):
+class CombinedTwoSpeciesModel(TwoSpeciesModel):
     pass
 
 # class Parameters(object):

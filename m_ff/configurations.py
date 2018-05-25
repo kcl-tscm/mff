@@ -108,7 +108,7 @@ class Configurations(metaclass=ABCMeta):
     def __init__(self, confs=None):
         self.confs = confs if confs else []
 
-    def save(self, filename):
+    def save(self, *args):
         pass
 
 

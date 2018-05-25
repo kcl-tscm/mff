@@ -95,7 +95,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         return None, None, None
 
 
-class ThreeBodyKernel(BaseThreeBody):
+class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
     """Three body kernel.
 
     Parameters

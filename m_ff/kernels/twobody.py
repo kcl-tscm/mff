@@ -226,7 +226,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         return k2_ee, k2_ef, k2_ff
 
 
-class TwoBodyKernel(BaseTwoBody):
+class TwoBodyTwoSpeciesKernel(BaseTwoBody):
     """Two body kernel.
 
     Parameters

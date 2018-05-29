@@ -26,7 +26,10 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
     # See if there are forces and energies, get them for the chosen atoms
 
     forces = atoms.arrays.get(forces_label) if forces_label else atoms.get_forces()
-    energy = atoms.arrays.get(energy_label) if energy_label else atoms.get_potential_energy()
+    try:
+        energy = atoms.arrays.get(energy_label) if energy_label else atoms.get_potential_energy()
+    except:
+        energy = None
 
     if forces is None and energy is None:
         raise MissingData('Cannot find energy or force values in the xyz file, shutting down')

@@ -25,9 +25,8 @@ import numpy as np
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
 
-from m_ff import kernels
 from m_ff import interpolation
-
+from m_ff import kernels
 
 class GaussianProcess(object):
     """ Gaussian process class
@@ -354,3 +353,86 @@ class GaussianProcess(object):
         self.kernel_ = self.kernel
 
         print('Loaded GP from file')
+
+
+class TwoBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.TwoBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+    def build_grid(self, dists, element1):
+        num = len(dists)
+        confs = np.zeros((num, 1, 5))
+
+        confs[:, 0, 0] = dists
+        confs[:, 0, 3], confs[:, 0, 4] = element1, element1
+
+        grid_2b = self.predict_energy(confs)
+
+        return interpolation.Spline1D(dists, grid_2b)
+
+
+class ThreeBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+    def build_grid(self, dists, element1):
+        """Function that builds and predicts energies on a cube of values"""
+
+        num = len(dists)
+
+        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists)
+
+        confs = np.zeros((len(r_ij_x), 2, 5))
+
+        confs[:, 0, 0] = r_ij_x  # Element on the x axis
+        confs[:, 1, 0] = r_ki_x  # Reshape into confs shape: this is x2
+        confs[:, 1, 1] = r_ki_y  # Reshape into confs shape: this is y2
+
+        # Permutations of elements
+
+        confs[:, :, 3] = element1  # Central element is always element 1
+        confs[:, 0, 4] = element1  # Element on the x axis is always element 2
+        confs[:, 1, 4] = element1  # Element on the xy plane is always element 3
+
+        grid_3b = np.zeros((num, num, num))
+        grid_3b[inds] = self.predict_energy(confs).flatten()
+
+        for ind_i in range(num):
+            for ind_j in range(ind_i + 1):
+                for ind_k in range(ind_j + 1):
+                    grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+
+        return interpolation.Spline3D(dists, dists, dists, grid_3b)
+
+    @staticmethod
+    def generate_triplets(dists):
+        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+
+        # Valid triangles according to triangle inequality
+        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+
+        # Utilizing permutation invariance
+        inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
+
+        # Element on the x axis
+        r_ij_x = d_ij[inds]
+
+        # Element on the xy plane
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+
+        # using abs to avoid numerical error near to 0
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
+
+        return inds, r_ij_x, r_ki_x, r_ki_y

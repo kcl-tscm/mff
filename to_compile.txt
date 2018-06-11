@@ -1,0 +1,3 @@
+# suggested compilation (for the moment)
+
+python setup.py build_ext --inplace

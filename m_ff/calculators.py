@@ -223,7 +223,7 @@ class ThreeBodySingleSpecies(MappedPotential):
                     _, _, dists_j = nl.get_neighbors(j)
 
                     indices.append([i, j, k])
-                    distances.append([dist_ij, dist_ik, np.sqrt(dists_j[jk_ind])])
+                    distances.append([dist_ij, np.sqrt(dists_j[jk_ind]), dist_ik])
 
         return np.array(indices), np.array(distances), positions
 

@@ -13,7 +13,10 @@ class MissingData(Exception):
 
 def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label=None):
     # See if there are forces and energies, get them for the chosen atoms
-
+    if (atoms.get_cell() == np.zeros((3,3))).all():
+        atoms.set_cell(100.0*np.identity(3))
+        logging.warning('No cell values found, setting to a 100 x 100 x 100 cube')
+    
     forces = atoms.arrays.get(forces_label) if forces_label else atoms.get_forces()
     energy = atoms.arrays.get(energy_label) if energy_label else atoms.get_potential_energy()
 

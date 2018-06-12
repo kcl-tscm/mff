@@ -260,7 +260,7 @@ class ThreeBodySingleSpecies(MappedPotential):
     #             positions[(j, k)], positions[(k, j)] = \
     #                 arr[j][1][jk_ind[0], :] / dist_jk, -arr[j][1][jk_ind[0], :] / dist_jk
     #
-    #             distances.append([dists[j_ind], dists[k_ind], dist_jk])
+    #             distances.append([dists[j_ind], dist_jk, dists[k_ind]])
     #
     #     return np.array(indices), np.array(distances), positions
 

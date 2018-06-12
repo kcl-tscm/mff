@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class GaussianProcess(object):
     """ Gaussian process class
     Class of GP regression of QM energies and forces
-
+    
     Args:
         kernel (obj): A kernel object (typically a two or three body)
         noise (foat): The regularising noise level (typically named \sigma_n^2)

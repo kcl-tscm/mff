@@ -1,28 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Remapped potential
-==================
-
-Introduction
-------------
-
-...
-
-Theory
-------
-
-...
-
-Running the Calculator
-----------------------
-
-...
-
-Example
--------
-
-...
-"""
-
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from itertools import combinations, islice

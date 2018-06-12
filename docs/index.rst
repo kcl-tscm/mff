@@ -42,7 +42,6 @@ We need to update the code on this since we are now working on r1 r2 r12 instead
    install
    confs
    gp
-   grid
    calculators
    tutorials
 

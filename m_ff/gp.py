@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class GaussianProcess(object):
     """ Gaussian process class
     Class of GP regression of QM energies and forces
-    
+
     Args:
         kernel (obj): A kernel object (typically a two or three body)
         noise (foat): The regularising noise level (typically named \sigma_n^2)
@@ -78,14 +78,13 @@ class GaussianProcess(object):
 
         Args:
             x (np.ndarray): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
+            return_std (bool): If True, the standard-deviation of the predictive distribution
+                of the target configurations is returned along with the mean.
 
         Returns:
             y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target configurations.
+                Only returned when return_std is True.
         """
 
         # Predict based on GP posterior

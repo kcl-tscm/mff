@@ -40,9 +40,9 @@ We need to update the code on this since we are now working on r1 r2 r12 instead
    :caption: Contents:
 
    install
+   models
    confs
    gp
-   grid
    calculators
    tutorials
 

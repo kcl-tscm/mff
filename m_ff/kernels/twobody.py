@@ -18,7 +18,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         self.theta = theta
         self.bounds = bounds
 
-        self.k2_ee, self.k2_ef, self.k2_ff = self.compile_theano()
+        self.k2_ee, self.k2_ef, self.k2_fe, self.k2_ff = self.compile_theano()
 
     def calc(self, X1, X2):
 
@@ -67,6 +67,16 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 K_trans[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
+    
+    def calc_fe(self, X1, X2):
+
+        K_trans_fe = np.zeros((X1.shape[0] * 3, X2.shape[0]))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+                K_trans_fe[3 * i:3 * i + 3, j] = self.k2_fe(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return K_trans_fe
 
     def calc_diag_e(self, X):
 
@@ -80,7 +90,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     def compile_theano():
-        return None, None, None
+        return None, None, None, None
 
 
 class TwoBodySingleSpeciesKernel(BaseTwoBody):
@@ -153,9 +163,14 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
                             allow_input_downcast=False, on_unused_input='warn')
 
-        # energy force kernel
+        # energy force kernel - Used to predict energies from forces
         k_ef = T.grad(k, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+                            allow_input_downcast=False, on_unused_input='warn')
+        
+        # force energy kernel- Used to predict forces from energies
+        k_fe = T.grad(k, r1)
+        k_fe_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
                             allow_input_downcast=False, on_unused_input='warn')
 
         # force force kernel
@@ -204,6 +219,24 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
+        def k2_fe(conf1, conf2, sig, theta, rc):
+            """
+            Two body kernel for force-energy correlation
+
+            Args:
+                conf1: first configuration.
+                conf2: second configuration.
+                sig: lengthscale hyperparameter.
+                theta: cutoff smoothness hyperparameter.
+                rc: cutoff distance hyperparameter.
+
+            Returns:
+                kernel (vector):
+            """
+
+            return k_fe_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
+        
         def k2_ff(conf1, conf2, sig, theta, rc):
             """
             Two body kernel for force-force correlation
@@ -223,7 +256,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
 
         logger.info("Ended compilation of theano two body single species kernels")
 
-        return k2_ee, k2_ef, k2_ff
+        return k2_ee, k2_ef, k2_fe, k2_ff
 
 
 class TwoBodyTwoSpeciesKernel(BaseTwoBody):
@@ -321,6 +354,11 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
                             allow_input_downcast=False, on_unused_input='ignore')
 
+        # force energy kernel
+        k_fe = T.grad(k, r1)
+        k_fe_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+                            allow_input_downcast=False, on_unused_input='ignore')
+        
         # force force kernel
         k_ff = T.grad(k, r1)
         k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
@@ -367,6 +405,23 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
+        def k2_fe(conf1, conf2, sig, theta, rc):
+            """
+            Two body kernel for force-energy correlation
+
+            Args:
+                conf1: first configuration.
+                conf2: second configuration.
+                sig: lengthscale hyperparameter.
+                theta: cutoff smoothness hyperparameter.
+                rc: cutoff distance hyperparameter.
+
+            Returns:
+                kernel (vector):
+            """
+
+            return k_fe_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
         def k2_ff(conf1, conf2, sig, theta, rc):
             """
             Two body kernel for force-force correlation
@@ -383,4 +438,4 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
 
         logger.info("Ended compilation of theano two body kernels")
 
-        return k2_ee, k2_ef, k2_ff
+        return k2_ee, k2_ef, k2_fe, k2_ff

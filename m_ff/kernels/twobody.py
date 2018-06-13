@@ -30,7 +30,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     self.k2_ff(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
-
+        
     def calc_gram(self, X, eval_gradient=False):
 
         diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
@@ -48,7 +48,61 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
             gram = diag + off_diag + off_diag.T
             return gram
+        
+    def calc_gram_e(self, X, eval_gradient=False): # Untested
 
+        diag = np.zeros((X.shape[0], X.shape[0]))
+        off_diag = np.zeros((X.shape[0], X.shape[0]))
+
+        if eval_gradient:
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+        else:
+            for i in np.arange(X.shape[0]):
+                diag[i,i] = \
+                    self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+                for j in np.arange(i):
+                    off_diag[i,j] = \
+                        self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+
+            gram = diag + off_diag + off_diag.T
+            return gram
+        
+    def calc_gram_ef(self, X, eval_gradient=False):
+
+        diag = np.zeros((X.shape[0], X.shape[0] * 3))
+        off_diag = np.zeros((X.shape[0], X.shape[0] * 3))
+
+        if eval_gradient:
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+        else:
+            for i in np.arange(X.shape[0]):
+                diag[i, 3 * i:3 * i + 3] = \
+                    self.k2_ef(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+                for j in np.arange(i):
+                    off_diag[i, 3 * j:3 * j + 3] = \
+                        self.k2_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+
+            gram = diag + off_diag + off_diag.T
+            return gram
+        
+    def calc_gram_fe(self, X, eval_gradient=False):
+
+        diag = np.zeros((X.shape[0] * 3, X.shape[0]))
+        off_diag = np.zeros((X.shape[0] * 3, X.shape[0]))
+
+        if eval_gradient:
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+        else:
+            for i in np.arange(X.shape[0]):
+                diag[3 * i:3 * i + 3, i] = \
+                    self.k2_fe(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+                for j in np.arange(i):
+                    off_diag[3 * i:3 * i + 3, j] = \
+                        self.k2_fe(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+
+            gram = diag + off_diag + off_diag.T
+            return gram
+        
     def calc_diag(self, X):
 
         diag = np.zeros((X.shape[0] * 3))
@@ -86,24 +140,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             diag[i] = self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag
-
-    def calc_gram_e(self, X, eval_gradient=False):
-
-        diag = np.zeros((X.shape[0], X.shape[0]))
-        off_diag = np.zeros((X.shape[0], X.shape[0]))
-
-        if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
-        else:
-            for i in np.arange(X.shape[0]):
-                diag[i,i] = \
-                    self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
-                for j in np.arange(i):
-                    off_diag[i,j] = \
-                        self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
-
-            gram = diag + off_diag + off_diag.T
-            return gram
         
     @staticmethod
     @abstractmethod

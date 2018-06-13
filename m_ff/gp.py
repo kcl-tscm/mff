@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
+"""Gaussian Process
+================
+
+Simple Gaussian process regression module suited to learn energies and forces
+
+Example:
+
+    $  gp = GaussianProcess(kenrel, noise)
+    $  gp.fit(train_configurations, train_forces)
+    $  gp.predict(test_configurations)
+
+Todo:
+    * For module TODOs
+    * You have to also use ``sphinx.ext.todo`` extension
+
+.. _Google Python Style Guide:
+   http://google.github.io/styleguide/pyguide.html
+
+"""
+
 import warnings
 
 import numpy as np
 from scipy.linalg import cholesky, cho_solve, solve_triangular
-# from scipy.optimize import fmin_l_bfgs_b
+from scipy.optimize import fmin_l_bfgs_b
 
-import logging
-
-logger = logging.getLogger(__name__)
-
+from m_ff import interpolation
+from m_ff import kernels
 
 class GaussianProcess(object):
     """ Gaussian process class
@@ -20,56 +38,97 @@ class GaussianProcess(object):
         optimizer (str): The kind of optimization of marginal likelihood (not implemented yet)
 
     Attributes:
-        x_train (list): The configurations used for training
-        alpha (array): The coefficients obtained during training
-        L (array): The lower triangular matrix from cholesky decomposition of gram matrix
+        X_train_ (list): The configurations used for training
+        alpha_ (array): The coefficients obtained during training
+        L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
     """
 
-    def __init__(self, kernel=None, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+    # optimizers "fmin_l_bfgs_b"
+
+    def __init__(self, kernel=None, noise=1e-10,
+                 optimizer=None, n_restarts_optimizer=0):
 
         self.kernel = kernel
         self.noise = noise
-
         self.optimizer = optimizer
         self.n_restarts_optimizer = n_restarts_optimizer
+        self.force_fit = False
+        self.energy_fit = False
+        self.energy_and_force_fit = False
 
-        self.x_train = None
-        self.y_train = None
-
-        self.log_marginal_likelihood_value = None
-
-        self.L = None
-        self.alpha = None
-
-    def fit(self, x, y):
+    def fit(self, X, y):
         """Fit a Gaussian process regression model.
 
         Args:
-            x (list): training configurations
+            X (list): training configurations
             y (np.ndarray): training forces
 
         """
+        self.kernel_ = self.kernel
 
-        self.x_train = x
-        self.y_train = np.reshape(y, (y.shape[0] * 3, 1))
+        self.X_train_ = X
+        self.y_train_ = np.reshape(y, (y.shape[0] * 3, 1))
 
-        self.log_marginal_likelihood_value = self.log_marginal_likelihood(self.kernel.theta)
+        if self.optimizer is not None:
+            # Choose hyperparameters based on maximizing the log-marginal
+            # likelihood (potentially starting from several initial values)
+            def obj_func(theta, eval_gradient=True):
+                if eval_gradient:
+                    lml, grad = self.log_marginal_likelihood(
+                        theta, eval_gradient=True)
+                    return -lml, -grad
+                else:
+                    return -self.log_marginal_likelihood(theta)
 
-        # Precompute quantities required for predictions which are independent of actual query points
-        K = self.kernel.calc_gram(self.x_train)
+            # First optimize starting from theta specified in kernel
+            optima = [(self._constrained_optimization(obj_func,
+                                                      self.kernel_.theta,
+                                                      self.kernel_.bounds))]
+
+            # Additional runs are performed from log-uniform chosen initial
+            # theta
+            if self.n_restarts_optimizer > 0:
+                if not np.isfinite(self.kernel_.bounds).all():
+                    raise ValueError(
+                        "Multiple optimizer restarts (n_restarts_optimizer>0) "
+                        "requires that all bounds are finite.")
+                bounds = self.kernel_.bounds
+                for iteration in range(self.n_restarts_optimizer):
+                    theta_initial = \
+                        self._rng.uniform(bounds[:, 0], bounds[:, 1])
+                    optima.append(
+                        self._constrained_optimization(obj_func, theta_initial,
+                                                       bounds))
+            # Select result from run with minimal (negative) log-marginal
+            # likelihood
+            lml_values = list(map(itemgetter(1), optima))
+            self.kernel_.theta = optima[np.argmin(lml_values)][0]
+            self.log_marginal_likelihood_value_ = -np.min(lml_values)
+        else:
+            self.log_marginal_likelihood_value_ = \
+                self.log_marginal_likelihood(self.kernel_.theta)
+
+        # Precompute quantities required for predictions which are independent
+        # of actual query points
+        K = self.kernel_.calc_gram(self.X_train_)
         K[np.diag_indices_from(K)] += self.noise
 
         try:
-            self.L = cholesky(K, lower=True)  # Line 2
+            self.L_ = cholesky(K, lower=True)  # Line 2
         except np.linalg.LinAlgError as exc:
-            exc.args = "The kernel, {}, is not returning a positive definite matrix. Try gradually " + \
-                       "increasing the 'noise' parameter of your GaussianProcessRegressor estimator. {}". \
-                           format(self.kernel, exc.args)
+            exc.args = ("The kernel, %s, is not returning a "
+                        "positive definite matrix. Try gradually "
+                        "increasing the 'noise' parameter of your "
+                        "GaussianProcessRegressor estimator."
+                        % self.kernel_,) + exc.args
             raise
 
-        self.alpha = cho_solve((self.L, True), self.y_train)  # Line 3
+        self.alpha_ = cho_solve((self.L_, True), self.y_train_)  # Line 3
+        self.K = K
+        self.force_fit = True
+        return self
 
-    def predict(self, x, return_std=False):
+    def predict(self, X, return_std=False):
         """Predict using the Gaussian process regression model
 
         We can also predict based on an unfitted model by using the GP prior.
@@ -77,79 +136,270 @@ class GaussianProcess(object):
         standard deviation (return_std=True)
 
         Args:
-            x (np.ndarray): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the predictive distribution
-                of the target configurations is returned along with the mean.
+            X (np.ndarray): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
 
         Returns:
             y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target configurations.
-                Only returned when return_std is True.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
         """
 
-        # Predict based on GP posterior
-        K_trans = self.kernel.calc(x, self.x_train)
+        if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
+            kernel = self.kernel
+            y_mean = np.zeros(X.shape[0])
+            if return_std:
+                y_var = kernel.calc_diag(X)
+                return y_mean, np.sqrt(y_var)
+            else:
+                return y_mean
 
-        y_mean = K_trans.dot(self.alpha)  # Line 4 (y_mean = f_star)
+        else:  # Predict based on GP posterior
+            K_trans = self.kernel_.calc(X, self.X_train_)
 
-        if return_std:
+            y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
 
-            # compute inverse K_inv of K based on its Cholesky  decomposition L and its inverse L_inv
-            L_inv = solve_triangular(self.L.T, np.eye(self.L.shape[0]))
-            K_inv = L_inv.dot(L_inv.T)
+            if return_std:
+                # compute inverse K_inv of K based on its Cholesky
+                # decomposition L and its inverse L_inv
+                L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
+                K_inv = L_inv.dot(L_inv.T)
+                # Compute variance of predictive distribution
 
-            # Compute variance of predictive distribution
-            y_var = self.kernel.calc_diag(x)
-            fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
-            y_var -= fit
+                y_var = self.kernel_.calc_diag(X)
+                fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
+                y_var -= fit
 
-            # Check if any of the variances is negative because of numerical issues. If yes: set the variance to 0.
-            y_var_negative = y_var < 0
-            if np.any(y_var_negative):
-                warnings.warn("Predicted variances smaller than 0. Setting those variances to 0.")
-                y_var[y_var_negative] = 0.0
+                # Check if any of the variances is negative because of
+                # numerical issues. If yes: set the variance to 0.
+                y_var_negative = y_var < 0
+                if np.any(y_var_negative):
+                    warnings.warn("Predicted variances smaller than 0. "
+                                  "Setting those variances to 0.")
+                    y_var[y_var_negative] = 0.0
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.sqrt(y_var)
+            else:
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
-            return y_mean.reshape(-1, 3), np.sqrt(y_var)
+    def fit_force_and_energy(self, X, y_force, y_energy):
+        """Fit a Gaussian process regression model.
+
+        Args:
+            X (list): training configurations
+            y (np.ndarray): training forces and local energies
+
+        """
+        self.kernel_ = self.kernel
+
+        self.X_train_ = X
+        self.y_train_ = np.reshape(y_force, (y_force.shape[0] * 3, 1))
+        self.y_train_energy_ = np.reshape(y_energy, (y_energy.shape[0], 1))
+
+        if self.optimizer is not None: # TODO
+            # Choose hyperparameters based on maximizing the log-marginal
+            # likelihood (potentially starting from several initial values)
+            def obj_func(theta, eval_gradient=True):
+                if eval_gradient:
+                    lml, grad = self.log_marginal_likelihood(
+                        theta, eval_gradient=True)
+                    return -lml, -grad
+                else:
+                    return -self.log_marginal_likelihood(theta)
+
+            # First optimize starting from theta specified in kernel
+            optima = [(self._constrained_optimization(obj_func,
+                                                      self.kernel_.theta,
+                                                      self.kernel_.bounds))]
+
+            # Additional runs are performed from log-uniform chosen initial
+            # theta
+            if self.n_restarts_optimizer > 0:
+                if not np.isfinite(self.kernel_.bounds).all():
+                    raise ValueError(
+                        "Multiple optimizer restarts (n_restarts_optimizer>0) "
+                        "requires that all bounds are finite.")
+                bounds = self.kernel_.bounds
+                for iteration in range(self.n_restarts_optimizer):
+                    theta_initial = \
+                        self._rng.uniform(bounds[:, 0], bounds[:, 1])
+                    optima.append(
+                        self._constrained_optimization(obj_func, theta_initial,
+                                                       bounds))
+            # Select result from run with minimal (negative) log-marginal
+            # likelihood
+            lml_values = list(map(itemgetter(1), optima))
+            self.kernel_.theta = optima[np.argmin(lml_values)][0]
+            self.log_marginal_likelihood_value_ = -np.min(lml_values)
         else:
-            return y_mean.reshape(-1, 3)
+            self.log_marginal_likelihood_value_ = \
+                self.log_marginal_likelihood(self.kernel_.theta)
 
-    def predict_energy(self, x, return_std=False):
-        """Predict energies using the Gaussian process regression model
+        # Precompute quantities required for predictions which are independent
+        # of actual query points
+        K_ff = self.kernel_.calc_gram(self.X_train_)
+        K[np.diag_indices_from(K)] += self.noise
+        
+        K_ee = self.kernel_.calc_gram_e(self.X_train_)
+        K_ee[np.diag_indices_from(K_ee)] += self.noise
+        
+        K_ef = self.kernel_.calc_gram_ef(self.X_train_)
+        
+        K_fe = self.kernel_.calc_gram_fe(self.X_train_)
+        
+        K = np.zeros((y_force.shape[0] * 4, y_force.shape[0] * 4))
+        K[:y_force.shape[0],:y_force.shape[0]] = K_ee
+        K[:y_force.shape[0],y_force.shape[0]:] = K_ef
+        K[y_force.shape[0]:,:y_force.shape[0]] = K_fe
+        K[y_force.shape[0]:,y_force.shape[0]:] = K_ff
+
+        try:
+            self.L_ = cholesky(K, lower=True)  # Line 2
+        except np.linalg.LinAlgError as exc:
+            exc.args = ("The kernel, %s, is not returning a "
+                        "positive definite matrix. Try gradually "
+                        "increasing the 'noise' parameter of your "
+                        "GaussianProcessRegressor estimator."
+                        % self.kernel_,) + exc.args
+            raise
+            
+        y_energy_and_force = np.vstack((y_energy, y_force))
+        self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)  # Line 3
+        self.K = K
+        self.force_and_energy_fit = True
+        return self
+    
+    def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now 
+        """Fit a Gaussian process regression model.
+
+        Args:
+            X (list): training configurations
+            y (np.ndarray): training energies 
+            the energy of each configuration is E/N where E is the total 
+            snapshot energy and N the atoms in that snapshot
+
+        """
+        self.kernel_ = self.kernel
+
+        self.X_train_ = X
+        self.y_train_energy_ = np.reshape(y, (y.shape[0], 1))
+
+        if self.optimizer is not None:
+            # Choose hyperparameters based on maximizing the log-marginal
+            # likelihood (potentially starting from several initial values)
+            def obj_func(theta, eval_gradient=True):
+                if eval_gradient:
+                    lml, grad = self.log_marginal_likelihood(
+                        theta, eval_gradient=True)
+                    return -lml, -grad
+                else:
+                    return -self.log_marginal_likelihood(theta)
+
+            # First optimize starting from theta specified in kernel
+            optima = [(self._constrained_optimization(obj_func,
+                                                      self.kernel_.theta,
+                                                      self.kernel_.bounds))]
+
+            # Additional runs are performed from log-uniform chosen initial
+            # theta
+            if self.n_restarts_optimizer > 0:
+                if not np.isfinite(self.kernel_.bounds).all():
+                    raise ValueError(
+                        "Multiple optimizer restarts (n_restarts_optimizer>0) "
+                        "requires that all bounds are finite.")
+                bounds = self.kernel_.bounds
+                for iteration in range(self.n_restarts_optimizer):
+                    theta_initial = \
+                        self._rng.uniform(bounds[:, 0], bounds[:, 1])
+                    optima.append(
+                        self._constrained_optimization(obj_func, theta_initial,
+                                                       bounds))
+            # Select result from run with minimal (negative) log-marginal
+            # likelihood
+            lml_values = list(map(itemgetter(1), optima))
+            self.kernel_.theta = optima[np.argmin(lml_values)][0]
+            self.log_marginal_likelihood_value_ = -np.min(lml_values)
+        else:
+            self.log_marginal_likelihood_value_ = \
+                self.log_marginal_likelihood(self.kernel_.theta)
+
+        # Precompute quantities required for predictions which are independent
+        # of actual query points
+        K = self.kernel_.calc_gram_e(self.X_train_)
+        K[np.diag_indices_from(K)] += self.noise
+
+        try:
+            self.L_ = cholesky(K, lower=True)  # Line 2
+        except np.linalg.LinAlgError as exc:
+            exc.args = ("The kernel, %s, is not returning a "
+                        "positive definite matrix. Try gradually "
+                        "increasing the 'noise' parameter of your "
+                        "GaussianProcessRegressor estimator."
+                        % self.kernel_,) + exc.args
+            raise
+
+        self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)  # Line 3
+        self.energy_K = K
+        self.energy_fit = True
+        return self
+    
+    def predict_energy(self, X, return_std=False):
+        """Predict energies from forces only using the Gaussian process regression model
 
         This function evaluates the GP energies for a set of test configurations.
 
         Args:
-            x (np.ndarray): Target configurations where the GP is evaluated
+            X (np.ndarray): Target configurations where the GP is evaluated
 
         Returns:
             y_mean (np.ndarray): Predicted energies
             y_std (np.ndarray): Predicted error on the energies
         """
 
-        # Predict based on GP posterior
-        K_trans = self.kernel.calc_ef(x, self.x_train)
-        e_mean = K_trans.dot(self.alpha)  # Line 4 (y_mean = f_star)
+        if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
+            kernel = self.kernel
+            e_mean = np.zeros(X.shape[0])
+            if return_std:
+                y_var = kernel.calc_diag_e(X)
+                return e_mean, np.sqrt(e_var)
+            else:
+                return e_mean
 
-        if return_std:
-            # compute inverse K_inv of K based on its Cholesky decomposition L and its inverse L_inv
-            L_inv = solve_triangular(self.L.T, np.eye(self.L.shape[0]))
-            K_inv = L_inv.dot(L_inv.T)
+        else:  # Predict based on GP posterior
+            
+            if energy_and_force_fit:
+                # TODO
+                pass
+                
+            elif energy_fit:
+                K_energy = self.kernel_.calc_ee(X, self.X_train_)
+                e_mean = K_energy.dot(self.energy_alpha_)
+                
+            else:
+                K_trans = self.kernel_.calc_ef(X, self.X_train_)
+                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
 
-            # Compute variance of predictive distribution
-            e_var = self.kernel.calc_diag_e(x)
-            fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
-            e_var -= fit
+            if return_std: # Energy part not implemented here as I am not sure what to do (Claudio)
+                # compute inverse K_inv of K based on its Cholesky
+                # decomposition L and its inverse L_inv
+                L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
+                K_inv = L_inv.dot(L_inv.T)
+                # Compute variance of predictive distribution
+                e_var = self.kernel_.calc_diag_e(X)
+                fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
+                e_var -= fit
 
-            # Check if any of the variances is negative because of numerical issues. If yes: set the variance to 0.
-            e_var_negative = e_var < 0
-            if np.any(e_var_negative):
-                warnings.warn("Predicted variances smaller than 0. "
-                              "Setting those variances to 0.")
-                e_var[e_var_negative] = 0.0
-
-            return e_mean, np.sqrt(e_var)
-        else:
-            return e_mean
+                # Check if any of the variances is negative because of
+                # numerical issues. If yes: set the variance to 0.
+                e_var_negative = e_var < 0
+                if np.any(e_var_negative):
+                    warnings.warn("Predicted variances smaller than 0. "
+                                  "Setting those variances to 0.")
+                    e_var[e_var_negative] = 0.0
+                return e_mean, np.sqrt(e_var)
+            else:
+                return e_mean
 
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         """Returns log-marginal likelihood of theta for training data.
@@ -176,26 +426,26 @@ class GaussianProcess(object):
             if eval_gradient:
                 raise ValueError(
                     "Gradient can only be evaluated for theta!=None")
-            return self.log_marginal_likelihood_value
+            return self.log_marginal_likelihood_value_
 
         # kernel = self.kernel_.clone_with_theta(theta)
         kernel = self.kernel
         kernel.theta = theta
 
         if eval_gradient:
-            K, K_gradient = kernel.calc_gram(self.x_train, eval_gradient=True)
+            K, K_gradient = kernel.calc_gram(self.X_train_, eval_gradient=True)
         else:
-            K = kernel.calc_gram(self.x_train)
+            K = kernel.calc_gram(self.X_train_)
 
         K[np.diag_indices_from(K)] += self.noise
-
         try:
             L = cholesky(K, lower=True)  # Line 2
         except np.linalg.LinAlgError:
-            return (-np.inf, np.zeros_like(theta)) if eval_gradient else -np.inf
+            return (-np.inf, np.zeros_like(theta)) \
+                if eval_gradient else -np.inf
 
         # Support multi-dimensional output of self.y_train_
-        y_train = self.y_train
+        y_train = self.y_train_
         if y_train.ndim == 1:
             y_train = y_train[:, np.newaxis]
 
@@ -210,17 +460,29 @@ class GaussianProcess(object):
         if eval_gradient:  # compare Equation 5.9 from GPML
             tmp = np.einsum("ik,jk->ijk", alpha, alpha)  # k: output-dimension
             tmp -= cho_solve((L, True), np.eye(K.shape[0]))[:, :, np.newaxis]
-
             # Compute "0.5 * trace(tmp.dot(K_gradient))" without
             # constructing the full matrix tmp.dot(K_gradient) since only
             # its diagonal is required
-            log_likelihood_gradient_dims = 0.5 * np.einsum("ijl,ijk->kl", tmp, K_gradient)
+            log_likelihood_gradient_dims = \
+                0.5 * np.einsum("ijl,ijk->kl", tmp, K_gradient)
             log_likelihood_gradient = log_likelihood_gradient_dims.sum(-1)
 
         if eval_gradient:
             return log_likelihood, log_likelihood_gradient
         else:
             return log_likelihood
+
+    def _constrained_optimization(self, obj_func, initial_theta, bounds):
+        if self.optimizer == "fmin_l_bfgs_b":
+            theta_opt, func_min, convergence_dict = \
+                fmin_l_bfgs_b(obj_func, initial_theta, bounds=bounds)
+            if convergence_dict["warnflag"] != 0:
+                warnings.warn("fmin_l_bfgs_b terminated abnormally with the "
+                              " state: %s" % convergence_dict)
+        else:
+            raise ValueError("Unknown optimizer %s." % self.optimizer)
+
+        return theta_opt, func_min
 
     def save(self, filename):
         """Dump the current GP model for later use
@@ -232,16 +494,16 @@ class GaussianProcess(object):
             * Need to decide the way to store a GP
         """
 
-        output = [self.kernel.kernel_name,
+        output = [self.kernel_.kernel_name,
                   self.noise,
                   self.optimizer,
                   self.n_restarts_optimizer,
-                  self.alpha,
+                  self.alpha_,
                   self.K,
-                  self.x_train]
+                  self.X_train_]
 
         np.save(filename, output)
-        logger.info('Saved Gaussian process with name: {}'.format(filename))
+        print('Saved Gaussian process with name:', filename)
 
     def load(self, filename):
         """Load a saved GP model
@@ -259,10 +521,93 @@ class GaussianProcess(object):
         self.noise, \
         self.optimizer, \
         self.n_restarts_optimizer, \
-        self.alpha, \
+        self.alpha_, \
         self.K, \
-        self.x_train = np.load(filename)
+        self.X_train_ = np.load(filename)
 
-        self.kernel = self.kernel
+        self.kernel_ = self.kernel
 
-        logger.info('Loaded GP from file!')
+        print('Loaded GP from file')
+
+
+class TwoBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.TwoBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+    def build_grid(self, dists, element1):
+        num = len(dists)
+        confs = np.zeros((num, 1, 5))
+
+        confs[:, 0, 0] = dists
+        confs[:, 0, 3], confs[:, 0, 4] = element1, element1
+
+        grid_2b = self.predict_energy(confs)
+
+        return interpolation.Spline1D(dists, grid_2b)
+
+
+class ThreeBodySingleSpeciesGP(GaussianProcess):
+
+    def __init__(self, theta, noise=1e-10, optimizer=None, n_restarts_optimizer=0):
+        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=theta)
+
+        super().__init__(
+            kernel=kernel, noise=noise, optimizer=optimizer, n_restarts_optimizer=n_restarts_optimizer)
+
+    def build_grid(self, dists, element1):
+        """Function that builds and predicts energies on a cube of values"""
+
+        num = len(dists)
+
+        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists)
+
+        confs = np.zeros((len(r_ij_x), 2, 5))
+
+        confs[:, 0, 0] = r_ij_x  # Element on the x axis
+        confs[:, 1, 0] = r_ki_x  # Reshape into confs shape: this is x2
+        confs[:, 1, 1] = r_ki_y  # Reshape into confs shape: this is y2
+
+        # Permutations of elements
+
+        confs[:, :, 3] = element1  # Central element is always element 1
+        confs[:, 0, 4] = element1  # Element on the x axis is always element 2
+        confs[:, 1, 4] = element1  # Element on the xy plane is always element 3
+
+        grid_3b = np.zeros((num, num, num))
+        grid_3b[inds] = self.predict_energy(confs).flatten()
+
+        for ind_i in range(num):
+            for ind_j in range(ind_i + 1):
+                for ind_k in range(ind_j + 1):
+                    grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+
+        return interpolation.Spline3D(dists, dists, dists, grid_3b)
+
+    @staticmethod
+    def generate_triplets(dists):
+        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+
+        # Valid triangles according to triangle inequality
+        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+
+        # Utilizing permutation invariance
+        inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
+
+        # Element on the x axis
+        r_ij_x = d_ij[inds]
+
+        # Element on the xy plane
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+
+        # using abs to avoid numerical error near to 0
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
+
+        return inds, r_ij_x, r_ki_x, r_ki_y

@@ -30,7 +30,37 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     self.k2_ff(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
         return K_trans
-        
+
+    def calc_ef(self, X1, X2):
+
+        K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+                K_trans[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return K_trans
+    
+    def calc_fe(self, X1, X2):
+
+        K_trans_fe = np.zeros((X1.shape[0] * 3, X2.shape[0]))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+                K_trans_fe[3 * i:3 * i + 3, j] = self.k2_fe(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return K_trans_fe
+    
+    def calc_ee(self, X1, X2):
+
+        K_trans_ee = np.zeros((X1.shape[0], X2.shape[0]))
+
+        for i in np.arange(X1.shape[0]):
+            for j in np.arange(X2.shape[0]):
+                K_trans_ee[i, j] = self.k2_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+
+        return K_trans_ee
+
     def calc_gram(self, X, eval_gradient=False):
 
         diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
@@ -111,27 +141,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             diag[i * 3:(i + 1) * 3] = np.diag(self.k2_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
 
         return diag
-
-    def calc_ef(self, X1, X2):
-
-        K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
-
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
-
-        return K_trans
     
-    def calc_fe(self, X1, X2):
-
-        K_trans_fe = np.zeros((X1.shape[0] * 3, X2.shape[0]))
-
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                K_trans_fe[3 * i:3 * i + 3, j] = self.k2_fe(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
-
-        return K_trans_fe
-
     def calc_diag_e(self, X):
 
         diag = np.zeros((X.shape[0]))
@@ -140,24 +150,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             diag[i] = self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag
-
-    def calc_gram_e(self, X, eval_gradient=False):
-
-        diag = np.zeros((X.shape[0], X.shape[0]))
-        off_diag = np.zeros((X.shape[0], X.shape[0]))
-
-        if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
-        else:
-            for i in np.arange(X.shape[0]):
-                diag[i,i] = \
-                    self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
-                for j in np.arange(i):
-                    off_diag[i,j] = \
-                        self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
-
-            gram = diag + off_diag + off_diag.T
-            return gram
         
     @staticmethod
     @abstractmethod

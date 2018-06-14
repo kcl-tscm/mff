@@ -65,6 +65,9 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
+        
+    def fit_energy(self, confs, energies):
+        self.gp.fit_energy(confs, energies)
 
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
@@ -95,6 +98,9 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
 
+    def fit_energy(self, confs, forces):
+        self.gp.fit_energy(confs, forces)
+        
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
 

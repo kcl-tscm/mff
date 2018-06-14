@@ -126,6 +126,8 @@ class GaussianProcess(object):
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)  # Line 3
         self.K = K
         self.force_fit = True
+        self.energy_fit = False
+        self.energy_and_force_fit = False
         return self
 
     def predict(self, X, return_std=False):
@@ -321,8 +323,9 @@ class GaussianProcess(object):
             self.kernel_.theta = optima[np.argmin(lml_values)][0]
             self.log_marginal_likelihood_value_ = -np.min(lml_values)
         else:
-            self.log_marginal_likelihood_value_ = \
-                self.log_marginal_likelihood(self.kernel_.theta)
+            pass
+            #self.log_marginal_likelihood_value_ = \
+                #self.log_marginal_likelihood(self.kernel_.theta)
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
@@ -342,6 +345,8 @@ class GaussianProcess(object):
         self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)  # Line 3
         self.energy_K = K
         self.energy_fit = True
+        self.energy_and_force_fit = False
+        self.force_fit = False
         return self
     
     def predict_energy(self, X, return_std=False):
@@ -368,11 +373,11 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
             
-            if energy_and_force_fit:
+            if self.energy_and_force_fit:
                 # TODO
                 pass
                 
-            elif energy_fit:
+            elif self.energy_fit:
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 e_mean = K_energy.dot(self.energy_alpha_)
                 

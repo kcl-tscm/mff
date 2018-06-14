@@ -241,7 +241,7 @@ class GaussianProcess(object):
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K_ff = self.kernel_.calc_gram(self.X_train_)
-        K[np.diag_indices_from(K)] += self.noise
+        K_ff[np.diag_indices_from(K_ff)] += self.noise
         
         K_ee = self.kernel_.calc_gram_e(self.X_train_)
         K_ee[np.diag_indices_from(K_ee)] += self.noise
@@ -249,7 +249,7 @@ class GaussianProcess(object):
         K_ef = self.kernel_.calc_gram_ef(self.X_train_)
         
         K_fe = self.kernel_.calc_gram_fe(self.X_train_)
-        
+                
         K = np.zeros((y_force.shape[0] * 4, y_force.shape[0] * 4))
         K[:y_force.shape[0],:y_force.shape[0]] = K_ee
         K[:y_force.shape[0],y_force.shape[0]:] = K_ef
@@ -266,10 +266,12 @@ class GaussianProcess(object):
                         % self.kernel_,) + exc.args
             raise
             
-        y_energy_and_force = np.vstack((y_energy, y_force))
+        self.y_energy_and_force = np.vstack((self.y_train_energy_, self.y_train_))
         self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)  # Line 3
         self.K = K
-        self.force_and_energy_fit = True
+        self.energy_fit = False
+        self.energy_and_force_fit = True
+        self.force_fit = False
         return self
     
     def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now 
@@ -374,7 +376,10 @@ class GaussianProcess(object):
         else:  # Predict based on GP posterior
             
             if self.energy_and_force_fit:
-                # TODO
+                K_energy = self.kernel_.calc_ee(X, self.X_train_)
+                K_energy_force = self.kernel_.calc_ef(X, self.X_train_)
+                K = np.hstack((K_energy, K_energy_force))
+                e_mean = K.dot(self.alpha_)
                 pass
                 
             elif self.energy_fit:

@@ -127,7 +127,6 @@ class GaussianProcess(object):
         self.K = K
         self.force_fit = True
         self.energy_fit = False
-        self.energy_and_force_fit = False
         return self
 
     def predict(self, X, return_std=False):
@@ -159,10 +158,21 @@ class GaussianProcess(object):
                 return y_mean
 
         else:  # Predict based on GP posterior
-            K_trans = self.kernel_.calc(X, self.X_train_)
-
-            y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
-
+            
+            if self.force_fit:
+                K_trans = self.kernel_.calc(X, self.X_train_)
+                y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
+            
+            elif self.energy_fit:
+                K_force_energy = self.kernel_.calc_fe(X, self.X_train_)
+                y_mean = K_trans_fe.dot(self.energy_alpha_)
+                
+            else: # BUGGED
+                K_force = self.kernel_.calc(X, self.X_train_)
+                K_force_energy = self.kernel_.calc_fe(X, self.X_train_)
+                K = np.hstack((K_force_energy, K_force))
+                y_mean = K.dot(self.alpha_)                
+                
             if return_std:
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
@@ -244,7 +254,7 @@ class GaussianProcess(object):
         K_ff[np.diag_indices_from(K_ff)] += self.noise
         
         K_ee = self.kernel_.calc_gram_e(self.X_train_)
-        K_ee[np.diag_indices_from(K_ee)] += self.noise
+        K_ee[np.diag_indices_from(K_ee)] += self.noise/100.0
         
         K_ef = self.kernel_.calc_gram_ef(self.X_train_)
         
@@ -332,7 +342,7 @@ class GaussianProcess(object):
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K = self.kernel_.calc_gram_e(self.X_train_)
-        K[np.diag_indices_from(K)] += self.noise
+        K[np.diag_indices_from(K)] += self.noise/100.0
 
         try:
             self.L_ = cholesky(K, lower=True)  # Line 2
@@ -375,20 +385,19 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
             
-            if self.energy_and_force_fit:
-                K_energy = self.kernel_.calc_ee(X, self.X_train_)
-                K_energy_force = self.kernel_.calc_ef(X, self.X_train_)
-                K = np.hstack((K_energy, K_energy_force))
-                e_mean = K.dot(self.alpha_)
-                pass
+            if self.force_fit:
+                K_trans = self.kernel_.calc_ef(X, self.X_train_)
+                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
                 
             elif self.energy_fit:
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 e_mean = K_energy.dot(self.energy_alpha_)
                 
             else:
-                K_trans = self.kernel_.calc_ef(X, self.X_train_)
-                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
+                K_energy = self.kernel_.calc_ee(X, self.X_train_)
+                K_energy_force = self.kernel_.calc_ef(X, self.X_train_)
+                K = np.hstack((K_energy, K_energy_force))
+                e_mean = K.dot(self.alpha_)
 
             if return_std: # Energy part not implemented here as I am not sure what to do (Claudio)
                 # compute inverse K_inv of K based on its Cholesky

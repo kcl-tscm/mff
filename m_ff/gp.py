@@ -164,13 +164,13 @@ class GaussianProcess(object):
                 y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
             
             elif self.energy_fit:
-                K_force_energy = self.kernel_.calc_fe(X, self.X_train_)
-                y_mean = K_trans_fe.dot(self.energy_alpha_)
+                K_force_energy = self.kernel_.calc_ef(X, self.X_train_).T
+                y_mean = K_force_energy.dot(self.energy_alpha_)
                 
-            else: # BUGGED
-                K_force = self.kernel_.calc(X, self.X_train_)
-                K_force_energy = self.kernel_.calc_fe(X, self.X_train_)
-                K = np.hstack((K_force_energy, K_force))
+            else: # BUGGED - mixed forc
+                K_trans = self.kernel_.calc(X, self.X_train_)
+                K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
+                K = np.hstack((K_force_energy, K_trans))
                 y_mean = K.dot(self.alpha_)                
                 
             if return_std:
@@ -254,18 +254,16 @@ class GaussianProcess(object):
         K_ff[np.diag_indices_from(K_ff)] += self.noise
         
         K_ee = self.kernel_.calc_gram_e(self.X_train_)
-        K_ee[np.diag_indices_from(K_ee)] += self.noise/100.0
+        K_ee[np.diag_indices_from(K_ee)] += self.noise/10.0
         
         K_ef = self.kernel_.calc_gram_ef(self.X_train_)
-        
-        K_fe = self.kernel_.calc_gram_fe(self.X_train_)
-                
+                        
         K = np.zeros((y_force.shape[0] * 4, y_force.shape[0] * 4))
         K[:y_force.shape[0],:y_force.shape[0]] = K_ee
         K[:y_force.shape[0],y_force.shape[0]:] = K_ef
-        K[y_force.shape[0]:,:y_force.shape[0]] = K_fe
+        K[y_force.shape[0]:,:y_force.shape[0]] = K_ef.T
         K[y_force.shape[0]:,y_force.shape[0]:] = K_ff
-
+        
         try:
             self.L_ = cholesky(K, lower=True)  # Line 2
         except np.linalg.LinAlgError as exc:

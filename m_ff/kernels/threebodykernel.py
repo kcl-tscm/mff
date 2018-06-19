@@ -18,7 +18,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         self.theta = theta
         self.bounds = bounds
 
-        self.k3_ee, self.k3_ef, self.k3_fe, self.k3_ff = self.compile_theano()            
+        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()            
         
     def calc(self, X1, X2):
 
@@ -43,23 +43,13 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
     def calc_ef(self, X1, X2):
 
-        K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
+        K_ef_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
 
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+                K_ef_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
-        return K_trans
-
-    def calc_fe(self, X1, X2):
-
-        K_trans_fe = np.zeros((X1.shape[0] * 3, X2.shape[0]))
-
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                K_trans_fe[3 * i:3 * i + 3, j] = self.k3_fe(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
-
-        return K_trans_fe
+        return K_ef_trans
 
     def calc_gram(self, X, eval_gradient=False):
 
@@ -114,11 +104,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             self.gram_ef = gram
             return gram
         
-    def calc_gram_fe(self, X, eval_gradient=False):
-        
-        gram = self.gram_ef.T
-        return gram
-        
     def calc_diag(self, X):
 
         diag = np.zeros((X.shape[0] * 3))
@@ -158,7 +143,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     def compile_theano():
-        return None, None, None, None
+        return None, None, None
 
 
 class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
@@ -368,10 +353,6 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         # energy force kernel
         k_ef_cut = T.grad(k_cutoff, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
-        
-        # force energy kernel
-        k_fe_cut = T.grad(k_cutoff, r1)
-        k_fe_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
 
         # force force kernel
         k_ff_cut = T.grad(k_cutoff, r1)
@@ -414,23 +395,6 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
             """
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-
-        def k3_fe(conf1, conf2, sig, theta, rc):
-            """
-            Three body kernel for force-energy correlation
-
-            Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
-
-            Returns:
-                kernel (vector):
-            """
-
-            return k_fe_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
         
         def k3_ff(conf1, conf2, sig, theta, rc):
             """
@@ -451,7 +415,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
 
         logger.info("Ended compilation of theano three body kernels")
 
-        return k3_ee, k3_ef, k3_fe, k3_ff
+        return k3_ee, k3_ef, k3_ff
 
 
 class ThreeBodySingleSpeciesKernel(BaseThreeBody):
@@ -662,10 +626,6 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
         k_ef_cut = T.grad(k_cutoff, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
 
-        # force energy kernel
-        k_fe_cut = T.grad(k_cutoff, r1)
-        k_fe_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
-
         # force force kernel
         k_ff_cut = T.grad(k_cutoff, r1)
         k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
@@ -708,22 +668,6 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
         
-        def k3_fe(conf1, conf2, sig, theta, rc):
-            """
-            Three body kernel for force-energy correlation
-
-            Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
-
-            Returns:
-                kernel (vector):
-            """
-
-            return k_fe_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
         def k3_ff(conf1, conf2, sig, theta, rc):
             """
@@ -744,4 +688,4 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
 
         logger.info("Ended compilation of theano three body kernels")
 
-        return k3_ee, k3_ef, k3_fe, k3_ff
+        return k3_ee, k3_ef, k3_ff

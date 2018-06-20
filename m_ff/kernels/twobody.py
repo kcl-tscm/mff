@@ -181,7 +181,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
 
         cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
                  (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
-
+            
         k_ij = k_ij * cut_ij
 
         # kernel

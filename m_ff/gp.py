@@ -52,9 +52,7 @@ class GaussianProcess(object):
         self.noise = noise
         self.optimizer = optimizer
         self.n_restarts_optimizer = n_restarts_optimizer
-        self.force_fit = False
-        self.energy_fit = False
-        self.energy_and_force_fit = False
+        self.fitted = [None, None]
 
     def fit(self, X, y):
         """Fit a Gaussian process regression model.
@@ -125,8 +123,9 @@ class GaussianProcess(object):
 
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)  # Line 3
         self.K = K
-        self.force_fit = True
-        self.energy_fit = False
+        self.energy_alpha_ = None
+        self.energy_K = None
+        self.fitted[0] = 'force'
         return self
 
     def predict(self, X, return_std=False):
@@ -159,15 +158,17 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
             
-            if self.force_fit:
+            if self.fitted == ['force', None]:
+
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
             
-            elif self.energy_fit:
+            elif self.fitted == [None, 'energy']:
+
                 K_force_energy = self.kernel_.calc_ef(X, self.X_train_).T
                 y_mean = K_force_energy.dot(self.energy_alpha_)
                 
-            else: # BUGGED - mixed forc
+            else: 
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 K = np.hstack((K_force_energy, K_trans))
@@ -276,10 +277,10 @@ class GaussianProcess(object):
             
         self.y_energy_and_force = np.vstack((self.y_train_energy_, self.y_train_))
         self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)  # Line 3
+        self.energy_alpha_ = None
         self.K = K
-        self.energy_fit = False
-        self.energy_and_force_fit = True
-        self.force_fit = False
+        self.energy_K = None
+        self.fitted = ['force', 'energy']
         return self
     
     def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now 
@@ -354,9 +355,10 @@ class GaussianProcess(object):
 
         self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)  # Line 3
         self.energy_K = K
-        self.energy_fit = True
-        self.energy_and_force_fit = False
-        self.force_fit = False
+        self.K = None
+        self.alpha_ = None
+        self.fitted[1] = 'energy'
+
         return self
     
     def predict_energy(self, X, return_std=False):
@@ -383,11 +385,11 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
             
-            if self.force_fit:
+            if self.fitted == ['force', None]:
                 K_trans = self.kernel_.calc_ef(X, self.X_train_)
                 e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
                 
-            elif self.energy_fit:
+            elif self.fitted == [None, 'energy']:
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 e_mean = K_energy.dot(self.energy_alpha_)
                 
@@ -515,8 +517,11 @@ class GaussianProcess(object):
                   self.noise,
                   self.optimizer,
                   self.n_restarts_optimizer,
+                  self.fitted,
                   self.alpha_,
                   self.K,
+                  self.energy_alpha_,
+                  self.energy_K,
                   self.X_train_]
 
         np.save(filename, output)
@@ -538,8 +543,11 @@ class GaussianProcess(object):
         self.noise, \
         self.optimizer, \
         self.n_restarts_optimizer, \
+        self.fitted, \
         self.alpha_, \
         self.K, \
+        self.energy_alpha_, \
+        self.energy_K, \
         self.X_train_ = np.load(filename)
 
         self.kernel_ = self.kernel

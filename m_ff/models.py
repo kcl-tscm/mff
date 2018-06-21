@@ -77,6 +77,12 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
+    
+    def save_gp(self, filename):
+        self.gp.save(filename)
+        
+    def load_gp(self, filename):
+        self.gp.load(filename)
 
     def build_grid(self, start, num):
         dists = np.linspace(start, self.r_cut, num)
@@ -112,6 +118,12 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
+    
+    def save_gp(self, filename):
+        self.gp.save(filename)
+        
+    def load_gp(self, filename):
+        self.gp.load(filename)
 
     def build_grid(self, start, num):
         """Function that builds and predicts energies on a cube of values"""
@@ -278,6 +290,12 @@ class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
                              
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
+    
+    def save_gp(self, filename):
+        self.gp.save(filename)
+        
+    def load_gp(self, filename):
+        self.gp.load(filename)
 
     def build_grid(self, start, num):
         """Function that builds and predicts energies on a cube of values"""
@@ -324,6 +342,12 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
+    
+    def save_gp(self, filename):
+        self.gp.save(filename)
+        
+    def load_gp(self, filename):
+        self.gp.load(filename)
 
     def build_grid(self, start, num):
         """Function that builds and predicts energies on a cube of values"""

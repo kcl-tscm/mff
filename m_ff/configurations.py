@@ -16,9 +16,9 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
     if (atoms.get_cell() == np.zeros((3,3))).all():
         atoms.set_cell(100.0*np.identity(3))
         logging.warning('No cell values found, setting to a 100 x 100 x 100 cube')
-    
+
     forces = atoms.arrays.get(forces_label) if forces_label else atoms.get_forces()
-    energy = atoms.arrays.get(energy_label) if energy_label else atoms.get_potential_energy()
+    energy = atoms.arrays.get(energy_label) if (energy_label and energy_label != 'energy') else atoms.get_potential_energy()
 
     if forces is None and energy is None:
         raise MissingData('Cannot find energy or force values in the xyz file, shutting down')

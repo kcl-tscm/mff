@@ -270,6 +270,12 @@ class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
 
+    def fit_energy(self, confs, energy):
+        self.gp.fit_energy(confs, energy)
+    
+    def fit_force_and_energy(self, confs, forces, energy):
+        self.gp.fit_force_and_energy( confs, forces, energy)
+                             
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
 
@@ -301,7 +307,7 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
     def __init__(self, element1, element2, r_cut, sigma, theta, noise, **kwargs):
         super().__init__(element1, element2, r_cut)
 
-        kernel = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
     def fit(self, confs, forces):
@@ -309,6 +315,12 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
+    
+    def fit_energy(self, confs, forces):
+        self.gp.fit_energy(confs, forces)
+    
+    def fit_force_and_energy(self, confs, forces, energies):
+        self.gp.fit_force_and_energy(confs, forces, energies)
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)

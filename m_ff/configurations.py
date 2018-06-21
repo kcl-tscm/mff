@@ -42,11 +42,9 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
         atomic_numbers_j = atoms.get_atomic_numbers()[indices].reshape(-1, 1)
 
         confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
-
     return confs, forces, energy
 
-
-def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None):
+def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smart_sampling = False):
     confs, forces, energies = [], [], []
 
     # Get the atomic number of each atom in the trajectory file
@@ -74,17 +72,19 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None):
         logging.info('Reading traj step {}'.format(j))
 
         this_ind = []
+        if smart_sampling:
+            for k in np.arange(len(elements)):
+                count_el_atoms = sum(atom_number_list[j] == elements[k])
+                element_ind_count[k] += count_el_atoms
+                temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
+                                    dtype=np.int)
 
-        for k in np.arange(len(elements)):
-            count_el_atoms = sum(atom_number_list[j] == elements[k])
-            element_ind_count[k] += count_el_atoms
-            temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
-                                dtype=np.int)
+                this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
+                element_ind_count_prev[k] += count_el_atoms
 
-            this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
-            element_ind_count_prev[k] += count_el_atoms
-
-        this_ind = np.concatenate(this_ind).ravel()
+            this_ind = np.concatenate(this_ind).ravel()
+        else:
+            this_ind = np.asarray(np.arange(len(atoms[j])))
 
         # Call the carve_from_snapshot function on the chosen atoms
         if this_ind.size > 0:

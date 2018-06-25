@@ -18,8 +18,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         self.theta = theta
         self.bounds = bounds
 
-        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()            
-        
+        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
+
     def calc(self, X1, X2):
 
         K_trans = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
@@ -69,9 +69,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             gram = diag + off_diag + off_diag.T
 
             return gram
-        
-        
-    def calc_gram_e(self, X, eval_gradient=False): # Untested
+
+    def calc_gram_e(self, X, eval_gradient=False):  # Untested
 
         diag = np.zeros((X.shape[0], X.shape[0]))
         off_diag = np.zeros((X.shape[0], X.shape[0]))
@@ -80,19 +79,19 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             for i in np.arange(X.shape[0]):
-                diag[i,i] = \
+                diag[i, i] = \
                     self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
                 for j in np.arange(i):
-                    off_diag[i,j] = \
+                    off_diag[i, j] = \
                         self.k3_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
             return gram
-        
+
     def calc_gram_ef(self, X, eval_gradient=False):
-        
+
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
-        
+
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
@@ -102,7 +101,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                         self.k3_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
             self.gram_ef = gram
             return gram
-        
+
     def calc_diag(self, X):
 
         diag = np.zeros((X.shape[0] * 3))
@@ -130,15 +129,15 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             for i in np.arange(X.shape[0]):
-                diag[i,i] = \
+                diag[i, i] = \
                     self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
                 for j in np.arange(i):
-                    off_diag[i,j] = \
+                    off_diag[i, j] = \
                         self.k3_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
             return gram
-        
+
     @staticmethod
     @abstractmethod
     def compile_theano():
@@ -398,7 +397,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
             """
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-        
+
         def k3_ff(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for force-force correlation
@@ -670,7 +669,6 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
             """
 
             return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-        
 
         def k3_ff(conf1, conf2, sig, theta, rc):
             """

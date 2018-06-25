@@ -201,6 +201,28 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
         self.gp_3b.fit(confs, forces - two_body_forces)
+        
+    def fit_energy(self, confs, energies):
+        self.gp_2b.fit_energy(confs, energies)
+
+        ntr = len(confs)
+        two_body_energies = np.zeros(ntr)
+        for i in np.arange(ntr):
+            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
+
+        self.gp_3b.fit_energy(confs, energies - two_body_energies)
+        
+    def fit_force_and_energy(self, confs, forces, energies):
+        self.gp_2b.fit_force_and_energy(confs, forces, energies)
+        
+        ntr = len(confs)
+        two_body_energies = np.zeros(ntr)
+        two_body_forces = np.zeros((ntr, 3))
+
+        for i in np.arange(ntr):
+            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
+            two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies)
 
     def predict(self, confs, return_std=False):
         return self.gp_2b.predict(confs, return_std) + \

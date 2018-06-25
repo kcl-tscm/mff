@@ -14,6 +14,8 @@ class Model(metaclass=ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.grid = dict()
+
     def savejson(self, directory, prefix):
         pass
 
@@ -47,11 +49,10 @@ class SingleSpeciesModel(Model, metaclass=ABCMeta):
 
 
 class TwoSpeciesModel(Model, metaclass=ABCMeta):
-    def __init__(self, element1, element2, r_cut):
+    def __init__(self, elements, r_cut):
         super().__init__()
 
-        self.element1 = element1
-        self.element2 = element2
+        self.elements = elements
         self.r_cut = r_cut
 
 
@@ -65,10 +66,10 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
-        
+
     def fit_energy(self, confs, energies):
         self.gp.fit_energy(confs, energies)
-        
+
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp.fit_force_and_energy(confs, forces, energies)
 
@@ -77,10 +78,10 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
-    
+
     def save_gp(self, filename):
         self.gp.save(filename)
-        
+
     def load_gp(self, filename):
         self.gp.load(filename)
 
@@ -93,7 +94,8 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
         grid_data = self.gp.predict_energy(confs)
         grid = interpolation.Spline1D(dists, grid_data)
-        return grid
+
+        self.grid[(self.element, self.element)] = grid
 
 
 class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
@@ -109,19 +111,19 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
     def fit_energy(self, confs, forces):
         self.gp.fit_energy(confs, forces)
-    
+
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp.fit_force_and_energy(confs, forces, energies)
-        
+
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
-    
+
     def save_gp(self, filename):
         self.gp.save(filename)
-        
+
     def load_gp(self, filename):
         self.gp.load(filename)
 
@@ -141,19 +143,21 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         confs[:, 0, 4] = self.element  # Element on the x axis is always element 2
         confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
 
-        grid_3b = np.zeros((num, num, num))
-        grid_3b[inds] = self.predict_energy(confs).flatten()
+        grid_data = np.zeros((num, num, num))
+        grid_data[inds] = self.predict_energy(confs).flatten()
 
         for ind_i in range(num):
             for ind_j in range(ind_i + 1):
                 for ind_k in range(ind_j + 1):
-                    grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+                    grid_data[ind_i, ind_k, ind_j] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_j, ind_i, ind_k] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_j, ind_k, ind_i] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_k, ind_i, ind_j] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_k, ind_j, ind_i] = grid_data[ind_i, ind_j, ind_k]
 
-        return interpolation.Spline3D(dists, dists, dists, grid_3b)
+        grid = interpolation.Spline3D(dists, dists, dists, grid_data)
+
+        self.grid[(self.element, self.element, self.element)] = grid
 
     @staticmethod
     def generate_triplets(dists):
@@ -245,7 +249,8 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
         grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
 
-        return grid_2b, grid_3b
+        self.grid[(self.element, self.element)] = grid_2b
+        self.grid[(self.element, self.element, self.element)] = grid_3b
 
     @staticmethod
     def generate_triplets(dists):
@@ -270,8 +275,8 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
 
 class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
-    def __init__(self, element1, element2, r_cut, sigma, theta, noise, **kwargs):
-        super().__init__(element1, element2, r_cut)
+    def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
+        super().__init__(elements, r_cut)
 
         kernel = kernels.TwoBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
@@ -284,16 +289,16 @@ class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
 
     def fit_energy(self, confs, energy):
         self.gp.fit_energy(confs, energy)
-    
+
     def fit_force_and_energy(self, confs, forces, energy):
-        self.gp.fit_force_and_energy( confs, forces, energy)
-                             
+        self.gp.fit_force_and_energy(confs, forces, energy)
+
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
-    
+
     def save_gp(self, filename):
         self.gp.save(filename)
-        
+
     def load_gp(self, filename):
         self.gp.load(filename)
 
@@ -305,25 +310,27 @@ class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
         confs = np.zeros((num, 1, 5))
         confs[:, 0, 0] = dists
 
-        confs[:, 0, 3], confs[:, 0, 4] = self.element1, self.element1
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements
+        grid_0_0_data = self.gp.predict_energy(confs)
+
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements
+        grid_0_1_data = self.gp.predict_energy(confs)
+
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements
         grid_1_1_data = self.gp.predict_energy(confs)
 
-        confs[:, 0, 3], confs[:, 0, 4] = self.element1, self.element2
-        grid_1_2_data = self.gp.predict_energy(confs)
-
-        confs[:, 0, 3], confs[:, 0, 4] = self.element2, self.element2
-        grid_2_2_data = self.gp.predict_energy(confs)
-
+        grid_0_0 = interpolation.Spline1D(dists, grid_0_0_data)
+        grid_0_1 = interpolation.Spline1D(dists, grid_0_1_data)
         grid_1_1 = interpolation.Spline1D(dists, grid_1_1_data)
-        grid_1_2 = interpolation.Spline1D(dists, grid_1_2_data)
-        grid_2_2 = interpolation.Spline1D(dists, grid_2_2_data)
 
-        return grid_1_1, grid_1_2, grid_2_2
+        self.grid[(self.elements[0], self.elements[0])] = grid_0_0
+        self.grid[(self.elements[0], self.elements[1])] = grid_0_1
+        self.grid[(self.elements[1], self.elements[1])] = grid_1_1
 
 
 class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
-    def __init__(self, element1, element2, r_cut, sigma, theta, noise, **kwargs):
-        super().__init__(element1, element2, r_cut)
+    def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
+        super().__init__(elements, r_cut)
 
         kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
@@ -333,19 +340,19 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
-    
+
     def fit_energy(self, confs, forces):
         self.gp.fit_energy(confs, forces)
-    
+
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp.fit_force_and_energy(confs, forces, energies)
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)
-    
+
     def save_gp(self, filename):
         self.gp.save(filename)
-        
+
     def load_gp(self, filename):
         self.gp.load(filename)
 
@@ -354,19 +361,24 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
         dists = np.linspace(start, self.r_cut, num)
 
-        grid_1_1_1 = self.build_grid_3b(dists, self.element1, self.element1, self.element1)
-        grid_1_1_2 = self.build_grid_3b(dists, self.element1, self.element1, self.element2)
-        grid_1_2_2 = self.build_grid_3b(dists, self.element1, self.element2, self.element2)
-        grid_2_2_2 = self.build_grid_3b(dists, self.element2, self.element2, self.element2)
+        grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0])
+        grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1])
+        grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1])
+        grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1])
 
-        return grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2
+        self.grid[(self.elements[0], self.elements[0], self.elements[0])] = grid_0_0_0
+        self.grid[(self.elements[0], self.elements[0], self.elements[1])] = grid_0_0_1
+        self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid_0_1_1
+        self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid_1_1_1
+
+        # return grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2
 
     def build_grid_3b(self, dists, element_i, element_j, element_k):
         """Function that builds and predicts energies on a cube of values"""
 
         num = len(dists)
 
-        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists)
+        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets_all(dists)
 
         confs = np.zeros((len(r_ij_x), 2, 5))
 
@@ -383,19 +395,19 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
         grid_3b = np.zeros((num, num, num))
         grid_3b[inds] = self.predict_energy(confs).flatten()
 
-        for ind_i in range(num):
-            for ind_j in range(ind_i + 1):
-                for ind_k in range(ind_j + 1):
-                    grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-                    grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+        # for ind_i in range(num):
+        #     for ind_j in range(ind_i + 1):
+        #         for ind_k in range(ind_j + 1):
+        #             grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+        #             grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
+        #             grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
+        #             grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
+        #             grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
     @staticmethod
-    def generate_triplets(dists):
+    def generate_triplets_with_permutation_invariance(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
@@ -403,6 +415,24 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
         # Utilizing permutation invariance
         inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
+
+        # Element on the x axis
+        r_ij_x = d_ij[inds]
+
+        # Element on the xy plane
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+
+        # using abs to avoid numerical error near to 0
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
+
+        return inds, r_ij_x, r_ki_x, r_ki_y
+
+    @staticmethod
+    def generate_triplets_all(dists):
+        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+
+        # Valid triangles according to triangle inequality
+        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Element on the x axis
         r_ij_x = d_ij[inds]

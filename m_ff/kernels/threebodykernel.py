@@ -267,7 +267,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
         delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
-        delta_alphas_j21n = delta_alphasj2[:, None] * delta_alphas1n[None, :]
+        # delta_alphas_j21n = delta_alphasj2[:, None] * delta_alphas1n[None, :]
         # delta_perm5 = delta_alphas_j21n[:, None, :, None] * delta_alphaskm[None, :, None, :]
         # delta_perm5 = delta_alphas_j21n[:, None, None, :] * delta_alphaskm[None, :, :, None]
         delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
@@ -303,31 +303,35 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         # ker_jkmn = (k1n + k2n + k3n) * (delta_perm1 + delta_perm2 + delta_perm3 + delta_perm4 + delta_perm5 + delta_perm6)
         # Claudio Edit
         ker_jkmn = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
-
-        cut_ik = (T.exp(-theta / T.abs_(rc - r1j[:, None])) *
-                  T.exp(-theta / T.abs_(rc - r1j[None, :])) *
+        
+        # Faster version of cutoff (less calculations)
+        cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
+        cut_jk = (cut_j[:,None] * cut_j[None,:] * 
                   T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                  (0.5 * (T.sgn(rc - r1j) + 1))[None, :] *
-                  (0.5 * (T.sgn(rc - r1j) + 1))[:, None] *
                   (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
 
-        cut_mn = (T.exp(-theta / T.abs_(rc - r2m[:, None])) *
-                  T.exp(-theta / T.abs_(rc - r2m[None, :])) *
+        cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
+        cut_mn = (cut_m[:,None] * cut_m[None,:] * 
                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                  (0.5 * (T.sgn(rc - r2m) + 1))[None, :] *
-                  (0.5 * (T.sgn(rc - r2m) + 1))[:, None] *
                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
+        
+#         cut_mn = (T.exp(-theta / T.abs_(rc - r2m[:, None])) *
+#                   T.exp(-theta / T.abs_(rc - r2m[None, :])) *
+#                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
+#                   (0.5 * (T.sgn(rc - r2m) + 1))[None, :] *
+#                   (0.5 * (T.sgn(rc - r2m) + 1))[:, None] *
+#                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
 
-        curoff_ikmn_cos = (0.5 * (T.cos(np.pi * r1j[:, None, None, None] / rc) + 1.0) *
-                           0.5 * (T.cos(np.pi * r1j[None, :, None, None] / rc) + 1.0) *
-                           0.5 * (T.cos(np.pi * rjk[:, :, None, None] / rc) + 1.0) *
-                           0.5 * (T.cos(np.pi * r2m[None, None, :, None] / rc) + 1.0) *
-                           0.5 * (T.cos(np.pi * r2m[None, None, None, :] / rc) + 1.0) *
-                           0.5 * (T.cos(np.pi * rmn[None, None, :, :] / rc) + 1.0) *
-                           (0.5 * (T.sgn(rc - rjk[:, :, None, None]) + 1)) *
-                           (0.5 * (T.sgn(rc - rmn[None, None, :, :]) + 1)))
+#         curoff_ikmn_cos = (0.5 * (T.cos(np.pi * r1j[:, None, None, None] / rc) + 1.0) *
+#                            0.5 * (T.cos(np.pi * r1j[None, :, None, None] / rc) + 1.0) *
+#                            0.5 * (T.cos(np.pi * rjk[:, :, None, None] / rc) + 1.0) *
+#                            0.5 * (T.cos(np.pi * r2m[None, None, :, None] / rc) + 1.0) *
+#                            0.5 * (T.cos(np.pi * r2m[None, None, None, :] / rc) + 1.0) *
+#                            0.5 * (T.cos(np.pi * rmn[None, None, :, :] / rc) + 1.0) *
+#                            (0.5 * (T.sgn(rc - rjk[:, :, None, None]) + 1)) *
+#                            (0.5 * (T.sgn(rc - rmn[None, None, :, :]) + 1)))
 
-        ker_jkmn_withcutoff = ker_jkmn * cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
+        ker_jkmn_withcutoff = ker_jkmn * cut_jk[:, :, None, None] * cut_mn[None, None, :, :]
 
         # --------------------------------------------------
         # REMOVE DIAGONAL ELEMENTS

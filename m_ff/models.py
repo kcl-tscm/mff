@@ -395,11 +395,10 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
         # return grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2
 
-    def build_grid_3b(self, dists, element_i, element_j, element_k):
+    def build_grid_3b(self, dists, element_k, element_i, element_j): # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
         num = len(dists)
-
         inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets_all(dists)
 
         confs = np.zeros((len(r_ij_x), 2, 5))

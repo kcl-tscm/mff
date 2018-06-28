@@ -109,8 +109,8 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
 
-    def fit_energy(self, confs, forces):
-        self.gp.fit_energy(confs, forces)
+    def fit_energy(self, confs, energies):
+        self.gp.fit_energy(confs, energies)
 
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp.fit_force_and_energy(confs, forces, energies)

@@ -44,11 +44,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     def calc_ef(self, X1, X2):
 
         K_ef_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
-
+        
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
                 K_ef_trans[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
-
         return K_ef_trans
 
     def calc_gram(self, X, eval_gradient=False):

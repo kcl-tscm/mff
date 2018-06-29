@@ -97,6 +97,15 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
 
         self.grid[(self.element, self.element)] = grid
 
+    def save_grid(self, filename):
+        grid = self.grid[(self.element, self.element)]
+        np.save(filename, grid)
+        print('Saved 2-body grid  with name:', filename)
+        
+    def load_grid(self, filename):
+        grid = np.load(filename)
+        self.grid[(self.element, self.element)] =  grid
+        print('Loaded 2-body grid from file:', filename)  
 
 class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
@@ -159,6 +168,16 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
         self.grid[(self.element, self.element, self.element)] = grid
 
+    def save_grid(self, filename):
+        grid = self.grid[(self.element, self.element, self.element)]
+        np.save(filename, grid)
+        print('Saved 3-body grid  with name:', filename)
+        
+    def load_grid(self, filename):
+        grid = np.load(filename)
+        self.grid[(self.element, self.element, self.element)] =  grid
+        print('Loaded 3-body grid from file:', filename)       
+        
     @staticmethod
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
@@ -274,6 +293,21 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         self.grid[(self.element, self.element)] = grid_2b
         self.grid[(self.element, self.element, self.element)] = grid_3b
 
+    def save_grid(self, filename):
+        grid_3b = self.grid[(self.element, self.element, self.element)] 
+        grid_2b = self.grid[(self.element, self.element)]
+        grid = [grid_2b, grid_3b]
+        np.save(filename, grid)
+        print('Saved 2- and 3-body grids with name:', filename)
+        
+    def load_grid(self, filename):
+        grid = np.load(filename)
+        self.grid[(self.element, self.element)] = grid[0]
+        self.grid[(self.element, self.element, self.element)] =  grid[1]
+        print('Loaded 2- and 3-body grids from file:', filename) 
+            
+            
+            
     @staticmethod
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)

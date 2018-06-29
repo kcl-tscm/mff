@@ -293,11 +293,13 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         self.grid[(self.element, self.element)] = grid_2b
         self.grid[(self.element, self.element, self.element)] = grid_3b
 
-    def save_gp(self, filename):
-        self.gp.save(filename)
+    def save_gp(self, filename_2b, filename_3b):
+        self.gp_2b.save(filename_2b)
+        self.gp_3b.save(filename_3b)
 
-    def load_gp(self, filename):
-        self.gp.load(filename)
+    def load_gp(self, filename_2b, filename_3b):
+        self.gp_2b.load(filename_2b)
+        self.gp_3b.load(filename_3b)
         
     def save_grid(self, filename):
         grid_3b = self.grid[(self.element, self.element, self.element)] 

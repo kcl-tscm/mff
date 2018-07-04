@@ -112,8 +112,8 @@ class TwoBodySingleSpecies(MappedPotential):
             energy_local = self.grid_2b(dist, nu=0)
             fs_scalars = - self.grid_2b(dist, nu=1)
 
-            potential_energies[i] = - 1 / 2 * np.sum(energy_local, axis=0)# - np.sum((rep_alpha/dist)**12)
-            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0)# + 12*np.einsum('i, in -> n', (rep_alpha/dist)**12/dist, norm)
+            potential_energies[i] = - 1 / 2 * np.sum(energy_local, axis=0) + np.sum((rep_alpha/dist)**12)
+            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', 1/dist**13, norm) 
 
         if 'energy' in self.results:
             self.results['energy'] += np.sum(potential_energies)
@@ -149,6 +149,7 @@ class ThreeBodySingleSpecies(MappedPotential):
         indices, distances, positions = self.find_triplets()
 
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
+
         mapped = self.grid_3b.ev_all(d_ij, d_jk, d_ki)
 
         for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):            
@@ -156,7 +157,7 @@ class ThreeBodySingleSpecies(MappedPotential):
             forces[j] += - positions[(j, k)] * dE_jk - positions[(j, i)] * dE_ij
             forces[k] += - positions[(k, i)] * dE_ki - positions[(k, j)] * dE_jk
 
-            potential_energies[[i, j, k]] += energy
+            potential_energies[[i, j, k]] -= energy
             
         if 'energy' in self.results:
             self.results['energy'] += np.sum(potential_energies)

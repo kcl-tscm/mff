@@ -101,11 +101,12 @@ class TwoBodySingleSpeciesModel(TwoBodyModel, SingleSpeciesModel):
         grid = self.grid[(self.element, self.element)]
         np.save(filename, grid)
         print('Saved 2-body grid  with name:', filename)
-        
+
     def load_grid(self, filename):
         grid = np.load(filename)
-        self.grid[(self.element, self.element)] =  grid
-        print('Loaded 2-body grid from file:', filename)  
+        self.grid[(self.element, self.element)] = grid
+        print('Loaded 2-body grid from file:', filename)
+
 
 class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
@@ -172,12 +173,12 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         grid = self.grid[(self.element, self.element, self.element)]
         np.save(filename, grid)
         print('Saved 3-body grid  with name:', filename)
-        
+
     def load_grid(self, filename):
         grid = np.load(filename)
-        self.grid[(self.element, self.element, self.element)] =  grid
-        print('Loaded 3-body grid from file:', filename)       
-        
+        self.grid[(self.element, self.element, self.element)] = grid
+        print('Loaded 3-body grid from file:', filename)
+
     @staticmethod
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
@@ -220,7 +221,7 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
         self.gp_3b.fit(confs, forces - two_body_forces)
-        
+
     def fit_energy(self, confs, energies):
         self.gp_2b.fit_energy(confs, energies)
 
@@ -230,10 +231,10 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies)
-        
+
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp_2b.fit_force_and_energy(confs, forces, energies)
-        
+
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
         two_body_forces = np.zeros((ntr, 3))
@@ -300,22 +301,20 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
     def load_gp(self, filename_2b, filename_3b):
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
-        
+
     def save_grid(self, filename):
-        grid_3b = self.grid[(self.element, self.element, self.element)] 
+        grid_3b = self.grid[(self.element, self.element, self.element)]
         grid_2b = self.grid[(self.element, self.element)]
         grid = [grid_2b, grid_3b]
         np.save(filename, grid)
         print('Saved 2- and 3-body grids with name:', filename)
-        
+
     def load_grid(self, filename):
         grid = np.load(filename)
         self.grid[(self.element, self.element)] = grid[0]
-        self.grid[(self.element, self.element, self.element)] =  grid[1]
-        print('Loaded 2- and 3-body grids from file:', filename) 
-            
-            
-            
+        self.grid[(self.element, self.element, self.element)] = grid[1]
+        print('Loaded 2- and 3-body grids from file:', filename)
+
     @staticmethod
     def generate_triplets(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
@@ -393,7 +392,7 @@ class TwoBodyTwoSpeciesModel(TwoSpeciesModel):
 
 
 class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
-    
+
     def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
         super().__init__(elements, r_cut)
 
@@ -438,7 +437,8 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
         # return grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2
 
-    def build_grid_3b(self, dists, element_k, element_i, element_j): # HOTFIX: understand why this weird order is correct
+    def build_grid_3b(self, dists, element_k, element_i, element_j):
+        # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
         num = len(dists)
@@ -530,7 +530,7 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
         self.gp_3b.fit(confs, forces - two_body_forces)
-        
+
     def fit_energy(self, confs, energies):
         self.gp_2b.fit_energy(confs, energies)
 
@@ -540,10 +540,10 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies)
-        
+
     def fit_force_and_energy(self, confs, forces, energies):
         self.gp_2b.fit_force_and_energy(confs, forces, energies)
-        
+
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
         two_body_forces = np.zeros((ntr, 3))
@@ -560,7 +560,6 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
     def predict_energy(self, confs, return_std=False):
         return self.gp_2b.predict_energy(confs, return_std) + \
                self.gp_3b.predict_energy(confs, return_std)
-
 
     def build_grid(self, start, num_2b, num_3b):
         """Function that builds and predicts energies on a cube of values"""
@@ -585,7 +584,7 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
         self.grid[(self.elements[0], self.elements[0])] = grid_0_0
         self.grid[(self.elements[0], self.elements[1])] = grid_0_1
         self.grid[(self.elements[1], self.elements[1])] = grid_1_1
-        
+
         grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0])
         grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1])
         grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1])
@@ -596,7 +595,8 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
         self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid_0_1_1
         self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid_1_1_1
 
-    def build_grid_3b(self, dists, element_k, element_i, element_j): # HOTFIX: understand why this weird order is correct
+    def build_grid_3b(self, dists, element_k, element_i,
+                      element_j):  # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
         num = len(dists)
@@ -631,19 +631,19 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
     def load_gp(self, filename_2b, filename_3b):
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
-        
+
     def save_grid(self, filename):
-        grid=[self.grid[(self.elements[0], self.elements[0])],
-              self.grid[(self.elements[0], self.elements[1])],
-              self.grid[(self.elements[1], self.elements[1])],
-              self.grid[(self.elements[0], self.elements[0], self.elements[0])],
-              self.grid[(self.elements[0], self.elements[0], self.elements[1])],
-              self.grid[(self.elements[0], self.elements[1], self.elements[1])],
-              self.grid[(self.elements[1], self.elements[1], self.elements[1])]
-             ]
+        grid = [self.grid[(self.elements[0], self.elements[0])],
+                self.grid[(self.elements[0], self.elements[1])],
+                self.grid[(self.elements[1], self.elements[1])],
+                self.grid[(self.elements[0], self.elements[0], self.elements[0])],
+                self.grid[(self.elements[0], self.elements[0], self.elements[1])],
+                self.grid[(self.elements[0], self.elements[1], self.elements[1])],
+                self.grid[(self.elements[1], self.elements[1], self.elements[1])]
+                ]
         np.save(filename, grid)
         print('Saved 2- and 3-body grids with name:', filename)
-        
+
     def load_grid(self, filename):
         grid = np.load(filename)
         self.grid[(self.elements[0], self.elements[0])] = grid[0]
@@ -654,8 +654,8 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
         self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid[5]
         self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid[6]
 
-        print('Loaded 2- and 3-body grids from file:', filename) 
-        
+        print('Loaded 2- and 3-body grids from file:', filename)
+
     @staticmethod
     def generate_triplets_all(dists):
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
@@ -673,7 +673,6 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
 
         return inds, r_ij_x, r_ki_x, r_ki_y
-
 
 # class Parameters(object):
 #     def __init__(self):

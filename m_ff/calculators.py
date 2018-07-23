@@ -86,12 +86,12 @@ class TwoBodySingleSpecies(MappedPotential):
     """A remapped 2-body calculator for ase
     """
 
-    def __init__(self, r_cut, grid_2b, rep_alpha = 0.0, **kwargs):
+    def __init__(self, r_cut, grid_2b, rep_alpha=0.0, **kwargs):
         super().__init__(r_cut, **kwargs)
-        
+
         self.grid_2b = grid_2b
         self.rep_alpha = rep_alpha
-        
+
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
         """Do the calculation.
         """
@@ -100,9 +100,9 @@ class TwoBodySingleSpecies(MappedPotential):
 
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
-        
+
         rep_alpha = self.rep_alpha
-        
+
         for i in range(len(self.atoms)):
             inds, pos, dists2 = self.nl.get_neighbors(i)
 
@@ -112,8 +112,9 @@ class TwoBodySingleSpecies(MappedPotential):
             energy_local = self.grid_2b(dist, nu=0)
             fs_scalars = - self.grid_2b(dist, nu=1)
 
-            potential_energies[i] =  0.5* np.sum(energy_local, axis=0) + np.sum((rep_alpha/dist)**12)
-            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', 1/dist**13, norm) 
+            potential_energies[i] = 0.5 * np.sum(energy_local, axis=0) + np.sum((rep_alpha / dist) ** 12)
+            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
+                12 * rep_alpha ** 12 * np.einsum('i, in -> n', 1 / dist ** 13, norm)
 
         if 'energy' in self.results:
             self.results['energy'] += np.sum(potential_energies)
@@ -152,13 +153,13 @@ class ThreeBodySingleSpecies(MappedPotential):
 
         mapped = self.grid_3b.ev_all(d_ij, d_jk, d_ki)
 
-        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):            
+        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):
             forces[i] += - positions[(i, j)] * dE_ij - positions[(i, k)] * dE_ki
             forces[j] += - positions[(j, k)] * dE_jk - positions[(j, i)] * dE_ij
             forces[k] += - positions[(k, i)] * dE_ki - positions[(k, j)] * dE_jk
 
             potential_energies[[i, j, k]] -= energy
-            
+
         if 'energy' in self.results:
             self.results['energy'] += np.sum(potential_energies)
         else:
@@ -246,7 +247,7 @@ class ThreeBodySingleSpecies(MappedPotential):
 
 
 class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
-    def __init__(self, r_cut, grid_2b, grid_3b, rep_alpha = 0.0, **kwargs):
+    def __init__(self, r_cut, grid_2b, grid_3b, rep_alpha=0.0, **kwargs):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
 
 

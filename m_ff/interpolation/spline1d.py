@@ -4,14 +4,14 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 class Spline1D(InterpolatedUnivariateSpline):
 
-    def __init__(self, x0, f):
+    def __init__(self, x_range, f):
         """
 
         :param x0: 1 dimensional array
         :param f: 1-dimensional array
         """
 
-        super(Spline1D, self).__init__(x0, f, k=3, ext=3)
+        super(Spline1D, self).__init__(x_range, f, k=3, ext=3)
 
     def ev_all(self, x):
         return self.ev_energy(x), self.ev_forces(x)
@@ -25,8 +25,29 @@ class Spline1D(InterpolatedUnivariateSpline):
         return energy_single
 
     @classmethod
-    def from_file(cls, filename):
+    def load(cls, filename):
         data = np.load(filename)
-        x_range, energies = data[:, 0], data[:, 1]
-
+        x_range, energies = data['x'], data['f']
         return cls(x_range, energies)
+
+    def save(self, filename):
+        np.savez_compressed(filename, x=self._data[0], f=self._data[1])
+
+
+if __name__ == '__main__':
+    from pathlib import Path
+
+    n = 101
+    x = np.linspace(0, 10, n)
+    f = np.random.rand(n)
+
+    s1 = Spline1D(x, f)
+
+    filename = Path('grid.npz')
+
+    s1.save(filename)
+
+    s2 = Spline1D.load(filename)
+
+    print(s1.ev_all(3))
+    print(s2.ev_all(3))

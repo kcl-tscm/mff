@@ -164,8 +164,36 @@ class Spline3D(object):
         else:
             raise NotImplementedError()
 
+    @classmethod
+    def load(cls, filename):
+        data = np.load(filename)
+        x, y, z, energies = data['x'], data['y'], data['z'], data['f']
+
+        return cls(x, y, z, energies)
+
+    def save(self, filename):
+
+        np.savez_compressed(filename, x=self._x[1:-1], y=self._y[1:-1], z=self._z[1:-1], f=self._f[1:-1, 1:-1, 1:-1])
+
 
 if __name__ == '__main__':
+    from pathlib import Path
+
+    n = 10
+    x, y, z = np.linspace(0, 10, n), np.linspace(0, 10, n), np.linspace(0, 10, n)
+
+    f = np.random.rand(n, n, n)
+    g1 = Spline3D(x, y, z, f)
+
+    filename = Path('grid.npz')
+
+    g1.save(filename)
+
+    g2 = Spline3D.load(filename)
+
+    print(g1.ev_all(3., 4.5, 6.))
+    print(g2.ev_all(3., 4.5, 6.))
+
     # x, y, z = np.linspace(0, 2, 3), np.linspace(0, 2, 3), np.linspace(0, 2, 3)
     # f = np.linspace(0, 3 ** 3 - 1, 3 ** 3).reshape(3, 3, 3)
     #
@@ -196,17 +224,17 @@ if __name__ == '__main__':
     #
     # print((0*z+x[1])*(0*z+y[1])**2 * z**3)
     # print(s.ev_energy(0*z+x[1], 0*z+y[1], z))
-
-    x, y, z = np.linspace(1, 4, 4), np.linspace(1, 5, 5), np.linspace(1, 6, 6)
-    print(x, y, z)
-    f = x[:, np.newaxis, np.newaxis] + y[np.newaxis, :, np.newaxis] ** 2 + z[np.newaxis, np.newaxis, :] ** 2
-
-    s = Spline3D(x, y, z, f)
-
-    for xi in range(len(x)):
-        for yi in range(len(y)):
-            for zi in range(len(z)):
-                dx = 1
-                dy = 2 * y[yi]
-                dz = 2 * z[zi]
-                print(xi, yi, zi, f[xi, yi, zi], dx, dy, dz, *s.ev_all(x[xi], y[yi], z[zi]))
+    #
+    # x, y, z = np.linspace(1, 4, 4), np.linspace(1, 5, 5), np.linspace(1, 6, 6)
+    # print(x, y, z)
+    # f = x[:, np.newaxis, np.newaxis] + y[np.newaxis, :, np.newaxis] ** 2 + z[np.newaxis, np.newaxis, :] ** 2
+    #
+    # s = Spline3D(x, y, z, f)
+    #
+    # for xi in range(len(x)):
+    #     for yi in range(len(y)):
+    #         for zi in range(len(z)):
+    #             dx = 1
+    #             dy = 2 * y[yi]
+    #             dz = 2 * z[zi]
+    #             print(xi, yi, zi, f[xi, yi, zi], dx, dy, dz, *s.ev_all(x[xi], y[yi], z[zi]))

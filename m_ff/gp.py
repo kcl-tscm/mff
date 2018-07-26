@@ -28,6 +28,7 @@ from scipy.optimize import fmin_l_bfgs_b
 from m_ff import interpolation
 from m_ff import kernels
 
+
 class GaussianProcess(object):
     """ Gaussian process class
     Class of GP regression of QM energies and forces
@@ -53,6 +54,8 @@ class GaussianProcess(object):
         self.optimizer = optimizer
         self.n_restarts_optimizer = n_restarts_optimizer
         self.fitted = [None, None]
+
+        self.X_train_, self.y_train_ = None, None
 
     def fit(self, X, y):
         """Fit a Gaussian process regression model.
@@ -128,6 +131,14 @@ class GaussianProcess(object):
         self.fitted[0] = 'force'
         return self
 
+    @property
+    def n_train(self):
+
+        if self.X_train_ is None:
+            return 0
+
+        return len(self.X_train_)
+
     def predict(self, X, return_std=False):
         """Predict using the Gaussian process regression model
 
@@ -157,23 +168,23 @@ class GaussianProcess(object):
                 return y_mean
 
         else:  # Predict based on GP posterior
-            
+
             if self.fitted == ['force', None]:
 
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
-            
+
             elif self.fitted == [None, 'energy']:
 
                 K_force_energy = self.kernel_.calc_ef(X, self.X_train_).T
                 y_mean = K_force_energy.dot(self.energy_alpha_)
-                
-            else: 
+
+            else:
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 K = np.hstack((K_force_energy, K_trans))
-                y_mean = K.dot(self.alpha_)                
-                
+                y_mean = K.dot(self.alpha_)
+
             if return_std:
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
@@ -210,7 +221,7 @@ class GaussianProcess(object):
         self.y_train_ = np.reshape(y_force, (y_force.shape[0] * 3, 1))
         self.y_train_energy_ = np.reshape(y_energy, (y_energy.shape[0], 1))
 
-        if self.optimizer is not None: # TODO
+        if self.optimizer is not None:  # TODO
             # Choose hyperparameters based on maximizing the log-marginal
             # likelihood (potentially starting from several initial values)
             def obj_func(theta, eval_gradient=True):
@@ -253,18 +264,18 @@ class GaussianProcess(object):
         # of actual query points
         K_ff = self.kernel_.calc_gram(self.X_train_)
         K_ff[np.diag_indices_from(K_ff)] += self.noise
-        
+
         K_ee = self.kernel_.calc_gram_e(self.X_train_)
-        K_ee[np.diag_indices_from(K_ee)] += self.noise/10.0
-        
+        K_ee[np.diag_indices_from(K_ee)] += self.noise / 10.0
+
         K_ef = self.kernel_.calc_gram_ef(self.X_train_)
-                        
+
         K = np.zeros((y_force.shape[0] * 4, y_force.shape[0] * 4))
-        K[:y_force.shape[0],:y_force.shape[0]] = K_ee
-        K[:y_force.shape[0],y_force.shape[0]:] = K_ef
-        K[y_force.shape[0]:,:y_force.shape[0]] = K_ef.T
-        K[y_force.shape[0]:,y_force.shape[0]:] = K_ff
-        
+        K[:y_force.shape[0], :y_force.shape[0]] = K_ee
+        K[:y_force.shape[0], y_force.shape[0]:] = K_ef
+        K[y_force.shape[0]:, :y_force.shape[0]] = K_ef.T
+        K[y_force.shape[0]:, y_force.shape[0]:] = K_ff
+
         try:
             self.L_ = cholesky(K, lower=True)  # Line 2
         except np.linalg.LinAlgError as exc:
@@ -274,7 +285,7 @@ class GaussianProcess(object):
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-            
+
         self.y_energy_and_force = np.vstack((self.y_train_energy_, self.y_train_))
         self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)  # Line 3
         self.energy_alpha_ = None
@@ -282,7 +293,7 @@ class GaussianProcess(object):
         self.energy_K = None
         self.fitted = ['force', 'energy']
         return self
-    
+
     def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now 
         """Fit a Gaussian process regression model.
 
@@ -335,13 +346,13 @@ class GaussianProcess(object):
             self.log_marginal_likelihood_value_ = -np.min(lml_values)
         else:
             pass
-            #self.log_marginal_likelihood_value_ = \
-                #self.log_marginal_likelihood(self.kernel_.theta)
+            # self.log_marginal_likelihood_value_ = \
+            # self.log_marginal_likelihood(self.kernel_.theta)
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K = self.kernel_.calc_gram_e(self.X_train_)
-        K[np.diag_indices_from(K)] += self.noise/100.0
+        K[np.diag_indices_from(K)] += self.noise / 100.0
 
         try:
             self.L_ = cholesky(K, lower=True)  # Line 2
@@ -360,7 +371,7 @@ class GaussianProcess(object):
         self.fitted[1] = 'energy'
 
         return self
-    
+
     def predict_energy(self, X, return_std=False):
         """Predict energies from forces only using the Gaussian process regression model
 
@@ -384,22 +395,22 @@ class GaussianProcess(object):
                 return e_mean
 
         else:  # Predict based on GP posterior
-            
+
             if self.fitted == ['force', None]:
                 K_trans = self.kernel_.calc_ef(X, self.X_train_)
                 e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
-                
+
             elif self.fitted == [None, 'energy']:
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 e_mean = K_energy.dot(self.energy_alpha_)
-                
+
             else:
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 K_energy_force = self.kernel_.calc_ef(X, self.X_train_)
                 K = np.hstack((K_energy, K_energy_force))
                 e_mean = K.dot(self.alpha_)
 
-            if return_std: # Energy part not implemented here as I am not sure what to do (Claudio)
+            if return_std:  # Energy part not implemented here as I am not sure what to do (Claudio)
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))

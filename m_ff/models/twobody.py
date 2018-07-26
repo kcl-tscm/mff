@@ -68,7 +68,7 @@ class TwoBodySingleSpeciesModel(Model):
 
         params = {
             'model': self.__class__.__name__,
-            'elements': self.element,
+            'element': self.element,
             'r_cut': self.r_cut,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
@@ -83,19 +83,47 @@ class TwoBodySingleSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
 
-        params['gp']['file'] = gp_filename
+        params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
 
         if self.grid:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}'.format(prefix, p=params)
+            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params)
 
             params['grid']['filename'] = grid_filename
             self.grid.save(directory / grid_filename)
 
-        with open(directory / f'{prefix}.json', 'w') as fp:
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
+
+    @classmethod
+    def from_json(cls, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+
+        model = cls(params['element'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'],
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        model.gp.load(directory / gp_filename)
+
+        if params['grid']:
+            grid_filename = params['grid']['filename']
+            model.grid = interpolation.Spline1D.load(directory / grid_filename)
+
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+        return model
 
 
 class TwoBodyTwoSpeciesModel(Model):
@@ -181,21 +209,51 @@ class TwoBodyTwoSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
 
-        params['gp']['file'] = gp_filename
+        params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
 
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
-            key = ''.join(str(element) for element in k)
-            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}'.format(prefix, key, p=params)
+            key = '_'.join(str(element) for element in k)
+            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
 
-            params['grid']['filenames'][key] = grid_filename
+            params['grid']['filename'][key] = grid_filename
             grid.save(directory / grid_filename)
 
-        with open(directory / f'{prefix}.json', 'w') as fp:
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
+
+    @classmethod
+    def from_json(cls, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+
+        model = cls(params['elements'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'],
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        model.gp.load(directory / gp_filename)
+
+        if params['grid']:
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+            for key, grid_filename in params['grid']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+
+                model.grid[k] = interpolation.Spline1D.load(directory / grid_filename)
+
+        return model
 
 
 if __name__ == '__main__':
@@ -209,7 +267,7 @@ if __name__ == '__main__':
 
         element, r_cut, sigma, theta, noise = 26, 2., 3., 4., 5.
 
-        filename = Path() / 'test_model'
+        filename = Path('test_model.json')
 
         m = TwoBodySingleSpeciesModel(element, r_cut, sigma, theta, noise)
 
@@ -228,6 +286,8 @@ if __name__ == '__main__':
 
         m.save(filename)
 
+        m2 = TwoBodySingleSpeciesModel.from_json(filename)
+
 
     def test_two_body_two_species_model():
         elements = [2, 4]
@@ -239,26 +299,23 @@ if __name__ == '__main__':
         forces = np.random.randn(2, 3)
         r_cut, sigma, theta, noise = 2., 3., 4., 5.
 
-        filename = Path() / 'test_model'
+        filename = Path('test_model.json')
 
         m = TwoBodyTwoSpeciesModel(elements, r_cut, sigma, theta, noise)
-
         print(m)
-        print(m.parameters)
 
         m.fit(confs, forces)
-
         print(m)
-        print(m.parameters)
 
         m.build_grid(1., 10)
-
         print(m)
-        print(m.parameters)
 
         m.save(filename)
 
+        m2 = TwoBodyTwoSpeciesModel.from_json(filename)
 
-    test_two_body_single_species_model()
+
+
+    # test_two_body_single_species_model()
 
     test_two_body_two_species_model()

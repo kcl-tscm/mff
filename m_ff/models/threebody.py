@@ -7,7 +7,7 @@ from m_ff import gp
 from m_ff import kernels
 from m_ff import interpolation
 
-from m_ff.models.base import Model, ThreeBodyModel, SingleSpeciesModel, TwoSpeciesModel
+from m_ff.models.base import Model
 
 
 class ThreeBodySingleSpeciesModel(Model):
@@ -289,13 +289,13 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
-            key = ''.join(str(element) for element in k)
+            key = '_'.join(str(element) for element in k)
             grid_filename = '{}_grid_{}_num_{p[grid][r_num]}'.format(prefix, key, p=params)
 
-            params['grid']['filenames'][key] = grid_filename
+            params['grid']['filename'][key] = grid_filename
             grid.save(directory / grid_filename)
 
-        with open((directory / prefix).with_suffix('.json'), 'w') as fp:
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
 
 
@@ -313,19 +313,13 @@ if __name__ == '__main__':
         filename = Path() / 'test_model'
 
         m = ThreeBodySingleSpeciesModel(element, r_cut, sigma, theta, noise)
-
         print(m)
-        print(m.parameters)
 
         m.fit(confs, forces)
-
         print(m)
-        print(m.parameters)
 
         m.build_grid(1., 10)
-
         print(m)
-        print(m.parameters)
 
         m.save(filename)
 
@@ -343,22 +337,16 @@ if __name__ == '__main__':
         filename = Path() / 'test_model'
 
         m = ThreeBodyTwoSpeciesModel(elements, r_cut, sigma, theta, noise)
-
         print(m)
-        print(m.parameters)
 
         m.fit(confs, forces)
-
         print(m)
-        print(m.parameters)
 
         m.build_grid(1., 10)
-
         print(m)
-        print(m.parameters)
 
         m.save(filename)
 
 
     test_three_body_single_species_model()
-    test_three_body_two_species_model()
+    # test_three_body_two_species_model()

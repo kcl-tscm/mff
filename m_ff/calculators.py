@@ -110,7 +110,7 @@ class TwoBodySingleSpecies(MappedPotential):
             norm = pos / dist.reshape(-1, 1)
 
             energy_local = self.grid_2b(dist, nu=0)
-            fs_scalars = - self.grid_2b(dist, nu=1)
+            fs_scalars = self.grid_2b(dist, nu=1)
 
             potential_energies[i] = 0.5 * np.sum(energy_local, axis=0) + np.sum((rep_alpha / dist) ** 12)
             forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
@@ -153,13 +153,13 @@ class ThreeBodySingleSpecies(MappedPotential):
 
         mapped = self.grid_3b.ev_all(d_ij, d_jk, d_ki)
 
-        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):
-            forces[i] += - positions[(i, j)] * dE_ij - positions[(i, k)] * dE_ki
-            forces[j] += - positions[(j, k)] * dE_jk - positions[(j, i)] * dE_ij
-            forces[k] += - positions[(k, i)] * dE_ki - positions[(k, j)] * dE_jk
+        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):            
+            forces[i] +=  positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki # F = - dE/dx
+            forces[j] +=  positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij # F = - dE/dx
+            forces[k] +=  positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk # F = - dE/dx
 
-            potential_energies[[i, j, k]] -= energy
-
+            potential_energies[[i, j, k]] += energy/3.0 # Energy of an atom is the sum of 1/3 of every triplet it is in
+            
         if 'energy' in self.results:
             self.results['energy'] += np.sum(potential_energies)
         else:

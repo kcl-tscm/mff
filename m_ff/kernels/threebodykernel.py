@@ -396,8 +396,8 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
                 kernel (vector):
             """
 
-            return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
         def k3_ff(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for force-force correlation
@@ -668,7 +668,8 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
                 kernel (vector):
             """
 
-            return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
 
         def k3_ff(conf1, conf2, sig, theta, rc):
             """

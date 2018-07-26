@@ -245,7 +245,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
                 kernel (vector):
             """
 
-            return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
         
         
         def k2_ff(conf1, conf2, sig, theta, rc):
@@ -409,7 +409,7 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
                 kernel (vector):
             """
 
-            return k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
         
         def k2_ff(conf1, conf2, sig, theta, rc):

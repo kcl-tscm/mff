@@ -175,11 +175,12 @@ class GaussianProcess(object):
                 y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
 
             elif self.fitted == [None, 'energy']:
-
+                
                 K_force_energy = self.kernel_.calc_ef(X, self.X_train_).T
-                y_mean = K_force_energy.dot(self.energy_alpha_)
-
-            else:
+                K_force_energy = np.reshape(K_force_energy, (len(self.energy_alpha_), 3))
+                y_mean = np.einsum('id, im ->d', K_force_energy , self.energy_alpha_)
+                
+            else: 
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 K = np.hstack((K_force_energy, K_trans))

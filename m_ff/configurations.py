@@ -89,6 +89,9 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smar
 
             this_ind = np.concatenate(this_ind).ravel()
         else:
+            positions = atoms[j].get_positions()
+#             z1s, z1f, z2s, z2f = 
+#             this_ind = np.argwhere( ((positions[:,2] > z1s) and (positions[:,2] < z1f)) or ((positions[:,2] > z2s) and (positions[:,2] < z2f)))
             this_ind = np.asarray(np.arange(len(atoms[j])))
 
         # Call the carve_from_snapshot function on the chosen atoms

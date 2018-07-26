@@ -6,19 +6,23 @@ from m_ff import gp
 from m_ff import kernels
 from m_ff import interpolation
 
-from .base import TwoBodyModel, ThreeBodyModel, SingleSpeciesModel, TwoSpeciesModel
+from .base import Model
 
 
-class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
+class CombinedSingleSpeciesModel(Model):
 
     def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, **kwargs):
-        super().__init__(element, r_cut)
+        super().__init__()
+        self.element = element
+        self.r_cut = r_cut
 
         kernel_2b = kernels.TwoBodySingleSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
 
         kernel_3b = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
         self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
+
+        self.grid_2b, self.grid_3b, self.grid_start, self.grid_num = None, None, None, None
 
     def fit(self, confs, forces):
         self.gp_2b.fit(confs, forces)
@@ -99,8 +103,8 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
         grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
 
-        self.grid[(self.element, self.element)] = grid_2b
-        self.grid[(self.element, self.element, self.element)] = grid_3b
+        self.grid_2b = grid_2b
+        self.grid_3b = grid_3b
 
     def save_gp(self, filename_2b, filename_3b):
         warnings.warn('use save and load function', DeprecationWarning)
@@ -111,21 +115,6 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
-
-    def save_grid(self, filename):
-        warnings.warn('use save and load function', DeprecationWarning)
-        grid_3b = self.grid[(self.element, self.element, self.element)]
-        grid_2b = self.grid[(self.element, self.element)]
-        grid = [grid_2b, grid_3b]
-        np.save(filename, grid)
-        print('Saved 2- and 3-body grids with name:', filename)
-
-    def load_grid(self, filename):
-        warnings.warn('use save and load function', DeprecationWarning)
-        grid = np.load(filename)
-        self.grid[(self.element, self.element)] = grid[0]
-        self.grid[(self.element, self.element, self.element)] = grid[1]
-        print('Loaded 2- and 3-body grids from file:', filename)
 
     @staticmethod
     def generate_triplets(dists):
@@ -149,16 +138,20 @@ class CombinedSingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
         return inds, r_ij_x, r_ki_x, r_ki_y
 
 
-class CombinedTwoSpeciesModel(TwoSpeciesModel):
+class CombinedTwoSpeciesModel(Model):
     #### TO BE CHECKED ####
     def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, **kwargs):
-        super().__init__(elements, r_cut)
+        super().__init__()
+        self.elements = elements
+        self.r_cut = r_cut
 
         kernel_2b = kernels.TwoBodySingleSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
 
         kernel_3b = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
         self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
+
+        self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
 
     def fit(self, confs, forces):
         self.gp_2b.fit(confs, forces)
@@ -202,40 +195,42 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
 
     def build_grid(self, start, num_2b, num_3b):
         """Function that builds and predicts energies on a cube of values"""
-        dists = np.linspace(start, self.r_cut, num)
+        self.grid_start = start
+        self.grid_num_2b = num_2b
+        self.grid_num_3b = num_2b
 
-        confs = np.zeros((num, 1, 5))
+        dists = np.linspace(start, self.r_cut, num_2b)
+
+        confs = np.zeros((num_2b, 1, 5))
         confs[:, 0, 0] = dists
 
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements
-        grid_0_0_data = self.gp.predict_energy(confs)
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[0]
+        grid_0_0_data = self.gp_2b.predict_energy(confs)
 
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements
-        grid_0_1_data = self.gp.predict_energy(confs)
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[1]
+        grid_0_1_data = self.gp_2b.predict_energy(confs)
 
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements
-        grid_1_1_data = self.gp.predict_energy(confs)
+        confs[:, 0, 3], confs[:, 0, 4] = self.elements[1], self.elements[1]
+        grid_1_1_data = self.gp_2b.predict_energy(confs)
 
-        grid_0_0 = interpolation.Spline1D(dists, grid_0_0_data)
-        grid_0_1 = interpolation.Spline1D(dists, grid_0_1_data)
-        grid_1_1 = interpolation.Spline1D(dists, grid_1_1_data)
+        self.grid_2b[(0, 0)] = interpolation.Spline1D(dists, grid_0_0_data)
+        self.grid_2b[(0, 1)] = interpolation.Spline1D(dists, grid_0_1_data)
+        self.grid_2b[(1, 1)] = interpolation.Spline1D(dists, grid_1_1_data)
 
-        self.grid[(self.elements[0], self.elements[0])] = grid_0_0
-        self.grid[(self.elements[0], self.elements[1])] = grid_0_1
-        self.grid[(self.elements[1], self.elements[1])] = grid_1_1
+        dists = np.linspace(start, self.r_cut, num_3b)
 
         grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0])
         grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1])
         grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1])
         grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1])
 
-        self.grid[(self.elements[0], self.elements[0], self.elements[0])] = grid_0_0_0
-        self.grid[(self.elements[0], self.elements[0], self.elements[1])] = grid_0_0_1
-        self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid_0_1_1
-        self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid_1_1_1
+        self.grid_3b[(0, 0, 0)] = grid_0_0_0
+        self.grid_3b[(0, 0, 1)] = grid_0_0_1
+        self.grid_3b[(0, 1, 1)] = grid_0_1_1
+        self.grid_3b[(1, 1, 1)] = grid_1_1_1
 
-    def build_grid_3b(self, dists, element_k, element_i,
-                      element_j):  # HOTFIX: understand why this weird order is correct
+    def build_grid_3b(self, dists, element_k, element_i, element_j):
+        # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
         num = len(dists)
@@ -254,14 +249,9 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num, num, num))
-        grid_3b[inds] = self.predict_energy(confs).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
-
-        grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
-
-        self.grid[(self.element, self.element)] = grid_2b
-        self.grid[(self.element, self.element, self.element)] = grid_3b
 
     def save_gp(self, filename_2b, filename_3b):
         self.gp_2b.save(filename_2b)
@@ -270,30 +260,6 @@ class CombinedTwoSpeciesModel(TwoSpeciesModel):
     def load_gp(self, filename_2b, filename_3b):
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
-
-    def save_grid(self, filename):
-        grid = [self.grid[(self.elements[0], self.elements[0])],
-                self.grid[(self.elements[0], self.elements[1])],
-                self.grid[(self.elements[1], self.elements[1])],
-                self.grid[(self.elements[0], self.elements[0], self.elements[0])],
-                self.grid[(self.elements[0], self.elements[0], self.elements[1])],
-                self.grid[(self.elements[0], self.elements[1], self.elements[1])],
-                self.grid[(self.elements[1], self.elements[1], self.elements[1])]
-                ]
-        np.save(filename, grid)
-        print('Saved 2- and 3-body grids with name:', filename)
-
-    def load_grid(self, filename):
-        grid = np.load(filename)
-        self.grid[(self.elements[0], self.elements[0])] = grid[0]
-        self.grid[(self.elements[0], self.elements[1])] = grid[1]
-        self.grid[(self.elements[1], self.elements[1])] = grid[2]
-        self.grid[(self.elements[0], self.elements[0], self.elements[0])] = grid[3]
-        self.grid[(self.elements[0], self.elements[0], self.elements[1])] = grid[4]
-        self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid[5]
-        self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid[6]
-
-        print('Loaded 2- and 3-body grids from file:', filename)
 
     @staticmethod
     def generate_triplets_all(dists):

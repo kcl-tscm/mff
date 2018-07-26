@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABCMeta
-
+from pathlib import Path
 
 
 class Model(metaclass=ABCMeta):
@@ -10,7 +10,7 @@ class Model(metaclass=ABCMeta):
 
         self.grid = dict()
 
-    def save(self, directory, prefix):
+    def save(self, path: Path):
         pass
 
     @classmethod

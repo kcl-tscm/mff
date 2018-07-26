@@ -6,10 +6,6 @@ __all__ = [TwoBodySingleSpeciesModel, TwoBodyTwoSpeciesModel,
            ThreeBodySingleSpeciesModel, ThreeBodyTwoSpeciesModel,
            CombinedSingleSpeciesModel, CombinedTwoSpeciesModel]
 
-
-
-
-
 # class Parameters(object):
 #     def __init__(self):
 #         pass

@@ -186,11 +186,12 @@ class TwoBodyTwoSpeciesModel(Model):
         params['gp']['file'] = gp_filename
         self.gp.save(directory / gp_filename)
 
+        params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = ''.join(str(element) for element in k)
             grid_filename = '{}_grid_{}_num_{p[grid][r_num]}'.format(prefix, key, p=params)
 
-            params['grid']['filename_' + key] = grid_filename
+            params['grid']['filenames'][key] = grid_filename
             grid.save(directory / grid_filename)
 
         with open(directory / f'{prefix}.json', 'w') as fp:

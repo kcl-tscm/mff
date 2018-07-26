@@ -1,21 +1,26 @@
 import json
 import numpy as np
 import warnings
+from pathlib import Path
 
 from m_ff import gp
 from m_ff import kernels
 from m_ff import interpolation
 
-from .base import ThreeBodyModel, SingleSpeciesModel, TwoSpeciesModel
+from m_ff.models.base import Model, ThreeBodyModel, SingleSpeciesModel, TwoSpeciesModel
 
 
-class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
+class ThreeBodySingleSpeciesModel(Model):
 
     def __init__(self, element, r_cut, sigma, theta, noise, **kwargs):
-        super().__init__(element, r_cut)
+        super().__init__()
+        self.element = element
+        self.r_cut = r_cut
 
         kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
+
+        self.grid, self.grid_start, self.grid_num = None, None, None
 
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
@@ -42,6 +47,8 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
     def build_grid(self, start, num):
         """Function that builds and predicts energies on a cube of values"""
+        self.grid_start = start
+        self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
         inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets(dists)
@@ -68,21 +75,7 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
                     grid_data[ind_k, ind_i, ind_j] = grid_data[ind_i, ind_j, ind_k]
                     grid_data[ind_k, ind_j, ind_i] = grid_data[ind_i, ind_j, ind_k]
 
-        grid = interpolation.Spline3D(dists, dists, dists, grid_data)
-
-        self.grid[(self.element, self.element, self.element)] = grid
-
-    def save_grid(self, filename):
-        warnings.warn('use save and load function', DeprecationWarning)
-        grid = self.grid[(self.element, self.element, self.element)]
-        np.save(filename, grid)
-        print('Saved 3-body grid  with name:', filename)
-
-    def load_grid(self, filename):
-        warnings.warn('use save and load function', DeprecationWarning)
-        grid = np.load(filename)
-        self.grid[(self.element, self.element, self.element)] = grid
-        print('Loaded 3-body grid from file:', filename)
+        self.grid = interpolation.Spline3D(dists, dists, dists, grid_data)
 
     @staticmethod
     def generate_triplets(dists):
@@ -105,14 +98,56 @@ class ThreeBodySingleSpeciesModel(ThreeBodyModel, SingleSpeciesModel):
 
         return inds, r_ij_x, r_ki_x, r_ki_y
 
+    def save(self, path):
 
-class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        params = {
+            'model': self.__class__.__name__,
+            'elements': self.element,
+            'r_cut': self.r_cut,
+            'gp': {
+                'kernel': self.gp.kernel.kernel_name,
+                'n_train': self.gp.n_train,
+                'sigma': self.gp.kernel.theta[0],
+                'theta': self.gp.kernel.theta[1],
+                'noise': self.gp.noise
+            },
+            'grid': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num
+            } if self.grid else {}
+        }
+
+        gp_filename = "{}_gp_ker_3_ntr_{p[gp][n_train]}".format(prefix, p=params)
+
+        params['gp']['filename'] = gp_filename
+        self.gp.save(directory / gp_filename)
+
+        if self.grid:
+            grid_filename = '{}_grid_num_{p[grid][r_num]}'.format(prefix, p=params)
+
+            params['grid']['filename'] = grid_filename
+            self.grid.save(directory / grid_filename)
+
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+            json.dump(params, fp, indent=4)
+
+
+class ThreeBodyTwoSpeciesModel(Model):
 
     def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
-        super().__init__(elements, r_cut)
+        super().__init__()
+        self.elements = elements
+        self.r_cut = r_cut
 
         kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
+
+        self.grid, self.grid_start, self.grid_num = {}, None, None
 
     def fit(self, confs, forces):
         self.gp.fit(confs, forces)
@@ -137,6 +172,8 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
 
     def build_grid(self, start, num):
         """Function that builds and predicts energies on a cube of values"""
+        self.grid_start = start
+        self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
 
@@ -145,12 +182,10 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
         grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1])
         grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1])
 
-        self.grid[(self.elements[0], self.elements[0], self.elements[0])] = grid_0_0_0
-        self.grid[(self.elements[0], self.elements[0], self.elements[1])] = grid_0_0_1
-        self.grid[(self.elements[0], self.elements[1], self.elements[1])] = grid_0_1_1
-        self.grid[(self.elements[1], self.elements[1], self.elements[1])] = grid_1_1_1
-
-        # return grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2
+        self.grid[(0, 0, 0)] = grid_0_0_0
+        self.grid[(0, 0, 1)] = grid_0_0_1
+        self.grid[(0, 1, 1)] = grid_0_1_1
+        self.grid[(1, 1, 1)] = grid_1_1_1
 
     def build_grid_3b(self, dists, element_k, element_i, element_j):
         # HOTFIX: understand why this weird order is correct
@@ -223,3 +258,107 @@ class ThreeBodyTwoSpeciesModel(TwoSpeciesModel):
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
 
         return inds, r_ij_x, r_ki_x, r_ki_y
+
+    def save(self, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        params = {
+            'model': self.__class__.__name__,
+            'elements': self.elements,
+            'r_cut': self.r_cut,
+            'gp': {
+                'kernel': self.gp.kernel.kernel_name,
+                'n_train': self.gp.n_train,
+                'sigma': self.gp.kernel.theta[0],
+                'theta': self.gp.kernel.theta[1],
+                'noise': self.gp.noise
+            },
+            'grid': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num
+            } if self.grid else {}
+        }
+
+        gp_filename = "{}_gp_ker_3_ntr_{p[gp][n_train]}".format(prefix, p=params)
+
+        params['gp']['filename'] = gp_filename
+        self.gp.save(directory / gp_filename)
+
+        params['grid']['filename'] = {}
+        for k, grid in self.grid.items():
+            key = ''.join(str(element) for element in k)
+            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}'.format(prefix, key, p=params)
+
+            params['grid']['filenames'][key] = grid_filename
+            grid.save(directory / grid_filename)
+
+        with open((directory / prefix).with_suffix('.json'), 'w') as fp:
+            json.dump(params, fp, indent=4)
+
+
+if __name__ == '__main__':
+    def test_three_body_single_species_model():
+        confs = np.array([
+            np.hstack([np.random.randn(4, 3), 26 * np.ones((4, 2))]),
+            np.hstack([np.random.randn(5, 3), 26 * np.ones((5, 2))])
+        ])
+
+        forces = np.random.randn(2, 3)
+
+        element, r_cut, sigma, theta, noise = 26, 2., 3., 4., 5.
+
+        filename = Path() / 'test_model'
+
+        m = ThreeBodySingleSpeciesModel(element, r_cut, sigma, theta, noise)
+
+        print(m)
+        print(m.parameters)
+
+        m.fit(confs, forces)
+
+        print(m)
+        print(m.parameters)
+
+        m.build_grid(1., 10)
+
+        print(m)
+        print(m.parameters)
+
+        m.save(filename)
+
+
+    def test_three_body_two_species_model():
+        elements = [2, 4]
+        confs = np.array([
+            np.hstack([np.random.randn(4, 3), np.random.choice(elements, size=(4, 2))]),
+            np.hstack([np.random.randn(5, 3), np.random.choice(elements, size=(5, 2))])
+        ])
+
+        forces = np.random.randn(2, 3)
+        r_cut, sigma, theta, noise = 2., 3., 4., 5.
+
+        filename = Path() / 'test_model'
+
+        m = ThreeBodyTwoSpeciesModel(elements, r_cut, sigma, theta, noise)
+
+        print(m)
+        print(m.parameters)
+
+        m.fit(confs, forces)
+
+        print(m)
+        print(m.parameters)
+
+        m.build_grid(1., 10)
+
+        print(m)
+        print(m.parameters)
+
+        m.save(filename)
+
+
+    test_three_body_single_species_model()
+    test_three_body_two_species_model()

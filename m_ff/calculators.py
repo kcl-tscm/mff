@@ -258,7 +258,7 @@ class TwoBodyTwoSpecies(MappedPotential):
         potential_energies = np.zeros((len(self.atoms), 1))
 
         rep_alpha = self.rep_alpha
-
+        
         for i, atom in enumerate(self.atoms):
             inds, pos, dists2 = self.nl.get_neighbors(i)
 
@@ -272,16 +272,15 @@ class TwoBodyTwoSpecies(MappedPotential):
 
             for element in self.elements:
                 local_inds = np.argwhere(atoms.numbers[inds] == element)
-
-                if local_inds:
-                    local_grid = self.grids_2b[(atom_element_index, self.element_map[element])]
-
+                if len(local_inds) > 0:
+                    # Doing this so that the order of the elements is always increasing
+                    ellist = (sorted([atom_element_index, self.element_map[element]])[0], sorted([atom_element_index, self.element_map[element]])[1])
+                    local_grid = self.grids_2b[ellist]
                     energy_local[local_inds] = local_grid(dist[local_inds], nu=0)
                     fs_scalars[local_inds] = local_grid(dist[local_inds], nu=1)
 
             potential_energies[i] = 0.5 * np.sum(energy_local, axis=0) + np.sum((rep_alpha / dist) ** 12)
-
-            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0)
+            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', 1/dist**13, norm)
             # forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
             #             12 * rep_alpha ** 12 * np.einsum('i, in -> n', 1 / dist ** 13, norm)
 

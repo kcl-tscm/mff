@@ -126,6 +126,7 @@ class GaussianProcess(object):
         self.energy_alpha_ = None
         self.energy_K = None
         self.fitted[0] = 'force'
+        self.n_train = len(self.y_train_)
         return self
 
     def predict(self, X, return_std=False):
@@ -282,6 +283,8 @@ class GaussianProcess(object):
         self.K = K
         self.energy_K = None
         self.fitted = ['force', 'energy']
+        self.n_train = len(self.y_train_)
+
         return self
     
     def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now 
@@ -359,6 +362,7 @@ class GaussianProcess(object):
         self.K = None
         self.alpha_ = None
         self.fitted[1] = 'energy'
+        self.n_train = len(self.y_train_)
 
         return self
     

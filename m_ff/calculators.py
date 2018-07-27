@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from itertools import combinations, islice
+from itertools import islice
 
 import numpy as np
 import logging
@@ -72,6 +72,9 @@ class MappedPotential(Calculator, metaclass=ABCMeta):
 
         self.nl.check_and_update(self.atoms)
 
+        self.results = {'energy': 0.0,
+                        'forces': np.zeros((len(atoms), 3))}
+
     def initialize(self, atoms):
         logger.info('initialize')
         self.nl = FullNeighborList(self.r_cut, atoms=atoms, driftfactor=0.)
@@ -116,17 +119,8 @@ class TwoBodySingleSpecies(MappedPotential):
             forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
                 12 * rep_alpha ** 12 * np.einsum('i, in -> n', 1 / dist ** 13, norm)
 
-        if 'energy' in self.results:
-            self.results['energy'] += np.sum(potential_energies)
-        else:
-            self.results['energy'] = np.sum(potential_energies)
-
-        if 'forces' in self.results:
-            self.results['forces'] += forces
-        else:
-            self.results['forces'] = forces
-
-        # self.results['forces'] = self.results['forces'] + forces if 'forces' in self.results else forces
+        self.results['energy'] += np.sum(potential_energies)
+        self.results['forces'] += forces
 
 
 class ThreeBodySingleSpecies(MappedPotential):
@@ -153,24 +147,16 @@ class ThreeBodySingleSpecies(MappedPotential):
 
         mapped = self.grid_3b.ev_all(d_ij, d_jk, d_ki)
 
-        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):            
-            forces[i] +=  positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki # F = - dE/dx
-            forces[j] +=  positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij # F = - dE/dx
-            forces[k] +=  positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk # F = - dE/dx
+        for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices, mapped[0], mapped[1], mapped[2], mapped[3]):
+            forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki  # F = - dE/dx
+            forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij  # F = - dE/dx
+            forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk  # F = - dE/dx
 
-            potential_energies[[i, j, k]] += energy/3.0 # Energy of an atom is the sum of 1/3 of every triplet it is in
-            
-        if 'energy' in self.results:
-            self.results['energy'] += np.sum(potential_energies)
-        else:
-            self.results['energy'] = np.sum(potential_energies)
+            potential_energies[
+                [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
 
-        if 'forces' in self.results:
-            self.results['forces'] += forces
-        else:
-            self.results['forces'] = forces
-
-        # self.results['forces'] = self.results['forces'] + forces if 'forces' in self.results else forces
+        self.results['energy'] += np.sum(potential_energies)
+        self.results['forces'] += forces
 
     def find_triplets(self):
         atoms, nl = self.atoms, self.nl
@@ -251,8 +237,57 @@ class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
 
 
-class TwoBodyTwoSpecies(Calculator):
-    pass
+class TwoBodyTwoSpecies(MappedPotential):
+    """A remapped 2-body calculator for ase
+    """
+
+    def __init__(self, r_cut, elements, grids_2b, rep_alpha=0.0, **kwargs):
+        super().__init__(r_cut, **kwargs)
+
+        self.elements = elements
+        self.element_map = {element: index for index, element in enumerate(elements)}
+        self.grids_2b = grids_2b
+        self.rep_alpha = rep_alpha
+
+    def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
+        """Do the calculation.
+        """
+
+        super().calculate(atoms, properties, system_changes)
+
+        forces = np.zeros((len(self.atoms), 3))
+        potential_energies = np.zeros((len(self.atoms), 1))
+
+        rep_alpha = self.rep_alpha
+
+        for i, atom in enumerate(self.atoms):
+            inds, pos, dists2 = self.nl.get_neighbors(i)
+
+            dist = np.sqrt(dists2)
+            norm = pos / dist.reshape(-1, 1)
+
+            energy_local = np.zeros_like(dist)
+            fs_scalars = np.zeros_like(dist)
+
+            atom_element_index = self.element_map[atom.number]
+
+            for element in self.elements:
+                local_inds = np.argwhere(atoms.numbers[inds] == element)
+
+                if local_inds:
+                    local_grid = self.grids_2b[(atom_element_index, self.element_map[element])]
+
+                    energy_local[local_inds] = local_grid(dist[local_inds], nu=0)
+                    fs_scalars[local_inds] = local_grid(dist[local_inds], nu=1)
+
+            potential_energies[i] = 0.5 * np.sum(energy_local, axis=0) + np.sum((rep_alpha / dist) ** 12)
+
+            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0)
+            # forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
+            #             12 * rep_alpha ** 12 * np.einsum('i, in -> n', 1 / dist ** 13, norm)
+
+        self.results['energy'] += np.sum(potential_energies)
+        self.results['forces'] += forces
 
 
 class ThreeBodyTwoSpecies(Calculator):
@@ -261,7 +296,8 @@ class ThreeBodyTwoSpecies(Calculator):
 
 if __name__ == '__main__':
     from ase.io import read
-    from m_ff.interpolation import Spline3D, Spline1D
+
+    # from m_ff.interpolation import Spline3D, Spline1D
 
     logging.basicConfig(level=logging.INFO)
 
@@ -270,43 +306,22 @@ if __name__ == '__main__':
     filename = directory / 'movie.xyz'
     traj = read(str(filename), index=slice(None))
 
-    rs, element1, _, grid_1_1_data, _ = np.load(str(directory / 'MFF_2b_ntr_20_sig_0.30_cut_4.45.npy'))
-    grid_2b = Spline1D(rs, grid_1_1_data)
-
     # calc = TwoBodySingleSpecies(r_cut=4.45, grid_2b=grid_2b)
-
-    rs, element1, _, _, grid_1_1_1_data = np.load(str(directory / 'MFF_3b_ntr_20_sig_0.60_cut_4.45.npy'))
-    grid_3b = Spline3D(rs, rs, rs, grid_1_1_1_data)
-
-    calc = ThreeBodySingleSpecies(r_cut=4.45, grid_2b=grid_2b, grid_3b=grid_3b)
-
-    atoms = traj[0]
-    atoms.set_calculator(calc)
-
-    f = atoms.get_forces()
-    rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
-    print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
-
-    for atoms in traj[0:5]:
-        atoms.set_calculator(calc)
-
-        # print(atoms.arrays['force'])
-        # print(atoms.get_forces())
-
-        rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
-        print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
-
-    # pass
-
-# If single element, build only a 2- and  3-body grid
-# result = [rs, element1, element2, grid_1_1, grid_1_1_1]
-
-# If two elements, build three 2- and four 3-body grids
-# result = [rs, element1, element2, grid_1_1, grid_1_2, grid_2_2, grid_1_1_1, grid_1_1_2, grid_1_2_2, grid_2_2_2]
-
-
-# MAEF on forces: 0.1696 +- 0.0920
-# MAEF on forces: 0.1696 +- 0.0920
-# MAEF on forces: 0.1645 +- 0.0879
-# MAEF on forces: 0.1616 +- 0.0826
-# MAEF on forces: 0.1616 +- 0.0782
+    # calc = ThreeBodySingleSpecies(r_cut=4.45, grid_2b=grid_2b, grid_3b=grid_3b)
+    #
+    # atoms = traj[0]
+    # atoms.set_calculator(calc)
+    #
+    # f = atoms.get_forces()
+    # rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
+    # print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
+    #
+    # for atoms in traj[0:5]:
+    #     atoms.set_calculator(calc)
+    #
+    #     # print(atoms.arrays['force'])
+    #     # print(atoms.get_forces())
+    #
+    #     rms = np.sqrt(np.sum(np.square(atoms.arrays['force'] - atoms.get_forces()), axis=1))
+    #     print('MAEF on forces: {:.4f} +- {:.4f}'.format(np.mean(rms), np.std(rms)))
+    #

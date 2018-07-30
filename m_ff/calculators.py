@@ -115,8 +115,8 @@ class TwoBodySingleSpecies(MappedPotential):
             energy_local = self.grid_2b(dist, nu=0)
             fs_scalars = self.grid_2b(dist, nu=1)
 
-            potential_energies[i] =  0.5* np.sum(energy_local, axis=0) + np.sum((rep_alpha/dist)**12)
-            forces[i] =  np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', 1/dist**13, norm) # F = - dE/dx
+            potential_energies[i] = + 0.5* np.sum(energy_local, axis=0) + 0.5*np.sum((rep_alpha/dist)**12) 
+            forces[i] = + np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', (1/dist)**13, norm)
 
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces

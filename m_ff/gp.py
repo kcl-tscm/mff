@@ -151,6 +151,7 @@ class GaussianProcess(object):
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             y_mean = np.zeros(X.shape[0])
+            warnings.warn("No training data, predicting based on prior")
             if return_std:
                 y_var = kernel.calc_diag(X)
                 return y_mean, np.sqrt(y_var)
@@ -160,14 +161,13 @@ class GaussianProcess(object):
         else:  # Predict based on GP posterior
             
             if self.fitted == ['force', None]:
-
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
             
-            elif self.fitted == [None, 'energy']:
-                
+            elif self.fitted == [None, 'energy']:       
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 y_mean = K_force_energy.dot(self.energy_alpha_)  
+                
             else: 
                 K_trans = self.kernel_.calc(X, self.X_train_)
                 K_force_energy =  self.kernel_.calc_ef(self.X_train_, X).T
@@ -380,6 +380,7 @@ class GaussianProcess(object):
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             e_mean = np.zeros(X.shape[0])
+            warnings.warn("No training data, predicting based on prior")
             if return_std:
                 y_var = kernel.calc_diag_e(X)
                 return e_mean, np.sqrt(e_var)
@@ -423,7 +424,7 @@ class GaussianProcess(object):
             else:
                 return e_mean
 
-    def log_marginal_likelihood(self, theta=None, eval_gradient=False):
+    def log_marginal_likelihood(self, theta=None, eval_gradient=False): # TODO: debug for energy and energy-force fitting
         """Returns log-marginal likelihood of theta for training data.
 
         Args:
@@ -494,7 +495,7 @@ class GaussianProcess(object):
         else:
             return log_likelihood
 
-    def _constrained_optimization(self, obj_func, initial_theta, bounds):
+    def _constrained_optimization(self, obj_func, initial_theta, bounds): # TODO: debug for energy and energy-force fitting
         if self.optimizer == "fmin_l_bfgs_b":
             theta_opt, func_min, convergence_dict = \
                 fmin_l_bfgs_b(obj_func, initial_theta, bounds=bounds)
@@ -525,7 +526,8 @@ class GaussianProcess(object):
                   self.K,
                   self.energy_alpha_,
                   self.energy_K,
-                  self.X_train_]
+                  self.X_train_,
+                  self.L_]
 
         np.save(filename, output)
         print('Saved Gaussian process with name:', filename)
@@ -551,7 +553,8 @@ class GaussianProcess(object):
         self.K, \
         self.energy_alpha_, \
         self.energy_K, \
-        self.X_train_ = np.load(filename)
+        self.X_train_,  \
+        self.L_ = np.load(filename)
 
         self.kernel_ = self.kernel
 

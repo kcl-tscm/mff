@@ -106,9 +106,10 @@ class CombinedSingleSpeciesModel(Model):
 
         self.grid_2b = grid_2b
         self.grid_3b = grid_3b
+        self.grid_num_2b = num_2b
+        self.grid_num_3b = num_3b
         
     def save_combined(self, path):
-        print("Hoi")
         if not isinstance(path, Path):
             path = Path(path)
 

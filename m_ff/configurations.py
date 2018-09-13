@@ -49,7 +49,7 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
         confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
     return confs, forces, energy
 
-def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smart_sampling = False):
+def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smart_sampling = False, boundaries = None):
     confs, forces, energies = [], [], []
 
     # Get the atomic number of each atom in the trajectory file
@@ -76,8 +76,8 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smar
     for j in np.arange(len(atoms)):
         logging.info('Reading traj step {}'.format(j))
 
-        this_ind = []
         if smart_sampling:
+            this_ind = []
             for k in np.arange(len(elements)):
                 count_el_atoms = sum(atom_number_list[j] == elements[k])
                 element_ind_count[k] += count_el_atoms
@@ -90,9 +90,13 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smar
             this_ind = np.concatenate(this_ind).ravel()
         else:
             positions = atoms[j].get_positions()
-#             z1s, z1f, z2s, z2f = 
-#             this_ind = np.argwhere( ((positions[:,2] > z1s) and (positions[:,2] < z1f)) or ((positions[:,2] > z2s) and (positions[:,2] < z2f)))
-            this_ind = np.asarray(np.arange(len(atoms[j])))
+            if np.any(boundaries):
+                z1s, z1f, z2s, z2f = boundaries
+                this_ind = np.ravel(np.argwhere(np.logical_or(
+                    np.logical_and(positions[:,2] > z2s, positions[:,2] < z2f), 
+                    np.logical_and(positions[:,2] > z1s, positions[:,2] < z1f))))
+            else:
+                this_ind = np.asarray(np.arange(len(atoms[j])))
 
         # Call the carve_from_snapshot function on the chosen atoms
         if this_ind.size > 0:

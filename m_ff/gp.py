@@ -54,6 +54,19 @@ class GaussianProcess(object):
         self.n_restarts_optimizer = n_restarts_optimizer
         self.fitted = [None, None]
 
+        
+    def calc_gram_ff(self, X):
+        self.kernel_ = self.kernel
+        self.X_train_ = X
+        K = self.kernel_.calc_gram(self.X_train_)
+        return K
+    
+    def calc_gram_ee(self, X):
+        self.kernel_ = self.kernel
+        self.X_train_ = X
+        K = self.kernel_.calc_gram_e(self.X_train_)
+        return K
+        
     def fit(self, X, y):
         """Fit a Gaussian process regression model.
 

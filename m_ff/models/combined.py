@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import warnings
+from pathlib import Path
 
 from m_ff import gp
 from m_ff import kernels
@@ -8,7 +9,7 @@ from m_ff import interpolation
 
 from .base import Model
 
-
+        
 class CombinedSingleSpeciesModel(Model):
 
     def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, **kwargs):
@@ -105,7 +106,108 @@ class CombinedSingleSpeciesModel(Model):
 
         self.grid_2b = grid_2b
         self.grid_3b = grid_3b
+        
+    def save_combined(self, path):
+        print("Hoi")
+        if not isinstance(path, Path):
+            path = Path(path)
 
+        directory, prefix = path.parent, path.stem
+        
+        ### SAVE THE 2B MODEL ###
+        params_2b = {
+            'model': self.__class__.__name__,
+            'element': self.element,
+            'r_cut': self.r_cut,
+            'gp': {
+                'kernel': self.gp_2b.kernel.kernel_name,
+                'n_train': self.gp_2b.n_train,
+                'sigma': self.gp_2b.kernel.theta[0],
+                'theta': self.gp_2b.kernel.theta[1],
+                'noise': self.gp_2b.noise
+            },
+            'grid': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num_2b
+            } if self.grid_2b else {}
+        }
+
+        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params_2b)
+
+        params_2b['gp']['filename'] = gp_filename_2b
+        self.gp_2b.save(directory / gp_filename_2b)
+
+        if self.grid_2b:
+            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params_2b)
+            print("Save 2-body grid under name %s" %(grid_filename))
+
+            params_2b['grid']['filename'] = gp_filename_2b
+            self.grid_2b.save(directory / gp_filename_2b)
+
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+            json.dump(params_2b, fp, indent=4)
+        
+        ### SAVE THE 3B MODEL ###
+        params_3b = {
+            'model': self.__class__.__name__,
+            'element': self.element,
+            'r_cut': self.r_cut,
+            'gp': {
+                'kernel': self.gp_3b.kernel.kernel_name,
+                'n_train': self.gp_3b.n_train,
+                'sigma': self.gp_3b.kernel.theta[0],
+                'theta': self.gp_3b.kernel.theta[1],
+                'noise': self.gp_3b.noise
+            },
+            'grid': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num_3b
+            } if self.grid_3b else {}
+        }
+
+        gp_filename_3b = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params_3b)
+
+        params_3b['gp']['filename'] = gp_filename_3b
+        self.gp_3b.save(directory / gp_filename_3b)
+
+        if self.grid_3b:
+            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params_3b)
+            print("Save 3-body grid under name %s" %(grid_filename))
+
+            params_3b['grid']['filename'] = gp_filename_3b
+            self.grid_3b.save(directory / gp_filename_3b)
+
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+            json.dump(params_3b, fp, indent=4)
+            
+    @classmethod
+    def from_json(cls, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+
+        model = cls(params['element'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'],
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        model.gp.load(directory / gp_filename)
+
+        if params['grid']:
+            grid_filename = params['grid']['filename']
+            model.grid = interpolation.Spline1D.load(directory / grid_filename)
+
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+        return model
+    
     def save_gp(self, filename_2b, filename_3b):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp_2b.save(filename_2b)
@@ -252,6 +354,7 @@ class CombinedTwoSpeciesModel(Model):
         grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
+    
 
     def save_gp(self, filename_2b, filename_3b):
         self.gp_2b.save(filename_2b)

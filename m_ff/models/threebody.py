@@ -78,7 +78,7 @@ class ThreeBodySingleSpeciesModel(Model):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
-            result = np.array(pool.map(self.predict_energy(confs), clist))
+            result = np.array(pool.map(self.gp.predict_energy, clist))
             result = np.concatenate(result).flatten()
             grid_data[inds] = result
             
@@ -189,24 +189,24 @@ class ThreeBodyTwoSpeciesModel(Model):
     def load_gp(self, filename):
         self.gp.load(filename)
 
-    def build_grid(self, start, num):
+    def build_grid(self, start, num, nnodes = 1):
         """Function that builds and predicts energies on a cube of values"""
         self.grid_start = start
         self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
 
-        grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0])
-        grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1])
-        grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1])
-        grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1])
+        grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], nnodes)
+        grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], nnodes)
+        grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], nnodes)
+        grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
 
         self.grid[(0, 0, 0)] = grid_0_0_0
         self.grid[(0, 0, 1)] = grid_0_0_1
         self.grid[(0, 1, 1)] = grid_0_1_1
         self.grid[(1, 1, 1)] = grid_1_1_1
 
-    def build_grid_3b(self, dists, element_k, element_i, element_j):
+    def build_grid_3b(self, dists, element_k, element_i, element_j, nnodes):
         # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
@@ -226,7 +226,26 @@ class ThreeBodyTwoSpeciesModel(Model):
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num, num, num))
-        grid_3b[inds] = self.predict_energy(confs).flatten()
+
+        if nnodes > 1:
+            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+            n = len(confs)
+            import sys
+            sys.setrecursionlimit(1000000)
+            print('Using %i cores for the mapping' % (nnodes))
+            pool = ProcessingPool(nodes=nnodes)
+            splitind = np.zeros(nnodes + 1)
+            factor = (n + (nnodes - 1)) / nnodes
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
+            result = np.array(pool.map(self.gp.predict_energy, clist))
+            result = np.concatenate(result).flatten()
+            grid_3b[inds] = result
+            
+        else:
+            grid_3b[inds] = self.gp.predict_energy(confs).flatten()
 
         # for ind_i in range(num):
         #     for ind_j in range(ind_i + 1):

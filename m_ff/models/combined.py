@@ -65,7 +65,7 @@ class CombinedSingleSpeciesModel(Model):
         return self.gp_2b.predict_energy(confs, return_std) + \
                self.gp_3b.predict_energy(confs, return_std)
 
-    def build_grid(self, start, num_2b, num_3b):
+    def build_grid(self, start, num_2b, num_3b, nnodes = 1):
         """Function that builds and predicts energies on a cube of values"""
         dists_2b = np.linspace(start, self.r_cut, num_2b)
 
@@ -91,8 +91,27 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
-        grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
-
+        
+        if nnodes > 1:
+            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+            n = len(confs)
+            import sys
+            sys.setrecursionlimit(1000000)
+            print('Using %i cores for the mapping' % (nnodes))
+            pool = ProcessingPool(nodes=nnodes)
+            splitind = np.zeros(nnodes + 1)
+            factor = (n + (nnodes - 1)) / nnodes
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
+            result = np.array(pool.map(self.gp_3b.predict_energy, clist))
+            result = np.concatenate(result).flatten()
+            grid_3b[inds] = result
+            
+        else:
+            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
+            
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
                 for ind_k in range(ind_j + 1):
@@ -321,6 +340,7 @@ class CombinedTwoSpeciesModel(Model):
         self.grid_2b[(1, 1)] = interpolation.Spline1D(dists, grid_1_1_data)
 
         dists = np.linspace(start, self.r_cut, num_3b)
+
 
         grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0])
         grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1])

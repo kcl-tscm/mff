@@ -267,7 +267,7 @@ class CombinedTwoSpeciesModel(Model):
         self.elements = elements
         self.r_cut = r_cut
 
-        kernel_2b = kernels.TwoBodySingleSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
+        kernel_2b = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
 
         kernel_3b = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])

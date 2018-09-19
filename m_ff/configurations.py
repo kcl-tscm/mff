@@ -58,26 +58,31 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smar
     elements, elements_count = np.unique(flat_atom_number, return_counts=True)
 
     # Calculate the ratios of occurrence of central atoms based on their atomic number
-    ratios = np.sqrt(1.0 * elements_count) / np.sum(elements_count)
-    ratios /= np.sum(ratios)
-
     if n_data > np.sum(elements_count):
         print('WARNING: n_data is larger that total number of configuration')
         n_data = np.sum(elements_count)
         print('Settin n_data = {}'.format(n_data))
 
     # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
-    indices = [np.linspace(0, elc, int(ratio * n_data) - 1, dtype=np.int) for elc, ratio in zip(elements_count, ratios)]
+    if len(elements) > 1:
+        ratios = np.sqrt(1.0 * elements_count) / np.sum(elements_count)
+        ratios /= np.sum(ratios)
+        
+    if smart_sampling:
+        indices = [np.linspace(0, elc, int(ratio * n_data) - 1, dtype=np.int) for elc, ratio in zip(elements_count, ratios)]
+    else:
+        avg_natoms = len(flat_atom_number)//len(atoms)
+        ind_snapshot = np.random.randint(0, len(atoms) - 1  , n_data//avg_natoms)
 
     # Go through each trajectory step and find where the chosen indexes for all different elements are
     element_ind_count = np.zeros_like(elements)
     element_ind_count_prev = np.zeros_like(elements)
 
     for j in np.arange(len(atoms)):
+        this_ind = []
         logging.info('Reading traj step {}'.format(j))
 
         if smart_sampling:
-            this_ind = []
             for k in np.arange(len(elements)):
                 count_el_atoms = sum(atom_number_list[j] == elements[k])
                 element_ind_count[k] += count_el_atoms
@@ -89,17 +94,19 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, smar
 
             this_ind = np.concatenate(this_ind).ravel()
         else:
-            positions = atoms[j].get_positions()
-            if np.any(boundaries):
-                z1s, z1f, z2s, z2f = boundaries
-                this_ind = np.ravel(np.argwhere(np.logical_or(
-                    np.logical_and(positions[:,2] > z2s, positions[:,2] < z2f), 
-                    np.logical_and(positions[:,2] > z1s, positions[:,2] < z1f))))
-            else:
-                this_ind = np.asarray(np.arange(len(atoms[j])))
+            if j in ind_snapshot:       
+                positions = atoms[j].get_positions()
+                if np.any(boundaries):
+                    z1s, z1f, z2s, z2f = boundaries
+                    this_ind.append(np.ravel(np.argwhere(np.logical_or(
+                        np.logical_and(positions[:,2] > z2s, positions[:,2] < z2f), 
+                        np.logical_and(positions[:,2] > z1s, positions[:,2] < z1f)))))
+                else:
+                    this_ind.append(np.asarray(np.arange(len(atoms[j]))))
+                this_ind = np.concatenate(this_ind).ravel()
 
         # Call the carve_from_snapshot function on the chosen atoms
-        if this_ind.size > 0:
+        if len(this_ind) > 0:
             this_conf, this_force, this_energy = \
                 carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label)
             confs.append(this_conf)

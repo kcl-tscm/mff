@@ -127,6 +127,7 @@ class CombinedSingleSpeciesModel(Model):
         self.grid_3b = grid_3b
         self.grid_num_2b = num_2b
         self.grid_num_3b = num_3b
+        self.grid_start = start
         
     def save_combined(self, path):
         if not isinstance(path, Path):
@@ -135,70 +136,60 @@ class CombinedSingleSpeciesModel(Model):
         directory, prefix = path.parent, path.stem
         
         ### SAVE THE 2B MODEL ###
-        params_2b = {
+        params = {
             'model': self.__class__.__name__,
             'element': self.element,
             'r_cut': self.r_cut,
-            'gp': {
+            'gp_2b': {
                 'kernel': self.gp_2b.kernel.kernel_name,
                 'n_train': self.gp_2b.n_train,
                 'sigma': self.gp_2b.kernel.theta[0],
                 'theta': self.gp_2b.kernel.theta[1],
                 'noise': self.gp_2b.noise
             },
-            'grid': {
-                'r_min': self.grid_start,
-                'r_num': self.grid_num_2b
-            } if self.grid_2b else {}
-        }
-
-        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params_2b)
-
-        params_2b['gp']['filename'] = gp_filename_2b
-        self.gp_2b.save(directory / gp_filename_2b)
-
-        if self.grid_2b:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params_2b)
-            print("Save 2-body grid under name %s" %(grid_filename))
-
-            params_2b['grid']['filename'] = gp_filename_2b
-            self.grid_2b.save(directory / gp_filename_2b)
-
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params_2b, fp, indent=4)
-        
-        ### SAVE THE 3B MODEL ###
-        params_3b = {
-            'model': self.__class__.__name__,
-            'element': self.element,
-            'r_cut': self.r_cut,
-            'gp': {
+            'gp_3b': {
                 'kernel': self.gp_3b.kernel.kernel_name,
                 'n_train': self.gp_3b.n_train,
                 'sigma': self.gp_3b.kernel.theta[0],
                 'theta': self.gp_3b.kernel.theta[1],
                 'noise': self.gp_3b.noise
             },
-            'grid': {
+            'grid_2b': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num_2b
+            } if self.grid_2b else {}
+            ,
+            'grid_3b': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num_3b
             } if self.grid_3b else {}
         }
 
-        gp_filename_3b = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params_3b)
+        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp_2b][n_train]}.npy".format(prefix, p=params)
 
-        params_3b['gp']['filename'] = gp_filename_3b
+        params['gp_2b']['filename'] = gp_filename_2b
+        self.gp_2b.save(directory / gp_filename_2b)
+
+        if self.grid_2b:
+            grid_filename_2b = '{}_grid_2b_num_{p[grid_2b][r_num]}.npz'.format(prefix, p=params)
+            print("Saved 2-body grid under name %s" %(grid_filename_2b))
+            params['grid_2b']['filename'] = grid_filename_2b
+            self.grid_2b.save(directory / grid_filename_2b)
+        
+        ### SAVE THE 3B MODEL ###
+        gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
+
+        params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(directory / gp_filename_3b)
 
         if self.grid_3b:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params_3b)
-            print("Save 3-body grid under name %s" %(grid_filename))
-
-            params_3b['grid']['filename'] = gp_filename_3b
-            self.grid_3b.save(directory / gp_filename_3b)
+            grid_filename_3b = '{}_grid_3b_num_{p[grid_3b][r_num]}.npz'.format(prefix, p=params)
+            print("Saved 3-body grid under name %s" %(grid_filename_3b))  
+            params['grid_3b']['filename'] = grid_filename_3b
+            self.grid_3b.save(directory / grid_filename_3b)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params_3b, fp, indent=4)
+            json.dump(params, fp, indent=4)
             
     @classmethod
     def from_json(cls, path):
@@ -209,22 +200,29 @@ class CombinedSingleSpeciesModel(Model):
 
         with open(path) as fp:
             params = json.load(fp)
-
         model = cls(params['element'],
                     params['r_cut'],
-                    params['gp']['sigma'],
-                    params['gp']['theta'],
-                    params['gp']['noise'])
+                    params['gp_2b']['sigma'],
+                    params['gp_3b']['sigma'],
+                    params['gp_2b']['theta'],
+                    params['gp_3b']['theta'],
+                    params['gp_2b']['noise'])
 
-        gp_filename = params['gp']['filename']
-        model.gp.load(directory / gp_filename)
+        gp_filename_2b = params['gp_2b']['filename']
+        gp_filename_3b = params['gp_3b']['filename']
+        model.gp_2b.load(directory / gp_filename_2b)
+        model.gp_3b.load(directory / gp_filename_3b)
 
-        if params['grid']:
-            grid_filename = params['grid']['filename']
-            model.grid = interpolation.Spline1D.load(directory / grid_filename)
+        if params['grid_2b']:
+            grid_filename_2b = params['grid_2b']['filename']
+            model.grid_2b = interpolation.Spline1D.load(directory / grid_filename_2b)
 
-            model.grid_start = params['grid']['r_min']
-            model.grid_num = params['grid']['r_num']
+            grid_filename_3b = params['grid_3b']['filename']
+            model.grid_3b = interpolation.Spline3D.load(directory / grid_filename_3b)
+            
+            model.grid_start = params['grid_2b']['r_min']
+            model.grid_num_2b = params['grid_2b']['r_num']
+            model.grid_num_3b = params['grid_3b']['r_num']
 
         return model
     

@@ -393,7 +393,110 @@ class CombinedTwoSpeciesModel(Model):
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
     
+    def save_combined(self, path):
+        if not isinstance(path, Path):
+            path = Path(path)
 
+        directory, prefix = path.parent, path.stem
+        
+        ### SAVE THE 2B MODEL ###
+        params = {
+            'model': self.__class__.__name__,
+            'elements': self.elements,
+            'r_cut': self.r_cut,
+            'gp_2b': {
+                'kernel': self.gp_2b.kernel.kernel_name,
+                'n_train': self.gp_2b.n_train,
+                'sigma': self.gp_2b.kernel.theta[0],
+                'theta': self.gp_2b.kernel.theta[1],
+                'noise': self.gp_2b.noise
+            },
+            'gp_3b': {
+                'kernel': self.gp_3b.kernel.kernel_name,
+                'n_train': self.gp_3b.n_train,
+                'sigma': self.gp_3b.kernel.theta[0],
+                'theta': self.gp_3b.kernel.theta[1],
+                'noise': self.gp_3b.noise
+            },
+            'grid_2b': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num_2b
+            } if self.grid_2b else {}
+            ,
+            'grid_3b': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num_3b
+            } if self.grid_3b else {}
+        }
+
+        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp_2b][n_train]}.npy".format(prefix, p=params)
+
+        params['gp_2b']['filename'] = gp_filename_2b
+        self.gp_2b.save(directory / gp_filename_2b)
+        
+        params['grid_2b']['filename'] = {}
+        for k, grid in self.grid_2b.items():
+            key = '_'.join(str(element) for element in k)
+            grid_filename_2b = '{}_grid_{}_num_{p[grid_2b][r_num]}.npz'.format(prefix, key, p=params)
+            print("Saved 2-body grid under name %s" %(grid_filename_2b))
+            params['grid_2b']['filename'][key] = grid_filename_2b
+            self.grid_2b[k].save(directory / grid_filename_2b)
+        
+        ### SAVE THE 3B MODEL ###
+        gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
+
+        params['gp_3b']['filename'] = gp_filename_3b
+        self.gp_3b.save(directory / gp_filename_3b)
+
+        params['grid_3b']['filename'] = {}
+        for k, grid in self.grid_3b.items():
+            key = '_'.join(str(element) for element in k)
+            grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
+
+            params['grid_3b']['filename'][key] = grid_filename_3b
+            self.grid_3b[k].save(directory / grid_filename_3b)
+
+        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+            json.dump(params, fp, indent=4)
+
+            
+    @classmethod
+    def from_json(cls, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+        model = cls(params['elements'],
+                    params['r_cut'],
+                    params['gp_2b']['sigma'],
+                    params['gp_3b']['sigma'],
+                    params['gp_2b']['theta'],
+                    params['gp_3b']['theta'],
+                    params['gp_2b']['noise'])
+
+        gp_filename_2b = params['gp_2b']['filename']
+        gp_filename_3b = params['gp_3b']['filename']
+        model.gp_2b.load(directory / gp_filename_2b)
+        model.gp_3b.load(directory / gp_filename_3b)
+
+        if params['grid_2b']:            
+            for key, grid_filename_2b in params['grid_2b']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+                model.grid_2b[k] = interpolation.Spline1D.load(directory / grid_filename_2b)
+
+            for key, grid_filename_3b in params['grid_3b']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+                model.grid_3b[k] = interpolation.Spline3D.load(directory / grid_filename_3b)
+            
+            model.grid_start = params['grid_2b']['r_min']
+            model.grid_num_2b = params['grid_2b']['r_num']
+            model.grid_num_3b = params['grid_3b']['r_num']
+
+        return model
+    
     def save_gp(self, filename_2b, filename_3b):
         self.gp_2b.save(filename_2b)
         self.gp_3b.save(filename_3b)

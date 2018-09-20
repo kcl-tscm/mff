@@ -205,7 +205,8 @@ class GaussianProcess(object):
 					warnings.warn("Predicted variances smaller than 0. "
 					              "Setting those variances to 0.")
 					y_var[y_var_negative] = 0.0
-				return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.sqrt(y_var)
+				return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.reshape(np.sqrt(y_var),
+				                                                                     (int(y_var.shape[0] / 3), 3))
 			else:
 				return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
@@ -546,7 +547,7 @@ class GaussianProcess(object):
 
 		# kernel = self.kernel_.clone_with_theta(theta)
 		kernel = self.kernel
-		kernel.theta = theta
+		#kernel.theta = theta
 
 		K = kernel.calc_gram(self.X_train_)
 

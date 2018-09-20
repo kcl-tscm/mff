@@ -61,7 +61,7 @@ def RMSE(tst_confs, tst_forces, gp):
 	return RMSE
 
 
-def neg_log_pred_diag(tst_confs, tst_forces, gp):
+def neg_log_pred(tst_confs, tst_forces, gp):
 	"""Negative log predictive probabiltiy of the data
 
 	Calculates the probability assigned by the trained model to the test set.
@@ -76,7 +76,8 @@ def neg_log_pred_diag(tst_confs, tst_forces, gp):
 		float: neg_log_pred_diag
 	"""
 	predicted_forces, predicted_std = gp.predict(tst_confs, return_std=True)
-	neg_log_lik_diag = (tst_forces - predicted_forces) ** 2 / (2 * predicted_std ** 2) + np.log(
-		predicted_std) + 0.5 * np.log(2 * np.pi)
+
+	neg_log_lik_diag = np.mean((tst_forces - predicted_forces) ** 2 / (2 * predicted_std ** 2) + np.log(
+		predicted_std) + 0.5 * np.log(2 * np.pi))
 
 	return neg_log_lik_diag

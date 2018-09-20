@@ -288,10 +288,103 @@ class TwoBodyTwoSpecies(MappedPotential):
         self.results['forces'] += forces
 
 
-class ThreeBodyTwoSpecies(Calculator):
-    pass
+class ThreeBodyTwoSpecies(MappedPotential):
+    """A remapped 3-body calculator for ase
+    """
 
+    def __init__(self, r_cut, elements, grids_3b, **kwargs):
+        super().__init__(r_cut, **kwargs)
 
+        self.elements = elements
+        self.element_map = {element: index for index, element in enumerate(elements)}
+        self.grids_3b = grids_3b
+
+    def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
+        """Do the calculation.
+        """
+        
+        super().calculate(atoms, properties, system_changes)
+
+        forces = np.zeros((len(self.atoms), 3))
+        potential_energies = np.zeros((len(self.atoms), 1))
+        
+        ind_atoms = np.argsort(atoms.get_atomic_numbers()) #Indexes of all atoms ordered according to atomic number
+        reverse_ind_atoms = np.argsort(ind_atoms) #Indexes to reverse the final output of the calculator
+        
+        indices, distances, positions = self.find_triplets(atoms[ind_atoms])
+        
+        el_indices = indices.copy()
+        element_list = atoms.get_atomic_numbers()
+        n_first_element = (element_list == self.elements[0]).sum()
+
+        el_indices[el_indices <= n_first_element] = 0 # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
+        el_indices[el_indices > 0] = 1
+        
+        d_ij, d_jk, d_ki = np.hsplit(distances, 3)
+        
+        list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis =1)).astype(bool)).astype(bool)
+        list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis =1)).astype(bool)).astype(bool)
+        list_011 = (1 - (np.sum(1 - el_indices == [0, 1, 1], axis =1)).astype(bool)).astype(bool)
+        list_111 = (1 - (np.sum(1 - el_indices == [1, 1, 1], axis =1)).astype(bool)).astype(bool)
+        list_triplets = [list_000, list_001, list_011, list_111]
+        list_grids = [(0, 0, 0), (0, 0, 1), (0, 1, 1), (1, 1, 1)]
+        
+        for r in np.arange(4):
+            mapped = self.grid_3b[list_grids[r]].ev_all(d_ij[list_triplets[r]], d_jk[list_triplets[r]], d_ki[list_triplets[r]])
+######### STILL TO TEST AND SEE IF CORRECT #####################
+            for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices[list_triplets[r]], mapped[0], mapped[1], mapped[2], mapped[3]):            
+                forces[ind_atoms[i]] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki # F = - dE/dx
+                forces[ind_atoms[i]] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij # F = - dE/dx
+                forces[ind_atoms[i]] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk # F = - dE/dx
+
+                potential_energies[
+                    [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
+
+            self.results['energy'] += np.sum(potential_energies)
+            self.results['forces'] += forces
+        
+        
+    def find_triplets(self, atoms):
+        nl = self.nl
+        # atomic_numbers = self.atoms.get_array('numbers', copy=False)
+
+        indices, distances, positions = [], [], dict()
+
+        for i in range(len(atoms)):
+
+            inds, pos, dists2 = nl.get_neighbors(i)
+
+            # Limitation
+            assert len(inds) is len(np.unique(inds)), "There are repetitive indices!\n{}".format(inds)
+
+            # ignoring already visited atoms
+            inds, pos, dists2 = inds[inds > i], pos[inds > i, :], dists2[inds > i]
+            dists = np.sqrt(dists2)
+
+            for local_ind, (j, pos_ij, dist_ij) in enumerate(zip(inds, pos, dists)):
+
+                # Caching local displacement vectors
+                positions[(i, j)], positions[(j, i)] = pos_ij / dist_ij, -pos_ij / dist_ij
+
+                for k, dist_ik in islice(zip(inds, dists), local_ind + 1, None):
+
+                    try:
+                        jk_ind = list(nl[j]).index(k)
+                    except ValueError:
+                        continue  # no valid triplet
+
+                    _, _, dists_j = nl.get_neighbors(j)
+
+                    indices.append([i, j, k])
+                    distances.append([dist_ij, np.sqrt(dists_j[jk_ind]), dist_ik])
+
+        return np.array(indices), np.array(distances), positions    
+    
+    
+class CombinedTwoSpecies(TwoBodyTwoSpecies, ThreeBodyTwoSpecies):
+    def __init__(self, r_cut, elements, grid_2b, grid_3b, rep_alpha = 0.0, **kwargs):
+        super().__init__(r_cut, elements, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
+        
 if __name__ == '__main__':
     from ase.io import read
 

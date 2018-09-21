@@ -196,17 +196,14 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         dists = np.linspace(start, self.r_cut, num)
 
-        grid_0_0_0 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], nnodes)
-        grid_0_0_1 = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], nnodes)
-        grid_0_1_1 = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], nnodes)
-        grid_1_1_1 = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
-
-        self.grid[(0, 0, 0)] = grid_0_0_0
-        self.grid[(0, 0, 1)] = grid_0_0_1
-        self.grid[(0, 1, 1)] = grid_0_1_1
-        self.grid[(1, 1, 1)] = grid_1_1_1
+        self.grid[(0, 0, 0)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], nnodes)
+        self.grid[(0, 0, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], nnodes)
+        self.grid[(0, 1, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], nnodes)
+        self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
 
     def build_grid_3b(self, dists, element_k, element_i, element_j, nnodes):
+#     def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
+
         # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
 
@@ -218,8 +215,6 @@ class ThreeBodyTwoSpeciesModel(Model):
         confs[:, 0, 0] = r_ij_x  # Element on the x axis
         confs[:, 1, 0] = r_ki_x  # Reshape into confs shape: this is x2
         confs[:, 1, 1] = r_ki_y  # Reshape into confs shape: this is y2
-
-        # Permutations of elements
 
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
@@ -331,11 +326,39 @@ class ThreeBodyTwoSpeciesModel(Model):
             grid_filename = '{}_grid_{}_num_{p[grid][r_num]}'.format(prefix, key, p=params)
 
             params['grid']['filename'][key] = grid_filename
-            grid[k].save(directory / grid_filename)
+            self.grid[k].save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
 
+    @classmethod
+    def from_json(cls, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+        model = cls(params['elements'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'], 
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        model.gp.load(directory / gp_filename)
+
+        if params['grid']:            
+
+            for key, grid_filename in params['grid']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+                model.grid[k] = interpolation.Spline3D.load(directory / grid_filename)
+            
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+        return model
 
 if __name__ == '__main__':
     def test_three_body_single_species_model():

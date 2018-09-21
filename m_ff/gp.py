@@ -139,7 +139,7 @@ class GaussianProcess(object):
 		self.energy_alpha_ = None
 		self.energy_K = None
 		self.fitted[0] = 'force'
-		self.n_train = len(self.y_train_)
+		self.n_train = len(self.y_train_)/3
 		return self
 
 	def predict(self, X, return_std=False):
@@ -295,7 +295,7 @@ class GaussianProcess(object):
 		self.K = K
 		self.energy_K = None
 		self.fitted = ['force', 'energy']
-		self.n_train = len(self.y_energy_and_force)
+		self.n_train = len(self.y_energy_and_force)/4
 
 		return self
 

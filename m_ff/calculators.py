@@ -84,7 +84,70 @@ class MappedPotential(Calculator, metaclass=ABCMeta):
         if changed_parameters:
             self.reset()
 
+class TwoSpeciesMappedPotential(Calculator, metaclass=ABCMeta):
+    # 'Properties calculator can handle (energy, forces, ...)'
+    implemented_properties = ['energy', 'forces']
 
+    # 'Default parameters'
+    default_parameters = {}
+
+    @abstractmethod
+    def __init__(self, r_cut, element0, element1, **kwargs):
+        super().__init__(**kwargs)
+        self.element0 = element0
+        self.element1 = element1
+        self.r_cut = r_cut
+        self.nl = None
+
+    def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
+        """Do the calculation.
+
+        properties: list of str
+            List of what needs to be calculated.  Can be any combination
+            of 'energy', 'forces', 'stress', 'dipole', 'charges', 'magmom'
+            and 'magmoms'.
+        system_changes: list of str
+            List of what has changed since last calculation.  Can be
+            any combination of these six: 'positions', 'numbers', 'cell',
+            'pbc', 'initial_charges' and 'initial_magmoms'.
+
+        Subclasses need to implement this, but can ignore properties
+        and system_changes if they want.  Calculated properties should
+        be inserted into results dictionary like shown in this dummy
+        example::
+
+            self.results = {'energy': 0.0,
+                            'forces': np.zeros((len(atoms), 3)),
+                            'stress': np.zeros(6),
+                            'dipole': np.zeros(3),
+                            'charges': np.zeros(len(atoms)),
+                            'magmom': 0.0,
+                            'magmoms': np.zeros(len(atoms))}
+
+        The subclass implementation should first call this
+        implementation to set the atoms attribute.
+        """
+        super().calculate(atoms, properties, system_changes)
+
+        if 'numbers' in system_changes:
+            logger.info('numbers is in system_changes')
+            self.initialize(self.atoms)
+
+        self.nl.check_and_update(self.atoms)
+
+        self.results = {'energy': 0.0,
+                        'forces': np.zeros((len(atoms), 3))}
+
+    def initialize(self, atoms):
+
+        logger.info('initialize')
+        self.nl = FullNeighborList(self.r_cut, atoms=atoms, driftfactor=0.)
+
+    def set(self, **kwargs):
+        changed_parameters = super().set(**kwargs)
+        if changed_parameters:
+            self.reset()
+            
 class TwoBodySingleSpecies(MappedPotential):
     """A remapped 2-body calculator for ase
     """
@@ -153,7 +216,6 @@ class ThreeBodySingleSpecies(MappedPotential):
 
             potential_energies[
                 [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
-
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces
 
@@ -236,13 +298,13 @@ class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
 
 
-class TwoBodyTwoSpecies(MappedPotential):
+class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
     """A remapped 2-body calculator for ase
     """
 
-    def __init__(self, r_cut, elements, grids_2b, rep_alpha=0.0, **kwargs):
-        super().__init__(r_cut, **kwargs)
-
+    def __init__(self, r_cut, element0, element1, grids_2b, rep_alpha=0.0, **kwargs):
+        super().__init__(r_cut, element0, element1, **kwargs)
+        elements = [element0, element1]
         self.elements = elements
         self.element_map = {element: index for index, element in enumerate(elements)}
         self.grids_2b = grids_2b
@@ -258,7 +320,7 @@ class TwoBodyTwoSpecies(MappedPotential):
         potential_energies = np.zeros((len(self.atoms), 1))
 
         rep_alpha = self.rep_alpha
-        
+                
         for i, atom in enumerate(self.atoms):
             inds, pos, dists2 = self.nl.get_neighbors(i)
 
@@ -279,49 +341,44 @@ class TwoBodyTwoSpecies(MappedPotential):
                     energy_local[local_inds] = local_grid(dist[local_inds], nu=0)
                     fs_scalars[local_inds] = local_grid(dist[local_inds], nu=1)
 
-            potential_energies[i] = 0.5 * np.sum(energy_local, axis=0) + 0.5*np.sum((rep_alpha / dist) ** 12)
-            forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', 1/dist**13, norm)
-            # forces[i] = np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - \
-            #             12 * rep_alpha ** 12 * np.einsum('i, in -> n', 1 / dist ** 13, norm)
+            potential_energies[i] = + 0.5* np.sum(energy_local, axis=0) + 0.5*np.sum((rep_alpha/dist)**12) 
+            forces[i] = + np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12*rep_alpha**12*np.einsum('i, in -> n', (1/dist)**13, norm)
 
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces
 
 
-class ThreeBodyTwoSpecies(MappedPotential):
+class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
     """A remapped 3-body calculator for ase
     """
 
-    def __init__(self, r_cut, elements, grids_3b, **kwargs):
-        super().__init__(r_cut, **kwargs)
+    def __init__(self, r_cut, element0, element1, grids_3b, **kwargs):
+        super().__init__(r_cut, element0, element1, **kwargs)
+        elements = [element0, element1]
 
         self.elements = elements
         self.element_map = {element: index for index, element in enumerate(elements)}
         self.grids_3b = grids_3b
+        
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
         """Do the calculation.
         """
-        
         super().calculate(atoms, properties, system_changes)
 
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
         
-        ind_atoms = np.argsort(atoms.get_atomic_numbers()) #Indexes of all atoms ordered according to atomic number
-        reverse_ind_atoms = np.argsort(ind_atoms) #Indexes to reverse the final output of the calculator
-        
-        indices, distances, positions = self.find_triplets(atoms[ind_atoms])
+        indices, distances, positions = self.find_triplets(atoms)
         
         el_indices = indices.copy()
         element_list = atoms.get_atomic_numbers()
         n_first_element = (element_list == self.elements[0]).sum()
 
-        el_indices[el_indices <= n_first_element] = 0 # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
+        el_indices[el_indices < n_first_element] = 0 # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
         el_indices[el_indices > 0] = 1
         
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
-        
         list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis =1)).astype(bool)).astype(bool)
         list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis =1)).astype(bool)).astype(bool)
         list_011 = (1 - (np.sum(1 - el_indices == [0, 1, 1], axis =1)).astype(bool)).astype(bool)
@@ -330,19 +387,15 @@ class ThreeBodyTwoSpecies(MappedPotential):
         list_grids = [(0, 0, 0), (0, 0, 1), (0, 1, 1), (1, 1, 1)]
         
         for r in np.arange(4):
-            mapped = self.grid_3b[list_grids[r]].ev_all(d_ij[list_triplets[r]], d_jk[list_triplets[r]], d_ki[list_triplets[r]])
-######### STILL TO TEST AND SEE IF CORRECT #####################
-            for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices[list_triplets[r]], mapped[0], mapped[1], mapped[2], mapped[3]):            
-                forces[ind_atoms[i]] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki # F = - dE/dx
-                forces[ind_atoms[i]] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij # F = - dE/dx
-                forces[ind_atoms[i]] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk # F = - dE/dx
-
-                potential_energies[
-                    [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
-
-            self.results['energy'] += np.sum(potential_energies)
-            self.results['forces'] += forces
-        
+            mapped = self.grids_3b[list_grids[r]].ev_all(d_ij[list_triplets[r]], d_jk[list_triplets[r]], d_ki[list_triplets[r]])
+            for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices[list_triplets[r]], mapped[0], mapped[1], mapped[2], mapped[3]): 
+                forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki # F = - dE/dx
+                forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij # F = - dE/dx
+                forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk # F = - dE/dx
+                potential_energies[[i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
+        self.results['energy'] += np.sum(potential_energies)
+        self.results['forces'] += forces
+            
         
     def find_triplets(self, atoms):
         nl = self.nl
@@ -353,7 +406,6 @@ class ThreeBodyTwoSpecies(MappedPotential):
         for i in range(len(atoms)):
 
             inds, pos, dists2 = nl.get_neighbors(i)
-
             # Limitation
             assert len(inds) is len(np.unique(inds)), "There are repetitive indices!\n{}".format(inds)
 
@@ -382,8 +434,8 @@ class ThreeBodyTwoSpecies(MappedPotential):
     
     
 class CombinedTwoSpecies(TwoBodyTwoSpecies, ThreeBodyTwoSpecies):
-    def __init__(self, r_cut, elements, grid_2b, grid_3b, rep_alpha = 0.0, **kwargs):
-        super().__init__(r_cut, elements, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
+    def __init__(self, r_cut, element0, element1, grids_2b, grids_3b, rep_alpha = 0.0, **kwargs):
+        super().__init__(r_cut, element0, element1, grids_2b=grids_2b, grids_3b=grids_3b, rep_alpha=rep_alpha, **kwargs)
         
 if __name__ == '__main__':
     from ase.io import read

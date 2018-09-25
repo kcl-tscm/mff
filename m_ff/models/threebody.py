@@ -195,14 +195,12 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
-
         self.grid[(0, 0, 0)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], nnodes)
         self.grid[(0, 0, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], nnodes)
         self.grid[(0, 1, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], nnodes)
         self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
 
-    def build_grid_3b(self, dists, element_k, element_i, element_j, nnodes):
-#     def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
+    def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
 
         # HOTFIX: understand why this weird order is correct
         """Function that builds and predicts energies on a cube of values"""
@@ -219,7 +217,7 @@ class ThreeBodyTwoSpeciesModel(Model):
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
-
+        
         grid_3b = np.zeros((num, num, num))
 
         if nnodes > 1:

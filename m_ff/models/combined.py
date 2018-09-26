@@ -25,28 +25,28 @@ class CombinedSingleSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num = None, None, None, None
 
-    def fit(self, confs, forces):
-        self.gp_2b.fit(confs, forces)
+    def fit(self, confs, forces, nnodes):
+        self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
         two_body_forces = np.zeros((ntr, 3))
         for i in np.arange(ntr):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
-        self.gp_3b.fit(confs, forces - two_body_forces)
+        self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies):
-        self.gp_2b.fit_energy(confs, energies)
+    def fit_energy(self, confs, energies, nnodes):
+        self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
         for i in np.arange(ntr):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
-        self.gp_3b.fit_energy(confs, energies - two_body_energies)
+        self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies):
-        self.gp_2b.fit_force_and_energy(confs, forces, energies)
+    def fit_force_and_energy(self, confs, forces, energies, nnodes):
+        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
@@ -55,7 +55,7 @@ class CombinedSingleSpeciesModel(Model):
         for i in np.arange(ntr):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
     def predict(self, confs, return_std=False):
         return self.gp_2b.predict(confs, return_std) + \
@@ -273,28 +273,28 @@ class CombinedTwoSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
 
-    def fit(self, confs, forces):
-        self.gp_2b.fit(confs, forces)
+    def fit(self, confs, forces, nnodes):
+        self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
         two_body_forces = np.zeros((ntr, 3))
         for i in np.arange(ntr):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
-        self.gp_3b.fit(confs, forces - two_body_forces)
+        self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies):
-        self.gp_2b.fit_energy(confs, energies)
+    def fit_energy(self, confs, energies, nnodes):
+        self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
         for i in np.arange(ntr):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
 
-        self.gp_3b.fit_energy(confs, energies - two_body_energies)
+        self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies):
-        self.gp_2b.fit_force_and_energy(confs, forces, energies)
+    def fit_force_and_energy(self, confs, forces, energies, nnodes):
+        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
         two_body_energies = np.zeros(ntr)
@@ -303,7 +303,7 @@ class CombinedTwoSpeciesModel(Model):
         for i in np.arange(ntr):
             two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
     def predict(self, confs, return_std=False):
         return self.gp_2b.predict(confs, return_std) + \

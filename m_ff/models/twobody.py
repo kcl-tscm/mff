@@ -23,14 +23,14 @@ class TwoBodySingleSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = None, None, None
 
-    def fit(self, confs, forces):
-        self.gp.fit(confs, forces)
+    def fit(self, confs, forces, nnodes = 1):
+        self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energies):
-        self.gp.fit_energy(confs, energies)
+    def fit_energy(self, confs, energies, nnodes = 1):
+        self.gp.fit_energy(confs, energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies):
-        self.gp.fit_force_and_energy(confs, forces, energies)
+    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+        self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
 
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
@@ -138,17 +138,17 @@ class TwoBodyTwoSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
-    def fit(self, confs, forces):
-        self.gp.fit(confs, forces)
+    def fit(self, confs, forces, nnodes):
+        self.gp.fit(confs, forces, nnodes)
 
     def predict(self, confs, return_std=False):
         return self.gp.predict(confs, return_std)
 
-    def fit_energy(self, confs, energy):
-        self.gp.fit_energy(confs, energy)
+    def fit_energy(self, confs, energy, nnodes):
+        self.gp.fit_energy(confs, energy, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energy):
-        self.gp.fit_force_and_energy(confs, forces, energy)
+    def fit_force_and_energy(self, confs, forces, energy, nnodes):
+        self.gp.fit_force_and_energy(confs, forces, energy, nnodes)
 
     def predict_energy(self, confs, return_std=False):
         return self.gp.predict_energy(confs, return_std)

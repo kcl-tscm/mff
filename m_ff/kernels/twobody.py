@@ -51,56 +51,156 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
         return K_trans_ee
 
-    def calc_gram(self, X, eval_gradient=False):
-
-        diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
-        off_diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
-
+    def calc_gram(self, X, nnodes =1, eval_gradient=False):
         if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+                raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            for i in np.arange(X.shape[0]):
-                diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = \
-                    self.k2_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
-                for j in np.arange(i):
-                    off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
-                        self.k2_ff(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+            if nnodes > 1:
+                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+                confs = []
+                for i in np.arange(len(X)):
+                    for j in np.arange(i+1):
+                        thislist = np.asarray([X[i], X[j]])
+                        confs.append(thislist)
+                n = len(confs)
+                import sys
+                sys.setrecursionlimit(1000000)
+                logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
+                pool = ProcessingPool(nodes=nnodes)
+                splitind = np.zeros(nnodes + 1)
+                factor = (n + (nnodes - 1)) / nnodes
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind[-1] = n
+                splitind = splitind.astype(int)
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                result = np.array(pool.map(self.dummy_calc_ff, clist))
+                result = np.concatenate(result).reshape((n,3,3))
+                
+                off_diag = np.zeros((len(X) * 3, len(X) * 3))
+                diag = np.zeros((len(X) * 3, len(X) * 3))
+                for i in np.arange(len(X)):
+                    diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = result[i+ i*(i+1)//2]
+                    for j in np.arange(i):
+                        off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = result[j+i*(i+1)//2]
+            
+            else:
+                diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
+                off_diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
+                for i in np.arange(X.shape[0]):
+                    diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = \
+                        self.k2_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+                    for j in np.arange(i):
+                        off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
+                            self.k2_ff(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
             return gram
-        
-    def calc_gram_e(self, X, eval_gradient=False): # Untested
-
-        diag = np.zeros((X.shape[0], X.shape[0]))
-        off_diag = np.zeros((X.shape[0], X.shape[0]))
-
+                
+    def dummy_calc_ff(self, array):
+        result = np.zeros((len(array), 3, 3))
+        for i in np.arange(len(array)):
+            result[i]= self.k2_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+        return result
+    
+    def calc_gram_e(self, X, nnodes =1, eval_gradient=False): # Untested
         if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')   
         else:
-            for i in np.arange(X.shape[0]):
-                diag[i,i] = \
-                    self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
-                for j in np.arange(i):
-                    off_diag[i,j] = \
-                        self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+            if nnodes >1:
+                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+                confs = []
+                for i in np.arange(len(X)):
+                    for j in np.arange(i+1):
+                        thislist = np.asarray([X[i], X[j]])
+                        confs.append(thislist)
+                n = len(confs)
+                import sys
+                sys.setrecursionlimit(1000000)
+                logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (nnodes))
+                pool = ProcessingPool(nodes=nnodes)
+                splitind = np.zeros(nnodes + 1)
+                factor = (n + (nnodes - 1)) / nnodes
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind[-1] = n
+                splitind = splitind.astype(int)
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                result = np.array(pool.map(self.dummy_calc_ee, clist))
+                result = np.concatenate(result).flatten()
+                
+                off_diag = np.zeros((len(X), len(X)))
+                diag = np.zeros((len(X), len(X)))
+                for i in np.arange(len(X)):
+                    diag[i, i] = result[i+ i*(i+1)//2]
+                    for j in np.arange(i):
+                        off_diag[i, j] = result[j+i*(i+1)//2]
+        
+            else:
+                diag = np.zeros((X.shape[0], X.shape[0]))
+                off_diag = np.zeros((X.shape[0], X.shape[0]))
+                for i in np.arange(X.shape[0]):
+                    diag[i,i] = \
+                        self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
+                    for j in np.arange(i):
+                        off_diag[i,j] = \
+                            self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
             return gram
-        
-    def calc_gram_ef(self, X, eval_gradient=False):
+            
+    def dummy_calc_ee(self, array):
+        result = np.zeros(len(array))
+        for i in np.arange(len(array)):
+            result[i]= self.k2_ee(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+        return result
+    
+    
+    def calc_gram_ef(self, X, nnodes =1, eval_gradient=False):
         
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
         
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            for i in np.arange(X.shape[0]):
-                for j in np.arange(X.shape[0]):
-                    gram[i, 3 * j:3 * j + 3] = \
-                        self.k2_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+            if nnodes > 1:
+                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+                confs = []
+                for i in np.arange(len(X)):
+                    for j in np.arange(len(X)):
+                        thislist = np.asarray([X[i], X[j]])
+                        confs.append(thislist)
+                n = len(confs)
+                import sys
+                sys.setrecursionlimit(1000000)
+                logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
+                pool = ProcessingPool(nodes=nnodes)
+                splitind = np.zeros(nnodes + 1)
+                factor = (n + (nnodes - 1)) / nnodes
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind[-1] = n
+                splitind = splitind.astype(int)
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                result = np.array(pool.map(self.dummy_calc_ef, clist))
+                result = np.concatenate(result).reshape((n, 1, 3))
+
+                for i in np.arange(X.shape[0]):
+                    for j in np.arange(X.shape[0]):
+                        gram[i, 3 * j:3 * j + 3] = result[j+i*X.shape[0]]
+                        
+            else:
+                for i in np.arange(X.shape[0]):
+                    for j in np.arange(X.shape[0]):
+                        gram[i, 3 * j:3 * j + 3] = \
+                            self.k2_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
+                        
             self.gram_ef = gram
             return gram
-        
+
+    def dummy_calc_ef(self, array):
+        result = np.zeros((len(array), 3))
+        for i in np.arange(len(array)):
+            result[i]= self.k2_ef(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+        return result
+    
     def calc_diag(self, X):
 
         diag = np.zeros((X.shape[0] * 3))

@@ -57,17 +57,17 @@ class GaussianProcess(object):
 
 	def calc_gram_ff(self, X):
 		self.kernel_ = self.kernel
-		self.X_train_ = X
-		K = self.kernel_.calc_gram(self.X_train_)
+		self.X_train_ = X       
+		K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
 		return K
 
 	def calc_gram_ee(self, X):
 		self.kernel_ = self.kernel
 		self.X_train_ = X
-		K = self.kernel_.calc_gram_e(self.X_train_)
+		K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
 		return K
 
-	def fit(self, X, y):
+	def fit(self, X, y, nnodes = 1):
 		"""Fit a Gaussian process regression model.
 
 		Args:
@@ -121,7 +121,7 @@ class GaussianProcess(object):
 
 		# Precompute quantities required for predictions which are independent
 		# of actual query points
-		K = self.kernel_.calc_gram(self.X_train_)
+		K = self.kernel_.calc_gram(self.X_train_, nnodes)
 		K[np.diag_indices_from(K)] += self.noise
 
 		try:
@@ -210,7 +210,7 @@ class GaussianProcess(object):
 			else:
 				return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
-	def fit_force_and_energy(self, X, y_force, y_energy):
+	def fit_force_and_energy(self, X, y_force, y_energy, nnodes = 1):
 		"""Fit a Gaussian process regression model.
 
 		Args:
@@ -265,13 +265,13 @@ class GaussianProcess(object):
 
 		# Precompute quantities required for predictions which are independent
 		# of actual query points
-		K_ff = self.kernel_.calc_gram(self.X_train_)
+		K_ff = self.kernel_.calc_gram(self.X_train_, nnodes)
 		K_ff[np.diag_indices_from(K_ff)] += self.noise
 
-		K_ee = self.kernel_.calc_gram_e(self.X_train_)
+		K_ee = self.kernel_.calc_gram_e(self.X_train_, nnodes)
 		K_ee[np.diag_indices_from(K_ee)] += self.noise / 10.0
 
-		K_ef = self.kernel_.calc_gram_ef(self.X_train_)
+		K_ef = self.kernel_.calc_gram_ef(self.X_train_, nnodes)
 
 		K = np.zeros((y_force.shape[0] * 4, y_force.shape[0] * 4))
 		K[:y_force.shape[0], :y_force.shape[0]] = K_ee
@@ -299,7 +299,7 @@ class GaussianProcess(object):
 
 		return self
 
-	def fit_energy(self, X, y):  # Untested, log_marginal_linkelihood not working as for now
+	def fit_energy(self, X, y, nnodes = 1):  # Untested, log_marginal_linkelihood not working as for now
 		"""Fit a Gaussian process regression model.
 
 		Args:
@@ -356,7 +356,7 @@ class GaussianProcess(object):
 
 		# Precompute quantities required for predictions which are independent
 		# of actual query points
-		K = self.kernel_.calc_gram_e(self.X_train_)
+		K = self.kernel_.calc_gram_e(self.X_train_, nnodes)
 		K[np.diag_indices_from(K)] += self.noise / 10.0
 
 		try:

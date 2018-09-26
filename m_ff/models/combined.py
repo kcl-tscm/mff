@@ -25,7 +25,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num = None, None, None, None
 
-    def fit(self, confs, forces, nnodes):
+    def fit(self, confs, forces, nnodes = 1):
         self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
@@ -35,7 +35,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes):
+    def fit_energy(self, confs, energies, nnodes = 1):
         self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
@@ -45,7 +45,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes):
+    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
         self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
@@ -273,7 +273,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
 
-    def fit(self, confs, forces, nnodes):
+    def fit(self, confs, forces, nnodes = 1):
         self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
@@ -283,7 +283,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes):
+    def fit_energy(self, confs, energies, nnodes = 1):
         self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
@@ -293,7 +293,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes):
+    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
         self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)

@@ -592,7 +592,8 @@ class GaussianProcess(object):
 		          self.energy_alpha_,
 		          self.energy_K,
 		          self.X_train_,
-		          self.L_]
+		          self.L_
+		          self.n_train]
 
 		np.save(filename, output)
 		print('Saved Gaussian process with name:', filename)
@@ -619,7 +620,8 @@ class GaussianProcess(object):
 		self.energy_alpha_, \
 		self.energy_K, \
 		self.X_train_, \
-		self.L_ = np.load(filename)
+		self.L_, \
+        self.n_train = np.load(filename)
 
 		self.kernel_ = self.kernel
 

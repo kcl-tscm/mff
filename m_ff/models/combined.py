@@ -8,6 +8,8 @@ from m_ff import kernels
 from m_ff import interpolation
 
 from .base import Model
+import logging
+logger = logging.getLogger(__name__)
 
         
 class CombinedSingleSpeciesModel(Model):
@@ -97,7 +99,7 @@ class CombinedSingleSpeciesModel(Model):
             n = len(confs)
             import sys
             sys.setrecursionlimit(1000000)
-            print('Using %i cores for the mapping' % (nnodes))
+            logger.info('Using %i cores for the mapping' % (nnodes))
             pool = ProcessingPool(nodes=nnodes)
             splitind = np.zeros(nnodes + 1)
             factor = (n + (nnodes - 1)) / nnodes
@@ -376,7 +378,7 @@ class CombinedTwoSpeciesModel(Model):
             n = len(confs)
             import sys
             sys.setrecursionlimit(1000000)
-            print('Using %i cores for the mapping' % (nnodes))
+            logger.info('Using %i cores for the mapping' % (nnodes))
             pool = ProcessingPool(nodes=nnodes)
             splitind = np.zeros(nnodes + 1)
             factor = (n + (nnodes - 1)) / nnodes
@@ -452,7 +454,7 @@ class CombinedTwoSpeciesModel(Model):
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
-
+            print("Saved 3-body grid under name %s" %(grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
             self.grid_3b[k].save(directory / grid_filename_3b)
 

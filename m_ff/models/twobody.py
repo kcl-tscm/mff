@@ -8,6 +8,7 @@ from m_ff import kernels
 from m_ff import interpolation
 
 from m_ff.models.base import Model
+import warnings
 
 
 class TwoBodySingleSpeciesModel(Model):
@@ -242,7 +243,11 @@ class TwoBodyTwoSpeciesModel(Model):
                     params['gp']['noise'])
 
         gp_filename = params['gp']['filename']
-        model.gp.load(directory / gp_filename)
+        try:
+            model.gp.load(directory / gp_filename)
+        except:
+            warnings.warn("The 2-body GP file is missing")
+            pass
 
         if params['grid']:
             model.grid_start = params['grid']['r_min']

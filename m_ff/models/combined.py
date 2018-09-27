@@ -9,6 +9,7 @@ from m_ff import interpolation
 
 from .base import Model
 import logging
+import warnings
 logger = logging.getLogger(__name__)
 
         
@@ -212,9 +213,18 @@ class CombinedSingleSpeciesModel(Model):
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
-        model.gp_2b.load(directory / gp_filename_2b)
-        model.gp_3b.load(directory / gp_filename_3b)
-
+        
+        try:
+            model.gp_2b.load(directory / gp_filename_2b)
+        except:
+            warnings.warn("The 2-body GP file is missing")
+            pass
+        try:
+            model.gp_3b.load(directory / gp_filename_3b)
+        except:
+            warnings.warn("The 3-body GP file is missing")
+            pass
+        
         if params['grid_2b']:
             grid_filename_2b = params['grid_2b']['filename']
             model.grid_2b = interpolation.Spline1D.load(directory / grid_filename_2b)
@@ -481,8 +491,16 @@ class CombinedTwoSpeciesModel(Model):
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
-        model.gp_2b.load(directory / gp_filename_2b)
-        model.gp_3b.load(directory / gp_filename_3b)
+        try:
+            model.gp_2b.load(directory / gp_filename_2b)
+        except:
+            warnings.warn("The 2-body GP file is missing")
+            pass
+        try:
+            model.gp_3b.load(directory / gp_filename_3b)
+        except:
+            warnings.warn("The 3-body GP file is missing")
+            pass
 
         if params['grid_2b']:            
             for key, grid_filename_2b in params['grid_2b']['filename'].items():

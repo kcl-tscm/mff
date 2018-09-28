@@ -160,7 +160,7 @@ class GaussianProcess(object):
             y_std (np.ndarray): Standard deviation of predictive distribution at target
                 configurations. Only returned when return_std is True.
         """
-
+        X = np.reshape(X, (1, len(X), 5))
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             y_mean = np.zeros(X.shape[0])
@@ -399,6 +399,7 @@ class GaussianProcess(object):
             y_mean (np.ndarray): Predicted energies
             y_std (np.ndarray): Predicted error on the energies
         """
+        X = np.reshape(X, (1, len(X), 5))
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel

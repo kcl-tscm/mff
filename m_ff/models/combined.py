@@ -61,12 +61,22 @@ class CombinedSingleSpeciesModel(Model):
         self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
     def predict(self, confs, return_std=False):
-        return self.gp_2b.predict(confs, return_std) + \
-               self.gp_3b.predict(confs, return_std)
+        if return_std:
+            force_2b, std_2b = self.gp_2b.predict(confs, return_std)
+            force_3b, std_3b = self.gp_2b.predict(confs, return_std)
+            return force_2b + force_3b, std_2b + std_3b
+        else:
+            return self.gp_2b.predict(confs, return_std) + \
+                   self.gp_3b.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
-        return self.gp_2b.predict_energy(confs, return_std) + \
-               self.gp_3b.predict_energy(confs, return_std)
+        if return_std:
+            energy_2b, std_2b = self.gp_2b.predict_energy(confs, return_std)
+            energy_3b, std_3b = self.gp_2b.predict_energy(confs, return_std)
+            return energy_2b + energy_3b, std_2b + std_3b
+        else:
+            return self.gp_2b.predict_energy(confs, return_std) + \
+                   self.gp_3b.predict_energy(confs, return_std)
 
     def build_grid(self, start, num_2b, num_3b, nnodes = 1):
         """Function that builds and predicts energies on a cube of values"""
@@ -318,12 +328,22 @@ class CombinedTwoSpeciesModel(Model):
         self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
     def predict(self, confs, return_std=False):
-        return self.gp_2b.predict(confs, return_std) + \
-               self.gp_3b.predict(confs, return_std)
+        if return_std:
+            force_2b, std_2b = self.gp_2b.predict(confs, return_std)
+            force_3b, std_3b = self.gp_2b.predict(confs, return_std)
+            return force_2b + force_3b, std_2b + std_3b
+        else:
+            return self.gp_2b.predict(confs, return_std) + \
+                   self.gp_3b.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
-        return self.gp_2b.predict_energy(confs, return_std) + \
-               self.gp_3b.predict_energy(confs, return_std)
+        if return_std:
+            energy_2b, std_2b = self.gp_2b.predict_energy(confs, return_std)
+            energy_3b, std_3b = self.gp_2b.predict_energy(confs, return_std)
+            return energy_2b + energy_3b, std_2b + std_3b
+        else:
+            return self.gp_2b.predict_energy(confs, return_std) + \
+                   self.gp_3b.predict_energy(confs, return_std)
 
     def build_grid(self, start, num_2b, num_3b, nnodes = 1):
         """Function that builds and predicts energies on a cube of values"""

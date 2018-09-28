@@ -1,7 +1,7 @@
 Gaussian Process
 ================
 
-Simple Gaussian process regression module suited to learn energies and forces
+Gaussian process regression module suited to learn energies and forces
 
 Example:
 

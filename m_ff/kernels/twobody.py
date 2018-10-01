@@ -75,6 +75,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
                 result = np.array(pool.map(self.dummy_calc_ff, clist))
                 result = np.concatenate(result).reshape((n,3,3))
+                pool.close()
+                pool.join()       
                 
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
@@ -126,6 +128,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
                 result = np.array(pool.map(self.dummy_calc_ee, clist))
                 result = np.concatenate(result).flatten()
+                pool.close()
+                pool.join()
                 
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
@@ -181,7 +185,9 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
                 result = np.array(pool.map(self.dummy_calc_ef, clist))
                 result = np.concatenate(result).reshape((n, 1, 3))
-
+                pool.close()
+                pool.join()
+                
                 for i in np.arange(X.shape[0]):
                     for j in np.arange(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = result[j+i*X.shape[0]]

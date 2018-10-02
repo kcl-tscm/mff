@@ -2,11 +2,12 @@
 """Gaussian Process
 ================
 
-Simple Gaussian process regression module suited to learn energies and forces
+Gaussian process regression module suited to learn and 
+predict energies and forces
 
 Example:
 
-    $  gp = GaussianProcess(kenrel, noise)
+    $  gp = GaussianProcess(kernel, noise)
     $  gp.fit(train_configurations, train_forces)
     $  gp.predict(test_configurations)
 
@@ -35,13 +36,14 @@ class GaussianProcess(object):
 
     Args:
         kernel (obj): A kernel object (typically a two or three body)
-        noise (foat): The regularising noise level (typically named \sigma_n^2)
+        noise (float): The regularising noise level (typically named \sigma_n^2)
         optimizer (str): The kind of optimization of marginal likelihood (not implemented yet)
 
     Attributes:
         X_train_ (list): The configurations used for training
         alpha_ (array): The coefficients obtained during training
         L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
+        K (array): The kernel gram matrix
     """
 
     # optimizers "fmin_l_bfgs_b"
@@ -55,13 +57,13 @@ class GaussianProcess(object):
         self.n_restarts_optimizer = n_restarts_optimizer
         self.fitted = [None, None]
 
-    def calc_gram_ff(self, X):
+    def calc_gram_ff(self, X):  # Calculate the force-force gram matrix
         self.kernel_ = self.kernel
         self.X_train_ = X       
         K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
         return K
 
-    def calc_gram_ee(self, X):
+    def calc_gram_ee(self, X):  # Calculate the energy-energy gram matrix
         self.kernel_ = self.kernel
         self.X_train_ = X
         K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
@@ -73,10 +75,10 @@ class GaussianProcess(object):
         Args:
             X (list): training configurations
             y (np.ndarray): training forces
+            nnodes (int): number of CPU workers to use, default is 1
 
         """
         self.kernel_ = self.kernel
-
         self.X_train_ = X
         self.y_train_ = np.reshape(y, (y.shape[0] * 3, 1))
 
@@ -124,8 +126,8 @@ class GaussianProcess(object):
         K = self.kernel_.calc_gram(self.X_train_, nnodes)
         K[np.diag_indices_from(K)] += self.noise
 
-        try:
-            self.L_ = cholesky(K, lower=True)  # Line 2
+        try:  # Use Cholesky decomposition to build the lower triangular matrix
+            self.L_ = cholesky(K, lower=True) 
         except np.linalg.LinAlgError as exc:
             exc.args = ("The kernel, %s, is not returning a "
                         "positive definite matrix. Try gradually "
@@ -133,94 +135,30 @@ class GaussianProcess(object):
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-
-        self.alpha_ = cho_solve((self.L_, True), self.y_train_)  # Line 3
+        
+        # Calculate the alpha weights using the Cholesky method
+        self.alpha_ = cho_solve((self.L_, True), self.y_train_) 
         self.K = K
         self.energy_alpha_ = None
         self.energy_K = None
         self.fitted[0] = 'force'
         self.n_train = len(self.y_train_)/3
+        
         return self
-
-    def predict(self, X, return_std=False):
-        """Predict using the Gaussian process regression model
-
-        We can also predict based on an unfitted model by using the GP prior.
-        In addition to the mean of the predictive distribution, also its
-        standard deviation (return_std=True)
-
-        Args:
-            X (np.ndarray): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
-
-        Returns:
-            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
-        """
-        if len(np.shape(X)) < 3:
-            X = np.reshape(X, (1, len(X), 5))
-        if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
-            kernel = self.kernel
-            y_mean = np.zeros(X.shape[0])
-            warnings.warn("No training data, predicting based on prior")
-            if return_std:
-                y_var = kernel.calc_diag(X)
-                return y_mean, np.sqrt(y_var)
-            else:
-                return y_mean
-
-        else:  # Predict based on GP posterior
-
-            if self.fitted == ['force', None]:
-                K_trans = self.kernel_.calc(X, self.X_train_)
-                y_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
-
-            elif self.fitted == [None, 'energy']:
-                K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
-                y_mean = K_force_energy.dot(self.energy_alpha_)
-
-            else:
-                K_trans = self.kernel_.calc(X, self.X_train_)
-                K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
-                K = np.hstack((K_force_energy, K_trans))
-                y_mean = K.dot(self.alpha_)
-
-            if return_std:
-                # compute inverse K_inv of K based on its Cholesky
-                # decomposition L and its inverse L_inv
-                L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
-                K_inv = L_inv.dot(L_inv.T)
-                # Compute variance of predictive distribution
-
-                y_var = self.kernel_.calc_diag(X)
-                fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
-                y_var -= fit
-
-                # Check if any of the variances is negative because of
-                # numerical issues. If yes: set the variance to 0.
-                y_var_negative = y_var < 0
-                if np.any(y_var_negative):
-                    warnings.warn("Predicted variances smaller than 0. "
-                                  "Setting those variances to 0.")
-                    y_var[y_var_negative] = 0.0
-                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.reshape(np.sqrt(y_var),
-                                                                                     (int(y_var.shape[0] / 3), 3))
-            else:
-                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
+    
 
     def fit_force_and_energy(self, X, y_force, y_energy, nnodes = 1):
-        """Fit a Gaussian process regression model.
+        """Fit a Gaussian process regression model using force and energy
 
         Args:
             X (list): training configurations
-            y (np.ndarray): training forces and local energies
+            y_force (np.ndarray): training forces
+            y_energy (np.ndarray): training local energies
+            nnodes (int): number of CPU workers to use, default is 1
 
         """
+        
         self.kernel_ = self.kernel
-
         self.X_train_ = X
         self.y_train_ = np.reshape(y_force, (y_force.shape[0] * 3, 1))
         self.y_train_energy_ = np.reshape(y_energy, (y_energy.shape[0], 1))
@@ -267,8 +205,9 @@ class GaussianProcess(object):
             '''
         else:
             pass
-#             self.log_marginal_likelihood_value_ = \
-#                 self.log_marginal_likelihood(self.kernel_.theta)
+        '''
+             self.log_marginal_likelihood_value_ = \
+                 self.log_marginal_likelihood(self.kernel_.theta)'''
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
@@ -286,7 +225,7 @@ class GaussianProcess(object):
         K[y_force.shape[0]:, :y_force.shape[0]] = K_ef.T
         K[y_force.shape[0]:, y_force.shape[0]:] = K_ff
 
-        try:
+        try:  # Use Cholesky decomposition to build the lower triangular matrix
             self.L_ = cholesky(K, lower=True)  # Line 2
         except np.linalg.LinAlgError as exc:
             exc.args = ("The kernel, %s, is not returning a "
@@ -295,12 +234,14 @@ class GaussianProcess(object):
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-
+            
         self.y_energy_and_force = np.vstack((self.y_train_energy_, self.y_train_))
-        self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)  # Line 3
-        self.energy_alpha_ = None
+        
+        # Calculate the alpha weights using the Cholesky method
+        self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)
+        self.energy_alpha_ = None  # Used to distinguish pure energy fitting
         self.K = K
-        self.energy_K = None
+        self.energy_K = None  # Used to distinguish pure energy fitting
         self.fitted = ['force', 'energy']
         self.n_train = len(self.y_energy_and_force)/4
 
@@ -312,12 +253,14 @@ class GaussianProcess(object):
         Args:
             X (list): training configurations
             y (np.ndarray): training energies
-            the energy of each configuration is E/N where E is the total
+            nnodes (int): number of CPU workers to use, default is 1
+            
+            The energy of each configuration is E/N where E is the total
             snapshot energy and N the atoms in that snapshot
 
         """
+        
         self.kernel_ = self.kernel
-
         self.X_train_ = X
         self.y_train_energy_ = np.reshape(y, (y.shape[0], 1))
 
@@ -361,16 +304,18 @@ class GaussianProcess(object):
             '''
         else:
             pass
-        # self.log_marginal_likelihood_value_ = \
-        # self.log_marginal_likelihood(self.kernel_.theta)
-
+        '''
+        self.log_marginal_likelihood_value_ = \
+        self.log_marginal_likelihood(self.kernel_.theta)
+        '''
+        
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K = self.kernel_.calc_gram_e(self.X_train_, nnodes)
         K[np.diag_indices_from(K)] += self.noise / 10.0
 
-        try:
-            self.L_ = cholesky(K, lower=True)  # Line 2
+        try:  # Use Cholesky decomposition to build the lower triangular matrix
+            self.L_ = cholesky(K, lower=True)
         except np.linalg.LinAlgError as exc:
             exc.args = ("The kernel, %s, is not returning a "
                         "positive definite matrix. Try gradually "
@@ -379,7 +324,8 @@ class GaussianProcess(object):
                         % self.kernel_,) + exc.args
             raise
 
-        self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)  # Line 3
+        # Calculate the alpha weights using the Cholesky method
+        self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)
         self.energy_K = K
         self.K = None
         self.alpha_ = None
@@ -388,6 +334,78 @@ class GaussianProcess(object):
 
         return self
 
+    
+    def predict(self, X, return_std=False):
+        """Predict forces using the Gaussian process regression model
+
+        We can also predict based on an unfitted model by using the GP prior.
+        In addition to the mean of the predictive distribution, also its
+        standard deviation (return_std=True)
+
+        Args:
+            X (np.ndarray): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
+
+        Returns:
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+        """
+        
+        if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
+            X = np.reshape(X, (1, len(X), 5))
+            
+        if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
+            kernel = self.kernel
+            y_mean = np.zeros(X.shape[0])
+            warnings.warn("No training data, predicting based on prior")
+            if return_std:
+                y_var = kernel.calc_diag(X)
+                return y_mean, np.sqrt(y_var)
+            else:
+                return y_mean
+
+        else:  # Predict based on GP posterior
+            if self.fitted == ['force', None]:  # Predict using force data
+                K_trans = self.kernel_.calc(X, self.X_train_)
+                y_mean = K_trans.dot(self.alpha_) 
+
+            elif self.fitted == [None, 'energy']:  # Predict using energy data
+                K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
+                y_mean = K_force_energy.dot(self.energy_alpha_)
+
+            else:  # Predict using both force and energy data
+                K_trans = self.kernel_.calc(X, self.X_train_)  
+                K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
+                K = np.hstack((K_force_energy, K_trans))
+                y_mean = K.dot(self.alpha_)
+
+            if return_std:
+                # compute inverse K_inv of K based on its Cholesky
+                # decomposition L and its inverse L_inv
+                L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
+                K_inv = L_inv.dot(L_inv.T)
+                
+                # Compute variance of predictive distribution
+                y_var = self.kernel_.calc_diag(X)
+                fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
+                y_var -= fit
+
+                # Check if any of the variances is negative because of
+                # numerical issues. If yes: set the variance to 0.
+                y_var_negative = y_var < 0
+                if np.any(y_var_negative):
+                    warnings.warn("Predicted variances smaller than 0. "
+                                  "Setting those variances to 0.")
+                    y_var[y_var_negative] = 0.0
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.reshape(np.sqrt(y_var),
+                                                                                     (int(y_var.shape[0] / 3), 3))
+            else:
+                return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
+            
+            
     def predict_energy(self, X, return_std=False):
         """Predict energies from forces only using the Gaussian process regression model
 
@@ -395,12 +413,17 @@ class GaussianProcess(object):
 
         Args:
             X (np.ndarray): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
 
         Returns:
-            y_mean (np.ndarray): Predicted energies
-            y_std (np.ndarray): Predicted error on the energies
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+                
         """
-        if len(np.shape(X)) < 3:
+        if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
             X = np.reshape(X, (1, len(X), 5))
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
@@ -415,21 +438,21 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
 
-            if self.fitted == ['force', None]:
+            if self.fitted == ['force', None]:  # Predict using force data
                 K_trans = self.kernel_.calc_ef(X, self.X_train_)
                 e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
 
-            elif self.fitted == [None, 'energy']:
+            elif self.fitted == [None, 'energy']:  # Predict using energy data
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 e_mean = K_energy.dot(self.energy_alpha_)
 
-            else:
+            else:  # Predict using both force and energy data
                 K_energy = self.kernel_.calc_ee(X, self.X_train_)
                 K_energy_force = self.kernel_.calc_ef(X, self.X_train_)
                 K = np.hstack((K_energy, K_energy_force))
                 e_mean = K.dot(self.alpha_)
 
-            if return_std:  # Energy part not implemented here as I am not sure what to do (Claudio)
+            if return_std: 
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
@@ -589,9 +612,7 @@ class GaussianProcess(object):
 
         Args:
             filename (str): name of the file where to save the GP
-
-        Todo:
-            * Need to decide the way to store a GP
+            
         """
 
         output = [self.kernel_.kernel_name,
@@ -616,11 +637,7 @@ class GaussianProcess(object):
         Args:
             name (str): name of the file where the GP is saved
 
-        Todo:
-            * Need to decide the way to store a GP
         """
-
-        # TODO: Proper initialisation of the kernel based on its name
 
         self.kernel.kernel_name, \
         self.noise, \

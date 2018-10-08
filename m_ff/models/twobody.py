@@ -25,7 +25,7 @@ Example:
     >>> forces = mymodel.predict(test_configurations)
     >>> mymodel.build_grid(grid_start, num_2b)
     >>> mymodel.save("thismodel.json")
-    >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+    >>> mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html

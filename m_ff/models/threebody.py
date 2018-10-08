@@ -451,7 +451,7 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.gp.load(filename)
 
     def build_grid(self, start, num, nnodes = 1):
-        """Functions used to create the four different 3-body energy grids for 
+        """Function used to create the four different 3-body energy grids for 
         atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
         ``build_grid_3b`` function for each of those combinations of elements.
         
@@ -473,7 +473,7 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
 
     def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
-        """ Build the mapped 3-body potential. 
+        """ Build a mapped 3-body potential. 
         Calculates the energy predicted by the GP for three atoms of elements element_i, element_j, element_k, 
         at all possible combinations of num distances ranging from start to r_cut. 
         The energy is calculated only for ``valid`` triplets of atoms, i.e. sets of three distances 

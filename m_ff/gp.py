@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Gaussian Process
+"""
+Gaussian Process
 ================
 
 Gaussian process regression module suited to learn and 
@@ -7,9 +8,9 @@ predict energies and forces
 
 Example:
 
-    $  gp = GaussianProcess(kernel, noise)
-    $  gp.fit(train_configurations, train_forces)
-    $  gp.predict(test_configurations)
+    >>>  gp = GaussianProcess(kernel, noise)
+    >>>  gp.fit(train_configurations, train_forces)
+    >>>  gp.predict(test_configurations)
 
 Todo:
     * For module TODOs
@@ -19,15 +20,15 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 """
-
-import warnings
-
+import logging
 import numpy as np
+
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
-
 from m_ff import interpolation
 from m_ff import kernels
+
+logger = logging.getLogger(__name__)
 
 
 class GaussianProcess(object):
@@ -45,7 +46,6 @@ class GaussianProcess(object):
         L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
         K (array): The kernel gram matrix
     """
-
     # optimizers "fmin_l_bfgs_b"
 
     def __init__(self, kernel=None, noise=1e-10,
@@ -57,20 +57,38 @@ class GaussianProcess(object):
         self.n_restarts_optimizer = n_restarts_optimizer
         self.fitted = [None, None]
 
-    def calc_gram_ff(self, X):  # Calculate the force-force gram matrix
+    def calc_gram_ff(self, X):
+        """Calculate the force-force kernel gram matrix
+
+        Args:
+            X (list): list of N training configurations, which are M x 5 matrices
+            
+        Returns:
+            K (matrix): The force-force gram matrix, has dimensions 3N x 3N
+        """
+        
         self.kernel_ = self.kernel
         self.X_train_ = X       
         K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
         return K
 
-    def calc_gram_ee(self, X):  # Calculate the energy-energy gram matrix
+    def calc_gram_ee(self, X):
+        """Calculate the force-force kernel gram matrix
+
+        Args:
+            X (list): list of N training configurations, which are M x 5 matrices
+
+        Returns:
+            K (matrix): The energy energy gram matrix, has dimensions N x N
+        """
+        
         self.kernel_ = self.kernel
         self.X_train_ = X
         K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
         return K
 
     def fit(self, X, y, nnodes = 1):
-        """Fit a Gaussian process regression model.
+        """Fit a Gaussian process regression model on training forces
 
         Args:
             X (list): training configurations
@@ -148,7 +166,7 @@ class GaussianProcess(object):
     
 
     def fit_force_and_energy(self, X, y_force, y_energy, nnodes = 1):
-        """Fit a Gaussian process regression model using force and energy
+        """Fit a Gaussian process regression model using forces and energies
 
         Args:
             X (list): training configurations
@@ -156,15 +174,14 @@ class GaussianProcess(object):
             y_energy (np.ndarray): training local energies
             nnodes (int): number of CPU workers to use, default is 1
 
-        """
-        
+        """     
         self.kernel_ = self.kernel
         self.X_train_ = X
         self.y_train_ = np.reshape(y_force, (y_force.shape[0] * 3, 1))
         self.y_train_energy_ = np.reshape(y_energy, (y_energy.shape[0], 1))
 
         if self.optimizer is not None:  
-            warnings.warn("Optimizer not yet implemented for force-energy training")
+            logger.warning("Optimizer not yet implemented for force-energy training")
             '''
             
             # TODO
@@ -248,7 +265,7 @@ class GaussianProcess(object):
         return self
 
     def fit_energy(self, X, y, nnodes = 1):  # Untested, log_marginal_linkelihood not working as for now
-        """Fit a Gaussian process regression model.
+        """Fit a Gaussian process regression model using local energies.
 
         Args:
             X (list): training configurations
@@ -258,14 +275,13 @@ class GaussianProcess(object):
             The energy of each configuration is E/N where E is the total
             snapshot energy and N the atoms in that snapshot
 
-        """
-        
+        """  
         self.kernel_ = self.kernel
         self.X_train_ = X
         self.y_train_energy_ = np.reshape(y, (y.shape[0], 1))
 
         if self.optimizer is not None: # TODO Debug
-            warnings.warn("Optimizer not yet implemented for energy training")
+            logger.warning("Optimizer not yet implemented for energy training")
             '''
             # Choose hyperparameters based on maximizing the log-marginal
             # likelihood (potentially starting from several initial values)
@@ -353,14 +369,13 @@ class GaussianProcess(object):
             y_std (np.ndarray): Standard deviation of predictive distribution at target
                 configurations. Only returned when return_std is True.
         """
-        
         if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
             X = np.reshape(X, (1, len(X), 5))
             
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             y_mean = np.zeros(X.shape[0])
-            warnings.warn("No training data, predicting based on prior")
+            logger.warning("No training data, predicting based on prior")
             if return_std:
                 y_var = kernel.calc_diag(X)
                 return y_mean, np.sqrt(y_var)
@@ -397,7 +412,7 @@ class GaussianProcess(object):
                 # numerical issues. If yes: set the variance to 0.
                 y_var_negative = y_var < 0
                 if np.any(y_var_negative):
-                    warnings.warn("Predicted variances smaller than 0. "
+                    logger.warning("Predicted variances smaller than 0. "
                                   "Setting those variances to 0.")
                     y_var[y_var_negative] = 0.0
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.reshape(np.sqrt(y_var),
@@ -429,7 +444,7 @@ class GaussianProcess(object):
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             e_mean = np.zeros(X.shape[0])
-            warnings.warn("No training data, predicting based on prior")
+            logger.warning("No training data, predicting based on prior")
             if return_std:
                 y_var = kernel.calc_diag_e(X)
                 return e_mean, np.sqrt(e_var)
@@ -466,7 +481,7 @@ class GaussianProcess(object):
                 # numerical issues. If yes: set the variance to 0.
                 e_var_negative = e_var < 0
                 if np.any(e_var_negative):
-                    warnings.warn("Predicted variances smaller than 0. "
+                    logger.warning("Predicted variances smaller than 0. "
                                   "Setting those variances to 0.")
                     e_var[e_var_negative] = 0.0
                 return e_mean, np.sqrt(e_var)
@@ -551,7 +566,7 @@ class GaussianProcess(object):
             theta_opt, func_min, convergence_dict = \
                 fmin_l_bfgs_b(obj_func, initial_theta, bounds=bounds)
             if convergence_dict["warnflag"] != 0:
-                warnings.warn("fmin_l_bfgs_b terminated abnormally with the "
+                logger.warning("fmin_l_bfgs_b terminated abnormally with the "
                               " state: %s" % convergence_dict)
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
@@ -579,7 +594,6 @@ class GaussianProcess(object):
                 hyperparameters at position theta.
                 Only returned when eval_gradient is True.
         """
-
         # kernel = self.kernel_.clone_with_theta(theta)
         kernel = self.kernel
         #kernel.theta = theta
@@ -638,7 +652,6 @@ class GaussianProcess(object):
             name (str): name of the file where the GP is saved
 
         """
-
         self.kernel.kernel_name, \
         self.noise, \
         self.optimizer, \

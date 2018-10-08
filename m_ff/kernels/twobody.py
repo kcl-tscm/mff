@@ -1,17 +1,57 @@
+# -*- coding: utf-8 -*-
+"""
+Two Body Kernel
+===============
+
+Module that contains the expressions for the 2-body single-species and
+multi-species kernel. The module uses the Theano package to create the 
+energy-energy, force-energy and force-force kernels through automatic
+differentiation of the energy-energy kernel.
+The module is used to calculate the energy-energy, energy-force and 
+force-force gram matrices for the Gaussian processes, and supports 
+multi processing.
+The module is called by the gp.py script.
+
+Example:
+
+    >>> from twobody import TwoBodySingleSpeciesKernel
+    >>> kernel = kernels.TwoBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
+    >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
+
+.. _Google Python Style Guide:
+   http://google.github.io/styleguide/pyguide.html
+
+"""
 import logging
 import numpy as np
-from abc import ABCMeta, abstractmethod
-
-from m_ff.kernels.base import Kernel
-
 import theano.tensor as T
+
+from abc import ABCMeta, abstractmethod
+from m_ff.kernels.base import Kernel
 from theano import function, scan
 
 logger = logging.getLogger(__name__)
 
 
 class BaseTwoBody(Kernel, metaclass=ABCMeta):
+    """ Two body kernel class
+    Handles the functions common to the single-species and
+    multi-species two-body kernels.
 
+    Args:
+        kernel_name (str): To choose between single- and two-species kernel
+        theta[0] (float) : lengthscale of the kernel
+        theta[1] (float) : decay rate of the cutoff function
+        theta[2] (float) : cutoff radius
+        bounds (list) : bounds of the kernel function.
+
+    Attributes:
+        k2_ee (object): Energy-energy kernel function
+        k2_ef (object): Energy-force kernel function
+        k2_ff (object): Force-force kernel function
+        
+    """
+    
     @abstractmethod
     def __init__(self, kernel_name, theta, bounds):
         super().__init__(kernel_name)
@@ -21,58 +61,103 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         self.k2_ee, self.k2_ef, self.k2_ff = self.compile_theano()
 
     def calc(self, X1, X2):
-
-        K_trans = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
-
+        """
+        Calculate the force-force kernel between two sets of configurations.
+        
+        Args:
+            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
+            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
+            
+        Returns:
+            K (matrix): N1*3 x N2*3 matrix of the matrix-valued kernels 
+       
+       """        
+        K = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
+                K[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
                     self.k2_ff(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
-        return K_trans
+        return K
 
     def calc_ef(self, X1, X2):
-
-        K_trans = np.zeros((X1.shape[0], X2.shape[0] * 3))
-
+        """
+        Calculate the energy-force kernel between two sets of configurations.
+        
+        Args:
+            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
+            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
+            
+        Returns:
+            K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
+       
+       """ 
+        K = np.zeros((X1.shape[0], X2.shape[0] * 3))
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+                K[i, 3 * j:3 * j + 3] = self.k2_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
-        return K_trans
+        return K
 
     def calc_ee(self, X1, X2):
-
-        K_trans_ee = np.zeros((X1.shape[0], X2.shape[0]))
-
+        """
+        Calculate the energy-energy kernel between two sets of configurations.
+        
+        Args:
+            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
+            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
+            
+        Returns:
+            K (matrix): N1 x N2 matrix of the scalar-valued kernels 
+       
+       """ 
+        K = np.zeros((X1.shape[0], X2.shape[0]))
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
-                K_trans_ee[i, j] = self.k2_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+                K[i, j] = self.k2_ee(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
 
-        return K_trans_ee
+        return K
 
     def calc_gram(self, X, nnodes =1, eval_gradient=False):
+        """
+        Calculate the force-force gram matrix for a set of configurations X.
+        
+        Args:
+            X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
+            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            eval_gradient (bool): if True, evaluate the gradient of the gram matrix
+            
+        Returns:
+            gram (matrix): N*3 x N*3 gram matrix of the matrix-valued kernels 
+       
+       """         
         if eval_gradient:
                 raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:
+            if nnodes > 1:  # Used for multiprocessing
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
-                for i in np.arange(len(X)):
+                
+                # Build a list of all input pairs which matrix needs to be computed
+                for i in np.arange(len(X)):  
                     for j in np.arange(i+1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(1000000)
+                sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
+                pool = ProcessingPool(nodes=nnodes)  # Use pool multiprocessing
+                
+                # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                
+                # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ff, clist))
                 result = np.concatenate(result).reshape((n,3,3))
                 pool.close()
@@ -95,37 +180,58 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
                             self.k2_ff(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
-            gram = diag + off_diag + off_diag.T
+            gram = diag + off_diag + off_diag.T  # The gram matrix is symmetric
             return gram
-                
+        
+    # Used to simplify multiprocessing call
     def dummy_calc_ff(self, array):
+        
         result = np.zeros((len(array), 3, 3))
         for i in np.arange(len(array)):
             result[i]= self.k2_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            
         return result
     
-    def calc_gram_e(self, X, nnodes =1, eval_gradient=False): # Untested
+    def calc_gram_e(self, X, nnodes =1, eval_gradient=False):
+        """
+        Calculate the energy-energy gram matrix for a set of configurations X.
+        
+        Args:
+            X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
+            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            eval_gradient (bool): if True, evaluate the gradient of the gram matrix
+            
+        Returns:
+            gram (matrix): N x N gram matrix of the scalar-valued kernels 
+       
+       """            
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')   
         else:
-            if nnodes >1:
+            if nnodes >1:  # Used for multiprocessing
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
+                
+                # Build a list of all input pairs which matrix needs to be computed       
                 for i in np.arange(len(X)):
                     for j in np.arange(i+1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(1000000)
+                sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
+                
+                # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                
+                # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ee, clist))
                 result = np.concatenate(result).flatten()
                 pool.close()
@@ -148,24 +254,41 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         off_diag[i,j] = \
                             self.k2_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
-            gram = diag + off_diag + off_diag.T
+            gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
+            
             return gram
             
+    # Used to simplify multiprocessing call
     def dummy_calc_ee(self, array):
+        
         result = np.zeros(len(array))
         for i in np.arange(len(array)):
-            result[i]= self.k2_ee(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            result[i]= self.k2_ee(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])  
+            
         return result
     
     
     def calc_gram_ef(self, X, nnodes =1, eval_gradient=False):
+        """
+        Calculate the energy-force gram matrix for a set of configurations X.
+        This returns a non-symmetric matrix which is equal to the transpose of 
+        the force-energy gram matrix.
         
+        Args:
+            X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
+            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            eval_gradient (bool): if True, evaluate the gradient of the gram matrix
+            
+        Returns:
+            gram (matrix): N x N*3 gram matrix of the vector-valued kernels 
+       
+       """            
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
         
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:
+            if nnodes > 1:  # Multiprocessing
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X)):
@@ -174,15 +297,19 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(1000000)
+                    sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
+                
+                # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                
+                # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ef, clist))
                 result = np.concatenate(result).reshape((n, 1, 3))
                 pool.close()
@@ -199,27 +326,29 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                             self.k2_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
                         
             self.gram_ef = gram
+            
             return gram
 
+    # Used to simplify multiprocessing
     def dummy_calc_ef(self, array):
+        
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
-            result[i]= self.k2_ef(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            result[i]= self.k2_ef(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2]) 
+            
         return result
     
-    def calc_diag(self, X):
+    def calc_diag(self, X):  # Calculate the diagonal of a force-force gram matrix
 
         diag = np.zeros((X.shape[0] * 3))
-
         for i in np.arange(X.shape[0]):
             diag[i * 3:(i + 1) * 3] = np.diag(self.k2_ff(X[i], X[i], self.theta[0], self.theta[1], self.theta[2]))
 
         return diag
     
-    def calc_diag_e(self, X):
+    def calc_diag_e(self, X):  # Calculate the diagonal of an energy-energy gram matrix
 
         diag = np.zeros((X.shape[0]))
-
         for i in np.arange(X.shape[0]):
             diag[i] = self.k2_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
@@ -232,11 +361,13 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
 
 class TwoBodySingleSpeciesKernel(BaseTwoBody):
-    """Two body kernel.
+    """Two body single species kernel.
 
-    Parameters
-    ----------
-    theta[0]: lengthscale
+    Args:
+        theta[0] (float): lengthscale of the kernel
+        theta[1] (float): decay rate of the cutoff function
+        theta[2] (float): cutoff radius
+        
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
@@ -247,14 +378,15 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         """
         This function generates theano compiled kernels for energy and force learning
 
-        The position of the atoms relative to the centrla one, and their chemical species
-        are defined by a matrix of dimension Mx5
+        The position of the atoms relative to the central one, and their chemical species
+        are defined by a matrix of dimension Mx5 here called r1 and r2.
 
         Returns:
             k2_ee (func): energy-energy kernel
             k2_ef (func): energy-force kernel
             k2_ff (func): force-force kernel
         """
+        
         logger.info("Started compilation of theano two body single species kernels")
         # --------------------------------------------------
         # INITIAL DEFINITIONS
@@ -324,15 +456,15 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             Two body kernel for energy-energy correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (scalar):
-
+                kernel (float): scalar valued energy-energy 2-body kernel
+                
             """
             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
@@ -341,16 +473,16 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             Two body kernel for energy-force correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (vector):
+                kernel (array): 3x1 energy-force 2-body kernel
+                
             """
-
             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
         
         
@@ -359,16 +491,16 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             Two body kernel for force-force correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (matrix):
+                kernel (matrix): 3x3 force-force 2-body kernel
+                
             """
-
             return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
         logger.info("Ended compilation of theano two body single species kernels")
@@ -377,11 +509,13 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
 
 
 class TwoBodyTwoSpeciesKernel(BaseTwoBody):
-    """Two body kernel.
+    """Two body two species kernel.
 
-    Parameters
-    ----------
-    theta[0]: lengthscale
+    Args:
+        theta[0] (float): lengthscale of the kernel
+        theta[1] (float): decay rate of the cutoff function
+        theta[2] (float): cutoff radius
+        
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
@@ -392,8 +526,8 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         """
         This function generates theano compiled kernels for energy and force learning
 
-        The position of the atoms relative to the centrla one, and their chemical species
-        are defined by a matrix of dimension Mx5
+        The position of the atoms relative to the central one, and their chemical species
+        are defined by a matrix of dimension Mx5 here called r1 and r2.
 
         Returns:
             k2_ee (func): energy-energy kernel
@@ -488,15 +622,15 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
             Two body kernel for energy-energy correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (scalar):
-
+                kernel (float): scalar valued energy-energy 2-body kernel
+                
             """
             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
@@ -505,31 +639,34 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
             Two body kernel for energy-force correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (vector):
+                kernel (array): 3x1 energy-force 2-body kernel
+                
             """
-
             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
         
         def k2_ff(conf1, conf2, sig, theta, rc):
             """
-            Two body kernel for force-force correlation
+            Two body kernel for energy-energy correlation
 
             Args:
-                conf1: first configuration.
-                conf2: second configuration.
-                sig: lengthscale hyperparameter.
-                theta: cutoff smoothness hyperparameter.
-                rc: cutoff distance hyperparameter.
-            """
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
 
+            Returns:
+                kernel (matrix): 3x3 force-force 2-body kernel
+                
+            """
             return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
         logger.info("Ended compilation of theano two body kernels")

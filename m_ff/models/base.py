@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-from abc import ABCMeta
+"""
+Base Model
+==========
+
+.. _Google Python Style Guide:
+   http://google.github.io/styleguide/pyguide.html
+
+"""from abc import ABCMeta
 from pathlib import Path
 
 

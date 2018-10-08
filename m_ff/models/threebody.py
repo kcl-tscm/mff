@@ -1,18 +1,67 @@
+# -*- coding: utf-8 -*-
+"""
+Three Body Model
+================
+
+Module containing the ThreeBodySingleSpecies and 
+ThreeBodyTwoSpecies classes, which are used to handle the Gaussian 
+process regression and the mapping algorithm used to build M-FFs.
+The model has to be first defined, then the Gaussian process must be
+trained using training configurations and forces (and/or local energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 3-body
+potential via the ``build grid`` function call. A mapped model can be then
+saved, loaded and used to run molecular dynamics simulations via the
+calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example:
+
+    >>> from m_ff import models
+    >>> mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    >>> mymodel.fit(training_confs, training_forces)
+    >>> forces = mymodel.predict(test_configurations)
+    >>> mymodel.build_grid(grid_start, num_3b)
+    >>> mymodel.save("thismodel.json")
+    >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+
+.. _Google Python Style Guide:
+   http://google.github.io/styleguide/pyguide.html
+
+"""
+
 import json
 import numpy as np
 import warnings
-from pathlib import Path
 
 from m_ff import gp
 from m_ff import kernels
 from m_ff import interpolation
-
+from pathlib import Path
 from m_ff.models.base import Model
-import warnings
 
 
 class ThreeBodySingleSpeciesModel(Model):
+    """ 3-body single species model class
+    Class managing the Gaussian process and its mapped counterpart
 
+    Args:
+        element (int): The atomic number of the element considered
+        r_cut (foat): The cutoff radius used to carve the atomic environments
+        sigma (foat): Lengthscale parameter of the Gaussian process
+        theta (float): decay ratio of the cutoff function in the Gaussian Process
+        noise (float): noise value associated with the training output data
+
+    Attributes:
+        gp (method): The 3-body single species Gaussian Process
+        grid (method): The 3-body single species tabulated potential
+        grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0.0)
+        grid_num (int): number of points per side used to create the 3-body grid. This is a 
+            3-dimensional grid, therefore the total number of grid points will be grid_num^3.
+    """
+    
     def __init__(self, element, r_cut, sigma, theta, noise, **kwargs):
         super().__init__()
         self.element = element
@@ -24,30 +73,120 @@ class ThreeBodySingleSpeciesModel(Model):
         self.grid, self.grid_start, self.grid_num = None, None, None
 
     def fit(self, confs, forces, nnodes = 1):
+        """ Fit the GP to a set of training forces using a 
+        3-body single species force-force kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit(confs, forces, nnodes)
 
     def fit_energy(self, confs, energies, nnodes = 1):
+        """ Fit the GP to a set of training energies using a 
+        3-body single species energy-energy kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit_energy(confs, energies, nnodes)
 
     def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+        """ Fit the GP to a set of training forces and energies using 
+        3-body single species force-force, energy-force and energy-energy kernels
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
 
     def predict(self, confs, return_std=False):
+        """ Predict the forces acting on the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            forces (array): array of force vectors predicted by the GP
+            forces_errors (array): errors associated to the force predictions,
+                returned only if return_std is True
+        """     
+        
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+            energies_errors (array): errors associated to the energies predictions,
+                returned only if return_std is True
+        """  
+        
         return self.gp.predict_energy(confs, return_std)
 
     def save_gp(self, filename):
+        """ Saves the GP object, now obsolete
+        """
+        
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.save(filename)
 
     def load_gp(self, filename):
+        """ Loads the GP object, now obsolete
+        """
+        
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
     def build_grid(self, start, num, nnodes = 1):
-        """Function that builds and predicts energies on a cube of values"""
+        """ Build the mapped 3-body potential. 
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality). The grid building exploits all the permutation invariances to
+        reduce the number of energy calculations needed to fill the grid.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            start (float): smallest interatomic distance for which the energy is predicted
+                by the GP and stored inn the 3-body mapped potential
+            num (int): number of points to use to generate the list of distances used to
+                generate the triplets of atoms for the mapped potential
+            nnodes (int): number of CPUs to use to calculate the energy predictions
+        """
+        
         self.grid_start = start
         self.grid_num = num
 
@@ -99,6 +238,32 @@ class ThreeBodySingleSpeciesModel(Model):
 
     @staticmethod
     def generate_triplets(dists):
+        """ Generate a list of all valid triplets using perutational invariance.
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality). The grid building exploits all the permutation invariances to
+        reduce the number of energy calculations needed to fill the grid.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+
+        Returns:
+            inds (array): array of booleans indicating which triplets (three distance values) need to be
+                evaluated to fill the 3D grid of energy values.
+            r_ij_x (array): array containing the x coordinate of the second atom j w.r.t. the central atom i
+            r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
+            r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
+        """
+        
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
@@ -119,7 +284,15 @@ class ThreeBodySingleSpeciesModel(Model):
         return inds, r_ij_x, r_ki_x, r_ki_y
 
     def save(self, path):
-
+        """ Save the model.
+        This creates a .json file containing the parameters of the model and the
+        paths to the GP objects and the mapped potential, which are saved as 
+        separate .gpy and .gpz files, respectively.
+        
+        Args:
+            path (str): path to the file 
+        """
+        
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -158,7 +331,25 @@ class ThreeBodySingleSpeciesModel(Model):
 
 
 class ThreeBodyTwoSpeciesModel(Model):
+    """ 3-body two species model class
+    Class managing the Gaussian process and its mapped counterpart
 
+    Args:
+        elements (list): List containing the atomic numbers in increasing order
+        r_cut (foat): The cutoff radius used to carve the atomic environments
+        sigma (foat): Lengthscale parameter of the Gaussian process
+        theta (float): decay ratio of the cutoff function in the Gaussian Process
+        noise (float): noise value associated with the training output data
+
+    Attributes:
+        gp (class): The 3-body two species Gaussian Process
+        grid (list): Contains the three 3-body two species tabulated potentials, accounting for
+            interactions between three atoms of types 0-0-0, 0-0-1, 0-1-1, and 1-1-1.
+        grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0)
+        grid_num (int): number of points per side used to create the 3-body grids. These are 
+            3-dimensional grids, therefore the total number of grid points will be grid_num^3.  
+    """
+    
     def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
         super().__init__()
         self.elements = elements
@@ -170,28 +361,108 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
     def fit(self, confs, forces, nnodes = 1):
+        """ Fit the GP to a set of training forces using a 
+        3-body two species force-force kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit(confs, forces, nnodes)
 
-    def predict(self, confs, return_std=False):
-        return self.gp.predict(confs, return_std)
-
     def fit_energy(self, confs, forces, nnodes = 1):
+        """ Fit the GP to a set of training energies using a 
+        3-body two species energy-energy kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit_energy(confs, forces, nnodes)
 
     def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+        """ Fit the GP to a set of training forces and energies using 
+        3-body two species force-force, energy-force and energy-energy kernels
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+        """
+        
         self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
 
+    def predict(self, confs, return_std=False):
+        """ Predict the forces acting on the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            forces (array): array of force vectors predicted by the GP
+            forces_errors (array): errors associated to the force predictions,
+                returned only if return_std is True
+        """     
+        
+        return self.gp.predict(confs, return_std)
+
     def predict_energy(self, confs, return_std=False):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+            energies_errors (array): errors associated to the energies predictions,
+                returned only if return_std is True
+        """  
+        
         return self.gp.predict_energy(confs, return_std)
 
     def save_gp(self, filename):
+        """ Saves the GP object, now obsolete
+        """
+    
         self.gp.save(filename)
 
     def load_gp(self, filename):
+        """ Loads the GP object, now obsolete
+        """
+        
         self.gp.load(filename)
 
     def build_grid(self, start, num, nnodes = 1):
-        """Function that builds and predicts energies on a cube of values"""
+        """Functions used to create the four different 3-body energy grids for 
+        atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
+        ``build_grid_3b`` function for each of those combinations of elements.
+        
+        Args:
+            start (float): smallest interatomic distance for which the energy is predicted
+                by the GP and stored inn the 3-body mapped potential
+            num (int): number of points to use to generate the list of distances used to
+                generate the triplets of atoms for the mapped potential
+            nnodes (int): number of CPUs to use to calculate the energy predictions
+        """
+        
         self.grid_start = start
         self.grid_num = num
 
@@ -202,10 +473,33 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
 
     def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
-
-        # HOTFIX: understand why this weird order is correct
-        """Function that builds and predicts energies on a cube of values"""
-
+        """ Build the mapped 3-body potential. 
+        Calculates the energy predicted by the GP for three atoms of elements element_i, element_j, element_k, 
+        at all possible combinations of num distances ranging from start to r_cut. 
+        The energy is calculated only for ``valid`` triplets of atoms, i.e. sets of three distances 
+        which form a triangle (this is checked via the triangle inequality), found by calling the 
+        ``generate_triplets_with_permutation_invariance`` function.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+            element_i (int): atomic number of the central atom i in a triplet
+            element_j (int): atomic number of the second atom j in a triplet
+            element_k (int): atomic number of the third atom k in a triplet
+            nnodes (int): number of CPUs to use when computing the triplet local energies
+            
+        Returns:
+            spline3D (obj): a 3D spline object that can be used to predict the energy and the force associated
+                to the central atom of a triplet.
+        """
+        
         num = len(dists)
         inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets_all(dists)
 
@@ -241,19 +535,36 @@ class ThreeBodyTwoSpeciesModel(Model):
         else:
             grid_3b[inds] = self.gp.predict_energy(confs).flatten()
 
-        # for ind_i in range(num):
-        #     for ind_j in range(ind_i + 1):
-        #         for ind_k in range(ind_j + 1):
-        #             grid_3b[ind_i, ind_k, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-        #             grid_3b[ind_j, ind_i, ind_k] = grid_3b[ind_i, ind_j, ind_k]
-        #             grid_3b[ind_j, ind_k, ind_i] = grid_3b[ind_i, ind_j, ind_k]
-        #             grid_3b[ind_k, ind_i, ind_j] = grid_3b[ind_i, ind_j, ind_k]
-        #             grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
-
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
     @staticmethod
     def generate_triplets_with_permutation_invariance(dists):
+        """ Generate a list of all valid triplets using perutational invariance.
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality). The grid building exploits all the permutation invariances to
+        reduce the number of energy calculations needed to fill the grid.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+
+        Returns:
+            inds (array): array of booleans indicating which triplets (three distance values) need to be
+                evaluated to fill the 3D grid of energy values.
+            r_ij_x (array): array containing the x coordinate of the second atom j w.r.t. the central atom i
+            r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
+            r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
+        """
+        
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
@@ -275,6 +586,31 @@ class ThreeBodyTwoSpeciesModel(Model):
 
     @staticmethod
     def generate_triplets_all(dists):
+        """ Generate a list of all valid triplets
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality).
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+
+        Returns:
+            inds (array): array of booleans indicating which triplets (three distance values) need to be
+                evaluated to fill the 3D grid of energy values.
+            r_ij_x (array): array containing the x coordinate of the second atom j w.r.t. the central atom i
+            r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
+            r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
+        """
+        
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
@@ -292,6 +628,15 @@ class ThreeBodyTwoSpeciesModel(Model):
         return inds, r_ij_x, r_ki_x, r_ki_y
 
     def save(self, path):
+        """ Save the model.
+        This creates a .json file containing the parameters of the model and the
+        paths to the GP objects and the mapped potentials, which are saved as 
+        separate .gpy and .gpz files, respectively.
+        
+        Args:
+            path (str): path to the file 
+        """
+        
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -332,6 +677,16 @@ class ThreeBodyTwoSpeciesModel(Model):
 
     @classmethod
     def from_json(cls, path):
+        """ Load the model.
+        Loads the model, the associated GP and the mapped potential, if available.
+        
+        Args:
+            path (str): path to the .json model file 
+        
+        Return:
+            model (obj): the model object
+        """
+        
         if not isinstance(path, Path):
             path = Path(path)
 

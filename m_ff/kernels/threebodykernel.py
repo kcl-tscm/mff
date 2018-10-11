@@ -61,7 +61,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
 
     def calc(self, X1, X2):
-         """
+        """
         Calculate the force-force kernel between two sets of configurations.
         
         Args:
@@ -71,7 +71,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1*3 x N2*3 matrix of the matrix-valued kernels 
        
-       """   
+        """   
         K = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
 
         for i in np.arange(X1.shape[0]):
@@ -82,7 +82,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         return K
 
     def calc_ee(self, X1, X2):
-         """
+        """
         Calculate the energy-energy kernel between two sets of configurations.
         
         Args:
@@ -92,7 +92,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1 x N2 matrix of the scalar-valued kernels 
        
-       """   
+        """   
         K = np.zeros((X1.shape[0], X2.shape[0]))
 
         for i in np.arange(X1.shape[0]):
@@ -102,7 +102,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         return K
 
     def calc_ef(self, X1, X2):
-         """
+        """
         Calculate the energy-force kernel between two sets of configurations.
         
         Args:
@@ -112,7 +112,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
        
-       """   
+        """   
         K = np.zeros((X1.shape[0], X2.shape[0] * 3))
         
         for i in np.arange(X1.shape[0]):
@@ -132,7 +132,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N*3 x N*3 gram matrix of the matrix-valued kernels 
        
-       """   
+        """   
         if eval_gradient:
                 raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
@@ -203,7 +203,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N gram matrix of the scalar-valued kernels 
        
-       """  
+        """  
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')   
         else:
@@ -276,7 +276,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N*3 gram matrix of the vector-valued kernels 
        
-       """          
+        """          
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
         
         if eval_gradient:
@@ -737,7 +737,7 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
 
-        ker_jkmn_withcutoff = ker_jkmn * cut_ik[:, :, None, None] * cut_mn[None, None, :, :]
+        ker_jkmn_withcutoff = ker_jkmn * cut_jk[:, :, None, None] * cut_mn[None, None, :, :]
 
         # --------------------------------------------------
         # REMOVE DIAGONAL ELEMENTS

@@ -297,7 +297,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                    sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
                 

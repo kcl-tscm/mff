@@ -12,10 +12,14 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+
 import os
 import sys
-
+sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../m_ff'))
+sys.path.insert(0, os.path.abspath('../../m_ff'))
 
 from recommonmark.parser import CommonMarkParser
 from recommonmark.transform import AutoStructify

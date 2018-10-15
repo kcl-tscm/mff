@@ -101,5 +101,14 @@ To load a previously saved model of a known type (here for example a CombinedSin
 
 
 
-.. automodule:: m_ff.models
+.. automodule:: models.base
+   :members:
+   
+.. automodule:: models.combined
+   :members:
+
+.. automodule:: models.twobody
+   :members:
+   
+.. automodule:: models.threebody
    :members:

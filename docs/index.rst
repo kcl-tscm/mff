@@ -46,13 +46,13 @@ We need to update the code on this since we are now working on r1 r2 r12 instead
    install
    models
    confs
-   .. gp
+
    calculators
    tutorials
    API_reference
 
 
-
+.. gp not included in toctree
 
 
 Indices and tables

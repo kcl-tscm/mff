@@ -32,7 +32,7 @@ source_parsers = {
 
 project = 'M-FF'
 copyright = '2018, Claudio Zeni, Aldo Glielmo, AdAm Fekete, Alessandro De Vita'
-author = 'Claudio Zeni, Aldo Glielmo, Ádám Fekete, Alessandro De Vita'
+author = 'Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'
 
 # The short X.Y version
 version = ''

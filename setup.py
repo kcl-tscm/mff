@@ -18,7 +18,7 @@ with open("README.md", "r") as fh:
 setup(
     name='m-ff',
     version='0.9.0',
-    author=['Aldo Glielmo', 'Claudio Zeni', 'Adam Fekete'],
+    author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
     description='This is a demo package',
     long_description=long_description,
     long_description_content_type="text/markdown",

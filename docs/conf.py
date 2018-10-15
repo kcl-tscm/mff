@@ -31,7 +31,7 @@ source_parsers = {
 # -- Project information -----------------------------------------------------
 
 project = 'M-FF'
-copyright = '2018, Claudio Zeni, Aldo Glielmo, AdAm Fekete, Alessandro De Vita'
+copyright = '2018, Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'
 author = 'Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'
 
 # The short X.Y version
@@ -145,7 +145,7 @@ latex_elements = {
 latex_documents = [
     (master_doc, 'Machinelearningderivednon-parametricforcefields.tex',
      'Machine learning derived non-parametric force fields Documentation',
-     'Claudio Zeni, Aldo Glielmo, Ádám Fekete, Alessandro De Vita', 'manual'),
+     'Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'),
 ]
 
 # -- Options for manual page output ------------------------------------------

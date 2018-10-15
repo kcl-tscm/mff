@@ -1,4 +1,4 @@
-from .twobody import TwoBodySingleSpeciesKernel, TwoBodyTwoSpeciesKernel
+from .twobodykernel import TwoBodySingleSpeciesKernel, TwoBodyTwoSpeciesKernel
 from .threebodykernel import ThreeBodySingleSpeciesKernel, ThreeBodyTwoSpeciesKernel
 
 __all__ = [TwoBodySingleSpeciesKernel, TwoBodyTwoSpeciesKernel, ThreeBodySingleSpeciesKernel, ThreeBodyTwoSpeciesKernel]

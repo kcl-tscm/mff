@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Three Body M
+Three Body Kernel
 =================
 
 Module that contains the expressions for the 3-body single-species and
@@ -14,7 +14,7 @@ The module is called by the gp.py script.
 
 Example:
 
-    >>> from twobody import ThreeBodySingleSpeciesKernel
+    >>> from threebodykernel import ThreeBodySingleSpeciesKernel
     >>> kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
     >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
 

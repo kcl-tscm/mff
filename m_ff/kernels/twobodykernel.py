@@ -14,7 +14,7 @@ The module is called by the gp.py script.
 
 Example:
 
-    >>> from twobody import TwoBodySingleSpeciesKernel
+    >>> from twobodykernel import TwoBodySingleSpeciesKernel
     >>> kernel = kernels.TwoBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
     >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
 

@@ -1,7 +1,7 @@
 ..  _model:
 
-Models
-======
+Using M-FF Models
+=================
 
 The models are the classes used to build, train and test a Gaussian process, and to then build the relative mapped potential.
 There are six types of models at the moment, each one is used to handle 2-, 3-, or 2+3-body kernels in the case of one or two atomic species.
@@ -100,15 +100,15 @@ To load a previously saved model of a known type (here for example a CombinedSin
 >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 
-
-.. automodule:: models.base
-   :members:
-   
-.. automodule:: models.combined
-   :members:
-
-.. automodule:: models.twobody
-   :members:
-   
-.. automodule:: models.threebody
-   :members:
+.. Model's complete reference
+.. ==========================
+..
+..
+.. .. automodule:: models.twobody
+..    :members:
+..
+.. .. automodule:: models.threebody
+..    :members:
+..
+.. .. automodule:: models.combined
+..    :members:

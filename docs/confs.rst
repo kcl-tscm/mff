@@ -1,6 +1,7 @@
 .. _configurations:
-Configurations
-==============
+
+Using M-FF Configurations
+=========================
 
 The M-FF package uses training and testing data extracted from .xyz files. The ``m_ff.configurations`` module contains the function ``carve_confs`` which is used to save .npy files containing local atomic environments, the forces acting on the central atoms of these local atomic environments and, if present, the energy associated with the snapshot the local environment has been extracted from.
 To extract local atomic environments, forces, energies and a list of all the elements contained in an ase ``atoms`` object::
@@ -14,5 +15,5 @@ where r_cut specifies the cutoff radius that will be applied to extract local at
 
 
 
-.. automodule:: m_ff.configurations
-   :members:
+.. .. automodule:: m_ff.configurations
+..    :members:

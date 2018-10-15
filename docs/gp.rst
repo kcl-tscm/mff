@@ -17,6 +17,6 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 
-.. automodule:: m_ff.gp
-   :members:
+.. .. automodule:: m_ff.gp
+..    :members:
 

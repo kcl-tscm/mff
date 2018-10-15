@@ -30,14 +30,14 @@ source_parsers = {
 
 # -- Project information -----------------------------------------------------
 
-project = 'Machine learning derived non-parametric force fields'
+project = 'M-FF'
 copyright = '2018, Claudio Zeni, Aldo Glielmo, AdAm Fekete, Alessandro De Vita'
 author = 'Claudio Zeni, Aldo Glielmo, Ádám Fekete, Alessandro De Vita'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.9'
+release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
 

@@ -6,41 +6,41 @@ API reference
 The "models" module
 -------------------
 
-.. automodule:: models.twobody
+.. automodule:: m_ff.models.twobody
    :members:
    
-.. automodule:: models.threebody
+.. automodule:: m_ff.models.threebody
    :members:
    
-.. automodule:: models.combined
+.. automodule:: m_ff.models.combined
    :members:
    
    
 The "gp" module
 ---------------
 
-.. automodule:: gp
+.. automodule:: m_ff.gp
    :members:
    
 The "configurations" module
 ---------------------------
 
-.. automodule:: configurations
+.. automodule:: m_ff.configurations
    :members:
    
    
 The "calculators" module
 ------------------------
 
-.. automodule:: calculators
+.. automodule:: m_ff.calculators
    :members:
    
    
 The "kernels" module
 ------------------------
 
-.. automodule:: kernels.twobodykernel
+.. automodule:: m_ff.kernels.twobodykernel
    :members:
    
-.. automodule:: kernels.threebodykernel
+.. automodule:: m_ff.kernels.threebodykernel
    :members:

@@ -18,14 +18,20 @@ These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
+    Basic usage::
 
-    >>> from m_ff import models
-    >>> mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
-    >>> mymodel.fit(training_confs, training_forces)
-    >>> forces = mymodel.predict(test_configurations)
-    >>> mymodel.build_grid(grid_start, num_2b)
-    >>> mymodel.save("thismodel.json")
-    >>> mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
+        from m_ff import models
+
+        mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+
+        mymodel.fit(training_confs, training_forces)
+
+        forces = mymodel.predict(test_configurations)
+
+        mymodel.build_grid(grid_start, num_2b)
+        mymodel.save("thismodel.json")
+
+        mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
@@ -58,8 +64,9 @@ class TwoBodySingleSpeciesModel(Model):
         grid (method): The 2-body single species tabulated potential
         grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0.0)
         grid_num (int): number of points used to create the 2-body grid
+
     """
-    
+
     def __init__(self, element, r_cut, sigma, theta, noise, **kwargs):
         super().__init__()
 
@@ -71,7 +78,7 @@ class TwoBodySingleSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = None, None, None
 
-    def fit(self, confs, forces, nnodes = 1):
+    def fit(self, confs, forces, nnodes=1):
         """ Fit the GP to a set of training forces using a 
         2-body single species force-force kernel
 
@@ -82,10 +89,10 @@ class TwoBodySingleSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes = 1):
+    def fit_energy(self, confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 
         2-body single species energy-energy kernel
 
@@ -96,10 +103,10 @@ class TwoBodySingleSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp.fit_energy(confs, energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
         """ Fit the GP to a set of training forces and energies using 
         2-body single species force-force, energy-force and energy-energy kernels
 
@@ -111,8 +118,9 @@ class TwoBodySingleSpeciesModel(Model):
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
+
         """
-        
+
         self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
 
     def predict(self, confs, return_std=False):
@@ -128,8 +136,9 @@ class TwoBodySingleSpeciesModel(Model):
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
-        """     
-        
+
+        """
+
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
@@ -145,21 +154,22 @@ class TwoBodySingleSpeciesModel(Model):
             energies (array): array of force vectors predicted by the GP
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
-        """  
-        
+
+        """
+
         return self.gp.predict_energy(confs, return_std)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.save(filename)
 
     def load_gp(self, filename):
         """ Loads the GP object, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
@@ -178,8 +188,9 @@ class TwoBodySingleSpeciesModel(Model):
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 2-body mapped potential
             num (int): number of points to use in the grid of the mapped potential   
+
         """
-        
+
         self.grid_start = start
         self.grid_num = num
 
@@ -200,8 +211,9 @@ class TwoBodySingleSpeciesModel(Model):
         
         Args:
             path (str): path to the file 
+
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -248,8 +260,9 @@ class TwoBodySingleSpeciesModel(Model):
         
         Return:
             model (obj): the model object
+
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -294,8 +307,9 @@ class TwoBodyTwoSpeciesModel(Model):
             interactions between two atoms of types 0-0, 0-1, and 1-1.
         grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0)
         grid_num (int): number of points used to create the 2-body grids
+
     """
-    
+
     def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
         super().__init__()
 
@@ -307,7 +321,7 @@ class TwoBodyTwoSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
-    def fit(self, confs, forces, nnodes = 1):
+    def fit(self, confs, forces, nnodes=1):
         """ Fit the GP to a set of training forces using a two 
         body two species force-force kernel
 
@@ -317,11 +331,12 @@ class TwoBodyTwoSpeciesModel(Model):
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
+
         """
-        
+
         self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energy, nnodes = 1):
+    def fit_energy(self, confs, energy, nnodes=1):
         """ Fit the GP to a set of training energies using a two 
         body two species energy-energy kernel
 
@@ -331,11 +346,12 @@ class TwoBodyTwoSpeciesModel(Model):
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
+
         """
-        
+
         self.gp.fit_energy(confs, energy, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energy, nnodes = 1):
+    def fit_force_and_energy(self, confs, forces, energy, nnodes=1):
         """ Fit the GP to a set of training forces and energies using two 
         body two species force-force, energy-force and energy-energy kernels
 
@@ -347,10 +363,10 @@ class TwoBodyTwoSpeciesModel(Model):
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
-        """
-        
-        self.gp.fit_force_and_energy(confs, forces, energy, nnodes)
 
+        """
+
+        self.gp.fit_force_and_energy(confs, forces, energy, nnodes)
 
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
@@ -365,10 +381,11 @@ class TwoBodyTwoSpeciesModel(Model):
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
-        """   
-        
+
+        """
+
         return self.gp.predict(confs, return_std)
-    
+
     def predict_energy(self, confs, return_std=False):
         """ Predict the local energies of the central atoms of confs using a GP 
 
@@ -382,21 +399,22 @@ class TwoBodyTwoSpeciesModel(Model):
             energies (array): array of force vectors predicted by the GP
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
-        """  
-        
+
+        """
+
         return self.gp.predict_energy(confs, return_std)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.save(filename)
 
     def load_gp(self, filename):
         """ Loads the GP object, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
@@ -417,8 +435,9 @@ class TwoBodyTwoSpeciesModel(Model):
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 2-body mapped potential
             num (int): number of points to use in the grid of the mapped potential   
+
         """
-        
+
         self.grid_start = start
         self.grid_num = num
 
@@ -448,7 +467,9 @@ class TwoBodyTwoSpeciesModel(Model):
         
         Args:
             path (str): path to the file 
+
         """
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -497,7 +518,9 @@ class TwoBodyTwoSpeciesModel(Model):
         
         Return:
             model (obj): the model object
+
         """
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -588,7 +611,6 @@ if __name__ == '__main__':
         m.save(filename)
 
         m2 = TwoBodyTwoSpeciesModel.from_json(filename)
-
 
 
     # test_two_body_single_species_model()

@@ -21,5 +21,5 @@ Running the Calculator
 ...
 
 
-.. .. automodule:: m_ff.calculators
-..    :members:
+.. C.. automodule:: m_ff.calculators
+.. C   :members:

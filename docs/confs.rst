@@ -12,5 +12,5 @@ To extract local atomic environments, forces, energies and a list of all the ele
 where r_cut specifies the cutoff radius that will be applied to extract local atomic environments containing all atomis within r_cut from the central one, and n_data specifies the total number of local atomic environments to extract.
 
 
-.. .. automodule:: m_ff.configurations
-.. ..    :members:
+.. C.. automodule:: m_ff.configurations
+.. C..    :members:

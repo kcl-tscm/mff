@@ -97,9 +97,9 @@ To load a previously saved model of a known type (here for example a CombinedSin
 
 Model's complete reference
 --------------------------
-
-.. automodule:: m_ff.models.twobody
-   :members:
+aa
+.. C.. automodule:: m_ff.models.twobody
+.. C   :members:
 
 
 

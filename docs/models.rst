@@ -1,7 +1,5 @@
-..  _model:
-
-Using M-FF Models
-=================
+Models
+======
 
 The models are the classes used to build, train and test a Gaussian process, and to then build the relative mapped potential.
 There are six types of models at the moment, each one is used to handle 2-, 3-, or 2+3-body kernels in the case of one or two atomic species.
@@ -14,8 +12,8 @@ Building a model
 ----------------
 To create a model based on a 2-body kernel for a monoatomic system::
 
->>> from m_ff import models
->>> mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    from m_ff import models
+    mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
 
 where the parameters refer to the atomic number of the species we are training the GP on, the cutoff radius we want to use, the lengthscale hyperparameter of the Gaussian Process, the hyperparameter governing the exponential decay of the cutoff function, and the noise associated with the output training data.
 In the case of a 2+3-body kernel for a monoatomic system::

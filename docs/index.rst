@@ -13,8 +13,10 @@ Trajectories or snapshots of the system of interest are used to train the potent
 
 At the moment the package supports single- and two-element atomic environments; we aim to support three-element atomic environments in future versions.
 
-.. ::
-   # Basic example
+.. code-block:: python
+
+  # Basic example
+
 
 CODE FUNCTIONS
 

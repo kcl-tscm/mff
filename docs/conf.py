@@ -134,7 +134,7 @@ modindex_common_prefix = ['m_ff', 'models']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '_static/m_ff_logo.png'
+html_logo = '_static/mff_logo_2.svg'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

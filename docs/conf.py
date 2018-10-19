@@ -20,7 +20,7 @@ import sys
 if os.environ.get('READTHEDOCS', None) is not 'True':
 
     # Adding local path to the package
-    sys.path.insert(0, os.path.abspath('../'))
+    # sys.path.insert(0, os.path.abspath('../'))
 
     # # Activate the theme.
     # import sphinx_bootstrap_theme

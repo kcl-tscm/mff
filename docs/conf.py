@@ -15,37 +15,7 @@
 import os
 import sys
 
-# sys.path.insert(0, os.path.abspath('.'))
-
-if os.environ.get('READTHEDOCS', None) is not 'True':
-
-    # Adding local path to the package
-    # sys.path.insert(0, os.path.abspath('../'))
-
-    # # Activate the theme.
-    # import sphinx_bootstrap_theme
-    #
-    # html_theme = 'bootstrap'
-    # html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-
-    import sphinx_rtd_theme
-
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-    html_theme_options = {
-        'canonical_url': '',
-        'analytics_id': '',
-        'logo_only': False,
-        'display_version': True,
-        'prev_next_buttons_location': 'bottom',
-        'style_external_links': False,
-        # Toc options
-        'collapse_navigation': False,
-        'sticky_navigation': True,
-        'navigation_depth': 2,
-        'includehidden': True,
-        'titles_only': False
-    }
+# sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
@@ -124,13 +94,30 @@ modindex_common_prefix = ['m_ff', 'models']
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-# html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_rtd_theme'
+
+# import sphinx_rtd_theme
+# html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 # html_theme_options = {}
+html_theme_options = {
+    'canonical_url': '',
+    'analytics_id': '',
+    'logo_only': False,
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    # Toc options
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'navigation_depth': 2,
+    'includehidden': True,
+    'titles_only': False
+}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

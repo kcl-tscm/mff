@@ -14,10 +14,9 @@ The module is called by the gp.py script.
 
 Example:
 
-    Basic usage::
-        from threebodykernel import ThreeBodySingleSpeciesKernel
-        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
-        ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
+    >>> from threebodykernel import ThreeBodySingleSpeciesKernel
+    >>> kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
+    >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html

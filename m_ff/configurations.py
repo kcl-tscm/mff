@@ -8,8 +8,8 @@ from ase atoms objects.
 
 Example:
 
-    trajectory = ase.io.read(filename)
-    elements, confs, forces, energies = configurations.carve_confs(
+    >>> trajectory = ase.io.read(filename)
+    >>> elements, confs, forces, energies = configurations.carve_confs(
                 trajcetory, r_cut, n_data)
 
 .. _Google Python Style Guide:

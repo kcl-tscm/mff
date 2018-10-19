@@ -18,20 +18,17 @@ These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
-    Basic usage::
 
-        from m_ff import models
+    >>> from m_ff import models
+    >>> mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    >>> mymodel.fit(training_confs, training_forces)
 
-        mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    >>> forces = mymodel.predict(test_configurations)
 
-        mymodel.fit(training_confs, training_forces)
+    >>> mymodel.build_grid(grid_start, num_2b)
+    >>> mymodel.save("thismodel.json")
 
-        forces = mymodel.predict(test_configurations)
-
-        mymodel.build_grid(grid_start, num_2b)
-        mymodel.save("thismodel.json")
-
-        mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
+    >>> mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html

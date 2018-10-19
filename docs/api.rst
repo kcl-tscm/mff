@@ -38,6 +38,9 @@ The "calculators" module
 
 :class:`m_ff.calculators.ThreeBodyTwoSpecies`
 
+:class:`m_ff.calculators.CombinedSingleSpecies`
+
+:class:`m_ff.calculators.CombinedTwoSpecies`
 
 The "kernels" module
 --------------------

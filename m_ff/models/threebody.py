@@ -19,14 +19,13 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
 
-    Basic usage::
-        from m_ff import models
-        mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
-        mymodel.fit(training_confs, training_forces)
-        forces = mymodel.predict(test_configurations)
-        mymodel.build_grid(grid_start, num_3b)
-        mymodel.save("thismodel.json")
-        mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+    >>> from m_ff import models
+    >>> mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    >>> mymodel.fit(training_confs, training_forces)
+    >>> forces = mymodel.predict(test_configurations)
+    >>> mymodel.build_grid(grid_start, num_3b)
+    >>> mymodel.save("thismodel.json")
+    >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html

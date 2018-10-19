@@ -7,10 +7,10 @@ Gaussian process regression module suited to learn and
 predict energies and forces
 
 Example:
-    Basic usage::
-        gp = GaussianProcess(kernel, noise)
-        gp.fit(train_configurations, train_forces)
-        gp.predict(test_configurations)
+
+    >>> gp = GaussianProcess(kernel, noise)
+    >>> gp.fit(train_configurations, train_forces)
+    >>> gp.predict(test_configurations)
 
 Todo:
     * For module TODOs

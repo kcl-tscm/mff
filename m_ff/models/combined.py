@@ -18,16 +18,14 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
 
-    Basic usage::
-
-        from m_ff import models
-        mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
+    >>> from m_ff import models
+    >>> mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
                         sigma_2b, sigma_3b, sigma_2b, theta_3b, noise)
-        mymodel.fit(training_confs, training_forces)
-        forces = mymodel.predict(test_configurations)
-        mymodel.build_grid(grid_start, num_2b)
-        mymodel.save("thismodel.json")
-        mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+    >>> mymodel.fit(training_confs, training_forces)
+    >>> forces = mymodel.predict(test_configurations)
+    >>> mymodel.build_grid(grid_start, num_2b)
+    >>> mymodel.save("thismodel.json")
+    >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html

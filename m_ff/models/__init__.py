@@ -1,3 +1,7 @@
+"""
+.. module:: m_ff.models
+
+"""
 from .twobody import TwoBodySingleSpeciesModel, TwoBodyTwoSpeciesModel
 from .threebody import ThreeBodySingleSpeciesModel, ThreeBodyTwoSpeciesModel
 from .combined import CombinedSingleSpeciesModel, CombinedTwoSpeciesModel

@@ -38,28 +38,35 @@ Notes: Need to optimize the process itself, add vutoff functions to the theano k
 4) Build the mapped energy grid
 Input: Cutoff, minimum distance (default = 1.5), number of points in the grid (default 100?), trained GP with its hyperparameters, elements.
 utput: 4 (mono-element) or 7 (bi-element) remapped grids (in a single file), parameters used to build it written somewhere for reference.
-Notes: Built using r1, r2, r12, we need to see if there is a way to exploit symmetry and reduce the number of computations needed.
+Notes: Built using :math:`r_1`, :math:`r_2`, :math:`r_{12}`, we need to see if there is a way to exploit symmetry and reduce the number of computations needed.
 
 5) Force and energy interpolator
 Input: configurations, mapped potential grids
 Output: forces and/or energies
 Notes: Use the configuration carving of function 2 to create inputs for the force and energy interpolator.
-We need to update the code on this since we are now working on r1 r2 r12 instead of r1 r2 $\theta$.
+We need to update the code on this since we are now working on :math:`r_1` :math:`r_2` :math:`r_{12}` instead of :math:`r_1` :math:`r_2` :math:`\theta`.
 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Table of Contents
 
    install
    models
    confs
+   gp
    calculators
    api
+
+.. toctree::
+   :caption: Appendix
+
+   genindex
 
 Indices and tables
 ==================
 
-* :ref:`genindex`
+* :ref:`Index <genindex>`
 * :ref:`modindex`
-* :ref:`search`
+
+.. c * :ref:`search`

@@ -18,14 +18,16 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
 
-    >>> from m_ff import models
-    >>> mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
+    Basic usage::
+
+        from m_ff import models
+        mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
                         sigma_2b, sigma_3b, sigma_2b, theta_3b, noise)
-    >>> mymodel.fit(training_confs, training_forces)
-    >>> forces = mymodel.predict(test_configurations)
-    >>> mymodel.build_grid(grid_start, num_2b)
-    >>> mymodel.save("thismodel.json")
-    >>> mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+        mymodel.fit(training_confs, training_forces)
+        forces = mymodel.predict(test_configurations)
+        mymodel.build_grid(grid_start, num_2b)
+        mymodel.save("thismodel.json")
+        mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
@@ -33,7 +35,7 @@ Example:
 
 import json
 import numpy as np
-import warnings
+
 from pathlib import Path
 
 from m_ff import gp
@@ -43,9 +45,10 @@ from m_ff import interpolation
 from .base import Model
 import logging
 import warnings
+
 logger = logging.getLogger(__name__)
 
-        
+
 class CombinedSingleSpeciesModel(Model):
     """ 2- and 3-body single species model class
     Class managing the Gaussian processes and their mapped counterparts
@@ -68,7 +71,7 @@ class CombinedSingleSpeciesModel(Model):
         grid_num (int): number of points per side used to create the 2- and 3-body grid. The 3-body
             grid is 3-dimensional, therefore its total number of grid points will be grid_num^3    
     """
-    
+
     def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, **kwargs):
         super().__init__()
         self.element = element
@@ -82,7 +85,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num = None, None, None, None
 
-    def fit(self, confs, forces, nnodes = 1):
+    def fit(self, confs, forces, nnodes=1):
         """ Fit the GP to a set of training forces using a 2- and
         3-body single species force-force kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -96,7 +99,7 @@ class CombinedSingleSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
@@ -106,7 +109,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes = 1):
+    def fit_energy(self, confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body single species energy-energy kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -120,7 +123,7 @@ class CombinedSingleSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
@@ -130,7 +133,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body single species force-force, energy-energy, and energy-forces kernel 
         functions. The 2-body Gaussian process is first fitted, then the 3-body GP 
@@ -146,7 +149,7 @@ class CombinedSingleSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
@@ -172,8 +175,8 @@ class CombinedSingleSpeciesModel(Model):
             forces (array): array of force vectors predicted by the GPs
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
-        """     
-        
+        """
+
         if return_std:
             force_2b, std_2b = self.gp_2b.predict(confs, return_std)
             force_3b, std_3b = self.gp_2b.predict(confs, return_std)
@@ -196,8 +199,8 @@ class CombinedSingleSpeciesModel(Model):
             energies (array): array of force vectors predicted by the GPs
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
-        """   
-        
+        """
+
         if return_std:
             energy_2b, std_2b = self.gp_2b.predict_energy(confs, return_std)
             energy_3b, std_3b = self.gp_2b.predict_energy(confs, return_std)
@@ -206,7 +209,7 @@ class CombinedSingleSpeciesModel(Model):
             return self.gp_2b.predict_energy(confs, return_std) + \
                    self.gp_3b.predict_energy(confs, return_std)
 
-    def build_grid(self, start, num_2b, num_3b, nnodes = 1):
+    def build_grid(self, start, num_2b, num_3b, nnodes=1):
         """ Build the mapped 2- and 3-body potentials. 
         Calculates the energy predicted by the GP for two and three atoms at all possible combination 
         of num distances ranging from start to r_cut. The energy for the 3-body mapped grid is 
@@ -230,7 +233,7 @@ class CombinedSingleSpeciesModel(Model):
                 generate the triplets of atoms for the 2-body mapped potential
             nnodes (int): number of CPUs to use to calculate the energy predictions
         """
-        
+
         dists_2b = np.linspace(start, self.r_cut, num_2b)
 
         confs = np.zeros((num_2b, 1, 5))
@@ -255,7 +258,7 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
-        
+
         if nnodes > 1:
             from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
@@ -272,10 +275,10 @@ class CombinedSingleSpeciesModel(Model):
             result = np.array(pool.map(self.gp_3b.predict_energy, clist))
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
-            
+
         else:
             grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
-            
+
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
                 for ind_k in range(ind_j + 1):
@@ -292,7 +295,7 @@ class CombinedSingleSpeciesModel(Model):
         self.grid_num_2b = num_2b
         self.grid_num_3b = num_3b
         self.grid_start = start
-        
+
     def save_combined(self, path):
         """ Save the model.
         This creates a .json file containing the parameters of the model and the
@@ -302,12 +305,12 @@ class CombinedSingleSpeciesModel(Model):
         Args:
             path (str): path to the file 
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
         directory, prefix = path.parent, path.stem
-        
+
         ### SAVE THE 2B MODEL ###
         params = {
             'model': self.__class__.__name__,
@@ -345,10 +348,10 @@ class CombinedSingleSpeciesModel(Model):
 
         if self.grid_2b:
             grid_filename_2b = '{}_grid_2b_num_{p[grid_2b][r_num]}.npz'.format(prefix, p=params)
-            print("Saved 2-body grid under name %s" %(grid_filename_2b))
+            print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'] = grid_filename_2b
             self.grid_2b.save(directory / grid_filename_2b)
-        
+
         ### SAVE THE 3B MODEL ###
         gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
 
@@ -357,13 +360,13 @@ class CombinedSingleSpeciesModel(Model):
 
         if self.grid_3b:
             grid_filename_3b = '{}_grid_3b_num_{p[grid_3b][r_num]}.npz'.format(prefix, p=params)
-            print("Saved 3-body grid under name %s" %(grid_filename_3b))  
+            print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'] = grid_filename_3b
             self.grid_3b.save(directory / grid_filename_3b)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
-            
+
     @classmethod
     def from_json(cls, path):
         """ Load the model.
@@ -375,7 +378,7 @@ class CombinedSingleSpeciesModel(Model):
         Return:
             model (obj): the model object
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -393,7 +396,7 @@ class CombinedSingleSpeciesModel(Model):
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
-        
+
         try:
             model.gp_2b.load(directory / gp_filename_2b)
         except:
@@ -404,24 +407,24 @@ class CombinedSingleSpeciesModel(Model):
         except:
             warnings.warn("The 3-body GP file is missing")
             pass
-        
+
         if params['grid_2b']:
             grid_filename_2b = params['grid_2b']['filename']
             model.grid_2b = interpolation.Spline1D.load(directory / grid_filename_2b)
 
             grid_filename_3b = params['grid_3b']['filename']
             model.grid_3b = interpolation.Spline3D.load(directory / grid_filename_3b)
-            
+
             model.grid_start = params['grid_2b']['r_min']
             model.grid_num_2b = params['grid_2b']['r_num']
             model.grid_num_3b = params['grid_3b']['r_num']
 
         return model
-    
+
     def save_gp(self, filename_2b, filename_3b):
         """ Saves the GP objects, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp_2b.save(filename_2b)
         self.gp_3b.save(filename_3b)
@@ -429,7 +432,7 @@ class CombinedSingleSpeciesModel(Model):
     def load_gp(self, filename_2b, filename_3b):
         """ Loads the GP objects, now obsolete
         """
-        
+
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
@@ -461,7 +464,7 @@ class CombinedSingleSpeciesModel(Model):
             r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
-        
+
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
@@ -507,7 +510,7 @@ class CombinedTwoSpeciesModel(Model):
         grid_num_3b (int): number of points to use to generate the list of distances used to
                 generate the triplets of atoms for the 2-body mapped potential  
     """
-    
+
     def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, **kwargs):
         super().__init__()
         self.elements = elements
@@ -521,7 +524,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
 
-    def fit(self, confs, forces, nnodes = 1):
+    def fit(self, confs, forces, nnodes=1):
         """ Fit the GP to a set of training forces using a 2- and
         3-body two species force-force kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -535,7 +538,7 @@ class CombinedTwoSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
@@ -545,7 +548,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes = 1):
+    def fit_energy(self, confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body two species energy-energy kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -559,7 +562,7 @@ class CombinedTwoSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
@@ -569,7 +572,7 @@ class CombinedTwoSpeciesModel(Model):
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes = 1):
+    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body two species force-force, energy-energy, and energy-forces kernel 
         functions. The 2-body Gaussian process is first fitted, then the 3-body GP 
@@ -585,7 +588,7 @@ class CombinedTwoSpeciesModel(Model):
                 the central atoms of the training configurations
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
-        
+
         self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
@@ -611,8 +614,8 @@ class CombinedTwoSpeciesModel(Model):
             forces (array): array of force vectors predicted by the GPs
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
-        """     
-        
+        """
+
         if return_std:
             force_2b, std_2b = self.gp_2b.predict(confs, return_std)
             force_3b, std_3b = self.gp_2b.predict(confs, return_std)
@@ -635,8 +638,8 @@ class CombinedTwoSpeciesModel(Model):
             energies (array): array of force vectors predicted by the GPs
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
-        """   
-        
+        """
+
         if return_std:
             energy_2b, std_2b = self.gp_2b.predict_energy(confs, return_std)
             energy_3b, std_3b = self.gp_2b.predict_energy(confs, return_std)
@@ -645,7 +648,7 @@ class CombinedTwoSpeciesModel(Model):
             return self.gp_2b.predict_energy(confs, return_std) + \
                    self.gp_3b.predict_energy(confs, return_std)
 
-    def build_grid(self, start, num_2b, num_3b, nnodes = 1):
+    def build_grid(self, start, num_2b, num_3b, nnodes=1):
         """Function used to create the three different 2-body energy grids for 
         atoms of elements 0-0, 0-1, and 1-1, and the four different 3-body energy grids for 
         atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
@@ -659,7 +662,7 @@ class CombinedTwoSpeciesModel(Model):
                 generate the triplets of atoms for the 3-body mapped potentials
             nnodes (int): number of CPUs to use to calculate the energy predictions
         """
-        
+
         self.grid_start = start
         self.grid_num_2b = num_2b
         self.grid_num_3b = num_2b
@@ -737,7 +740,7 @@ class CombinedTwoSpeciesModel(Model):
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
 
         grid_3b = np.zeros((num, num, num))
-        
+
         if nnodes > 1:
             from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
@@ -754,12 +757,12 @@ class CombinedTwoSpeciesModel(Model):
             result = np.array(pool.map(self.gp_3b.predict_energy, clist))
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
-            
+
         else:
             grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
-    
+
     def save_combined(self, path):
         """ Save the model.
         This creates a .json file containing the parameters of the model and the
@@ -769,12 +772,12 @@ class CombinedTwoSpeciesModel(Model):
         Args:
             path (str): path to the file 
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
         directory, prefix = path.parent, path.stem
-        
+
         ### SAVE THE 2B MODEL ###
         params = {
             'model': self.__class__.__name__,
@@ -809,15 +812,15 @@ class CombinedTwoSpeciesModel(Model):
 
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(directory / gp_filename_2b)
-        
+
         params['grid_2b']['filename'] = {}
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_2b = '{}_grid_{}_num_{p[grid_2b][r_num]}.npz'.format(prefix, key, p=params)
-            print("Saved 2-body grid under name %s" %(grid_filename_2b))
+            print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
             self.grid_2b[k].save(directory / grid_filename_2b)
-        
+
         ### SAVE THE 3B MODEL ###
         gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
 
@@ -828,14 +831,13 @@ class CombinedTwoSpeciesModel(Model):
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
-            print("Saved 3-body grid under name %s" %(grid_filename_3b))
+            print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
             self.grid_3b[k].save(directory / grid_filename_3b)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
 
-            
     @classmethod
     def from_json(cls, path):
         """ Load the model.
@@ -847,7 +849,7 @@ class CombinedTwoSpeciesModel(Model):
         Return:
             model (obj): the model object
         """
-        
+
         if not isinstance(path, Path):
             path = Path(path)
 
@@ -876,7 +878,7 @@ class CombinedTwoSpeciesModel(Model):
             warnings.warn("The 3-body GP file is missing")
             pass
 
-        if params['grid_2b']:            
+        if params['grid_2b']:
             for key, grid_filename_2b in params['grid_2b']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))
                 model.grid_2b[k] = interpolation.Spline1D.load(directory / grid_filename_2b)
@@ -884,24 +886,24 @@ class CombinedTwoSpeciesModel(Model):
             for key, grid_filename_3b in params['grid_3b']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))
                 model.grid_3b[k] = interpolation.Spline3D.load(directory / grid_filename_3b)
-            
+
             model.grid_start = params['grid_2b']['r_min']
             model.grid_num_2b = params['grid_2b']['r_num']
             model.grid_num_3b = params['grid_3b']['r_num']
 
         return model
-    
+
     def save_gp(self, filename_2b, filename_3b):
         """ Saves the GP objects, now obsolete
         """
-        
+
         self.gp_2b.save(filename_2b)
         self.gp_3b.save(filename_3b)
 
     def load_gp(self, filename_2b, filename_3b):
         """ Loads the GP objects, now obsolete
         """
-        
+
         self.gp_2b.load(filename_2b)
         self.gp_3b.load(filename_3b)
 
@@ -931,7 +933,7 @@ class CombinedTwoSpeciesModel(Model):
             r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
-        
+
         d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality

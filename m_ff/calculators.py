@@ -12,12 +12,11 @@ WARNING: The atoms object must be such that the atoms are ordered
 with increasing atomic number for the two species calculator to work.
 
 Example:
-
-
-    >>> calc = calculators.CombinedTwoSpecies(
+    Basic usage::
+        calc = calculators.CombinedTwoSpecies(
             r_cut, element0, element1,  grid_2b, grid_3b, rep_alpha=1.4)
-    >>> atoms = atoms[np.argsort(atoms.get_atomic_numbers())]
-    >>> atoms.set_calculator(calc)
+        atoms = atoms[np.argsort(atoms.get_atomic_numbers())]
+        atoms.set_calculator(calc)
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
@@ -558,10 +557,9 @@ class CombinedTwoSpecies(TwoBodyTwoSpecies, ThreeBodyTwoSpecies):
 
 if __name__ == '__main__':
     from ase.io import read
-
     # from m_ff.interpolation import Spline3D, Spline1D
 
-    logger.basicConfig(level=logger.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     directory = Path('../test/data/Fe_vac')
 

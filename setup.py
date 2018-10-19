@@ -25,7 +25,7 @@ setup(
     url="https://github.com/kcl-tscm/M-FF",
     packages=find_packages(),
     ext_modules=[tricube_cpp_module, tricube_fortran_module],
-    requires=['numpy']
+    requires=['numpy', 'asap3', 'ase', 'theano', 'scipy']
     # install_requires=['scipy', 'numpy', 'future'],
 )
 

@@ -16,8 +16,36 @@ import os
 import sys
 
 # sys.path.insert(0, os.path.abspath('.'))
-# sys.path.insert(0, os.path.abspath('../'))
 
+if os.environ.get('READTHEDOCS', None) is not 'True':
+
+    # Adding local path to the package
+    sys.path.insert(0, os.path.abspath('../'))
+
+    # # Activate the theme.
+    # import sphinx_bootstrap_theme
+    #
+    # html_theme = 'bootstrap'
+    # html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+
+    import sphinx_rtd_theme
+
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    html_theme_options = {
+        'canonical_url': '',
+        'analytics_id': '',
+        'logo_only': False,
+        'display_version': True,
+        'prev_next_buttons_location': 'bottom',
+        'style_external_links': False,
+        # Toc options
+        'collapse_navigation': False,
+        'sticky_navigation': True,
+        'navigation_depth': 2,
+        'includehidden': True,
+        'titles_only': False
+    }
 
 # -- Project information -----------------------------------------------------
 
@@ -45,7 +73,12 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'sphinx.ext.todo',
 ]
+
+napoleon_google_docstring = True
+# napoleon_use_param = False
+# napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -72,7 +105,17 @@ language = None
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = 'sphinx'
+
+# If true, the current module name will be prepended to all description
+# unit titles (such as .. function::).
+#
+# add_module_names = True
+add_module_names = True
+
+# A list of ignored prefixes for module index sorting.
+# modindex_common_prefix = []
+modindex_common_prefix = ['m_ff', 'models']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -81,13 +124,17 @@ pygments_style = None
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = 'sphinx_rtd_theme'
+# html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 # html_theme_options = {}
+
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+html_logo = '_static/m_ff_logo.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -104,6 +151,15 @@ html_static_path = ['_static']
 #
 # html_sidebars = {}
 
+# If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
+#
+# html_show_sphinx = True
+html_show_sphinx = False
+
+# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
+#
+# html_show_copyright = True
+html_show_copyright = False
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

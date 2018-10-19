@@ -1,46 +1,54 @@
-..  _API_reference:
-
-API reference
+API Reference
 =============
 
 The "models" module
 -------------------
+:mod:`m_ff.models.twobody`
 
-.. automodule:: m_ff.models.twobody
-   :members:
-   
-.. automodule:: m_ff.models.threebody
-   :members:
-   
-.. automodule:: m_ff.models.combined
-   :members:
-   
+:class:`m_ff.models.twobody.TwoBodyTwoSpeciesModel`
+
+:class:`m_ff.models.threebody.ThreeBodySingleSpeciesModel`
+
+:class:`m_ff.models.threebody.ThreeBodyTwoSpeciesModel`
+
+:class:`m_ff.models.combined.CombinedSingleSpeciesModel`
+
+:class:`m_ff.models.combined.CombinedTwoSpeciesModel`
+
    
 The "gp" module
 ---------------
 
-.. automodule:: m_ff.gp
-   :members:
-   
+:class:`m_ff.gp.GaussianProcess`
+
 The "configurations" module
 ---------------------------
 
-.. automodule:: m_ff.configurations
-   :members:
-   
-   
+:class:`m_ff.configurations.Configurations`
+
+
 The "calculators" module
 ------------------------
 
-.. automodule:: m_ff.calculators
-   :members:
-   
-   
-The "kernels" module
-------------------------
+:class:`m_ff.calculators.TwoBodySingleSpecies`
 
-.. automodule:: m_ff.kernels.twobodykernel
-   :members:
-   
-.. automodule:: m_ff.kernels.threebodykernel
-   :members:
+:class:`m_ff.calculators.TwoBodyTwoSpecies`
+
+:class:`m_ff.calculators.ThreeBodySingleSpecies`
+
+:class:`m_ff.calculators.ThreeBodyTwoSpecies`
+
+
+The "kernels" module
+--------------------
+
+:class:`m_ff.kernels.twobodykernel.TwoBodySingleSpeciesKernel`
+
+:class:`m_ff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel`
+
+:class:`m_ff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel`
+
+:class:`m_ff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
+
+
+

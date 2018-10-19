@@ -8,14 +8,15 @@ from ase atoms objects.
 
 Example:
 
-    >>> trajectory = ase.io.read(filename)
-    >>> elements, confs, forces, energies = configurations.carve_confs(
+    trajectory = ase.io.read(filename)
+    elements, confs, forces, energies = configurations.carve_confs(
                 trajcetory, r_cut, n_data)
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
 
 """
+
 import logging
 import numpy as np
 
@@ -36,7 +37,7 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
     Args:
         atoms (ase atoms object): Ase atoms file, opened with ase.io.read
         atoms_ind (list): indexes of the atoms for which a conf is created
-        t_cut (float): Cutoff to use when carving out atomic environments
+        r_cut (float): Cutoff to use when carving out atomic environments
         forces_label (str): Name of the force label in the trajectory file, if None default is "forces"
         energy_label (str): Name of the energy label in the trajectory file, if None default is "energy"
         
@@ -47,25 +48,26 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
             central atom, the fifth the atomic number of each atom.
         forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
         energies (array): value of the local atomic energy in eV
-            
+
     """
+
     # See if there are forces and energies, get them for the chosen atoms
-    if (atoms.get_cell() == np.zeros((3,3))).all():
-        atoms.set_cell(100.0*np.identity(3))
+    if (atoms.get_cell() == np.zeros((3, 3))).all():
+        atoms.set_cell(100.0 * np.identity(3))
         logger.warning('No cell values found, setting to a 100 x 100 x 100 cube')
 
     if forces_label:
-        forces = atoms.arrays.get(forces_label) 
+        forces = atoms.arrays.get(forces_label)
     else:
         forces = atoms.get_forces()
         forces_label = 'forces'
-        
-    if (energy_label and energy_label != 'energy'):
-        energy = atoms.arrays.get(energy_label) 
+
+    if energy_label and energy_label != 'energy':
+        energy = atoms.arrays.get(energy_label)
     else:
         energy_label = 'energy'
         try:
-            energy = atoms.get_potential_energy() 
+            energy = atoms.get_potential_energy()
         except:
             energy = None
 
@@ -75,10 +77,10 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
     if forces is not None:
         forces = forces[atoms_ind]
     else:
-        logger.info('Forces in the xyz file are not present, or are not called %s' %(forces_label))
+        logger.info('Forces in the xyz file are not present, or are not called %s' % (forces_label))
 
     if energy is None:
-        logger.info('Energy in the xyz file is not present, or is not called %s' %(energy_label))
+        logger.info('Energy in the xyz file is not present, or is not called %s' % (energy_label))
 
     # Build local configurations for every indexed atom
     nl = FullNeighborList(r_cut, atoms=atoms)
@@ -99,7 +101,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
 
     Args:
         atoms (ase atoms object): Ase trajectory file, opened with ase.io.read
-        t_cut (float): Cutoff to use when carving out atomic environments
+        r_cut (float): Cutoff to use when carving out atomic environments
         n_data (int): Total number of atomic configurations to extract from the trajectory
         forces_label (str): Name of the force label in the trajectory file, if None default is "forces"
         energy_label (str): Name of the energy label in the trajectory file, if None default is "energy"
@@ -107,8 +109,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
             Each of them contains a list of tuples indicating every interval that must be used to
             sample central atoms from. Example: boundaries = [[], [], [[-10.0, +5.3]]]
             Default is None, and all of the snapshot is used.
-            
-        
+
     Returns:
         elements (array): Array of atomic numbers in increasing order
         confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within
@@ -117,8 +118,9 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
             central atom, the fifth the atomic number of each atom.
         forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
         energies (array): value of the local atomic energy in eV
-            
+
     """
+
     confs, forces, energies = [], [], []
 
     # Get the atomic number of each atom in the trajectory file
@@ -136,14 +138,14 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
     if len(elements) > 1:
         ratios = np.sqrt(1.0 * elements_count) / np.sum(elements_count)
         ratios /= np.sum(ratios)
-        
-#     if smart_sampling:
-#         indices = [np.linspace(0, elc, int(ratio * n_data) - 1, dtype=np.int) for elc, ratio in zip(elements_count, ratios)]
-#     else:
-        
-    avg_natoms = len(flat_atom_number)//len(atoms)
+
+    # if smart_sampling:
+    #     indices = [np.linspace(0, elc, int(ratio * n_data) - 1, dtype=np.int) for elc, ratio in zip(elements_count, ratios)]
+    # else:
+
+    avg_natoms = len(flat_atom_number) // len(atoms)
     # Use randomly selected snapshots to roughly match n_data
-    ind_snapshot = np.random.randint(0, len(atoms) - 1  , n_data//avg_natoms)  
+    ind_snapshot = np.random.randint(0, len(atoms) - 1, n_data // avg_natoms)
 
     # Go through each trajectory step and find where the chosen indexes for all different elements are
     element_ind_count = np.zeros_like(elements)
@@ -153,18 +155,18 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
         this_ind = []
         logger.info('Reading traj step {}'.format(j))
 
-#         if smart_sampling:
-#             for k in np.arange(len(elements)):
-#                 count_el_atoms = sum(atom_number_list[j] == elements[k])
-#                 element_ind_count[k] += count_el_atoms
-#                 temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
-#                                     dtype=np.int)
-
-#                 this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
-#                 element_ind_count_prev[k] += count_el_atoms
-
-#             this_ind = np.concatenate(this_ind).ravel()
-#         else:
+        # if smart_sampling:
+        #     for k in np.arange(len(elements)):
+        #         count_el_atoms = sum(atom_number_list[j] == elements[k])
+        #         element_ind_count[k] += count_el_atoms
+        #         temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
+        #                             dtype=np.int)
+        #
+        #         this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
+        #         element_ind_count_prev[k] += count_el_atoms
+        #
+        #     this_ind = np.concatenate(this_ind).ravel()
+        # else:
 
         if j in ind_snapshot:  # For every snapshot, if that was selected through random sampling, do the following
             positions = atoms[j].get_positions()
@@ -172,7 +174,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
                 for d in np.arange(3):
                     for i in np.arange(len(boundaries[d])):
                         this_ind.append(np.ravel(np.argwhere(np.logical_and(
-                            positions[:,d] > boundaries[d][i][0], positions[:,d] < boundaries[d][i][1]))))
+                            positions[:, d] > boundaries[d][i][0], positions[:, d] < boundaries[d][i][1]))))
             else:
                 this_ind.append(np.asarray(np.arange(len(atoms[j]))))
             this_ind = np.concatenate(this_ind).ravel()
@@ -190,10 +192,10 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
     forces = [item for sublist in forces for item in sublist]
     forces = np.asarray(forces)
     energies = np.asarray(energies)
-    
+
     if boundaries is not None:
         logger.warning('When using boundaries, n_data is smaller than the one set by user')
-        
+
     return elements, confs, forces, energies
 
 
@@ -293,7 +295,7 @@ class ConfsTwoForces(Forces, SingleSpecies):
 
 if __name__ == '__main__':
     from ase.io import read
-    from m_ff.sampling import SamplingLinspaceSingle, SamplingRandomSingle
+    from m_ff.sampling import SamplingRandomSingle
 
     testfiles = {
         'BIP_300': '../test/data/BIP_300/movie.xyz',
@@ -310,7 +312,7 @@ if __name__ == '__main__':
     for atoms, atom_inds in SamplingRandomSingle(traj, n_target=25):
         confs.append(atoms, atom_inds)
 
-#
+
 # if __name__ == '__main__':
 #
 #     from ase.io import read, iread

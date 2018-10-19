@@ -124,14 +124,14 @@ class TwoBodySingleSpeciesModel(Model):
         self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
 
     def predict(self, confs, return_std=False):
-        """ Predict the forces acting on the central atoms of confs using a GP 
+        """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
@@ -142,14 +142,14 @@ class TwoBodySingleSpeciesModel(Model):
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
+        """ Predict the local energies of the central atoms of confs using a GP
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array): array of force vectors predicted by the GP
             energies_errors (array): errors associated to the energies predictions,

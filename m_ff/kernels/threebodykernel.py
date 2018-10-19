@@ -14,9 +14,10 @@ The module is called by the gp.py script.
 
 Example:
 
-    >>> from threebodykernel import ThreeBodySingleSpeciesKernel
-    >>> kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
-    >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
+    Basic usage::
+        from threebodykernel import ThreeBodySingleSpeciesKernel
+        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
+        ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
@@ -52,6 +53,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         k3_ff (object): Force-force kernel function
         
     """
+
     @abstractmethod
     def __init__(self, kernel_name, theta, bounds):
         super().__init__(kernel_name)
@@ -71,7 +73,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1*3 x N2*3 matrix of the matrix-valued kernels 
        
-        """   
+        """
         K = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
 
         for i in np.arange(X1.shape[0]):
@@ -92,7 +94,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1 x N2 matrix of the scalar-valued kernels 
        
-        """   
+        """
         K = np.zeros((X1.shape[0], X2.shape[0]))
 
         for i in np.arange(X1.shape[0]):
@@ -112,15 +114,15 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
        
-        """   
+        """
         K = np.zeros((X1.shape[0], X2.shape[0] * 3))
-        
+
         for i in np.arange(X1.shape[0]):
             for j in np.arange(X2.shape[0]):
                 K[i, 3 * j:3 * j + 3] = self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
         return K
 
-    def calc_gram(self, X, nnodes = 1, eval_gradient=False):
+    def calc_gram(self, X, nnodes=1, eval_gradient=False):
         """
         Calculate the force-force gram matrix for a set of configurations X.
         
@@ -132,45 +134,46 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N*3 x N*3 gram matrix of the matrix-valued kernels 
        
-        """   
+        """
         if eval_gradient:
-                raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X)):
-                    for j in np.arange(i+1):
+                    for j in np.arange(i + 1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
                 logger.info('Using %i cores for the 3-body force-force gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
-                
+
                 import sys
                 sys.setrecursionlimit(10000)
-                
+
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-                
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in
+                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ff, clist))
-                result = np.concatenate(result).reshape((n,3,3))            
+                result = np.concatenate(result).reshape((n, 3, 3))
                 pool.close()
                 pool.join()
-                
+
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
                 for i in np.arange(len(X)):
-                    diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = result[i+ i*(i+1)//2]
+                    diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = result[i + i * (i + 1) // 2]
                     for j in np.arange(i):
-                        off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = result[j+i*(i+1)//2]
-            
+                        off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = result[j + i * (i + 1) // 2]
+
             else:
                 diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
                 off_diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
@@ -188,10 +191,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     def dummy_calc_ff(self, array):
         result = np.zeros((len(array), 3, 3))
         for i in np.arange(len(array)):
-            result[i]= self.k3_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            result[i] = self.k3_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
         return result
-    
-    def calc_gram_e(self, X, nnodes =1, eval_gradient=False): # Untested
+
+    def calc_gram_e(self, X, nnodes=1, eval_gradient=False):  # Untested
         """
         Calculate the energy-energy gram matrix for a set of configurations X.
         
@@ -203,15 +206,15 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N gram matrix of the scalar-valued kernels 
        
-        """  
+        """
         if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')   
+            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes >1:
+            if nnodes > 1:
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X)):
-                    for j in np.arange(i+1):
+                    for j in np.arange(i + 1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
@@ -219,36 +222,37 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 3-body energy-energy gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
-                
+
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-                
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in
+                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+
                 # Using the dummy function which has a single argument
                 result = np.array(pool.map(self.dummy_calc_ee, clist))
                 result = np.concatenate(result).flatten()
                 pool.close()
-                pool.join()         
-                
+                pool.join()
+
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
                 for i in np.arange(len(X)):
-                    diag[i, i] = result[i+ i*(i+1)//2]
+                    diag[i, i] = result[i + i * (i + 1) // 2]
                     for j in np.arange(i):
-                        off_diag[i, j] = result[j+i*(i+1)//2]
-        
+                        off_diag[i, j] = result[j + i * (i + 1) // 2]
+
             else:
                 diag = np.zeros((X.shape[0], X.shape[0]))
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
                 for i in np.arange(X.shape[0]):
-                    diag[i,i] = \
+                    diag[i, i] = \
                         self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
                     for j in np.arange(i):
-                        off_diag[i,j] = \
+                        off_diag[i, j] = \
                             self.k3_ee(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
@@ -258,11 +262,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     def dummy_calc_ee(self, array):
         result = np.zeros(len(array))
         for i in np.arange(len(array)):
-            result[i]= self.k3_ee(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            result[i] = self.k3_ee(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
         return result
-    
-    
-    def calc_gram_ef(self, X, nnodes =1, eval_gradient=False):
+
+    def calc_gram_ef(self, X, nnodes=1, eval_gradient=False):
         """
         Calculate the energy-force gram matrix for a set of configurations X.
         This returns a non-symmetric matrix which is equal to the transpose of 
@@ -276,9 +279,9 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N*3 gram matrix of the vector-valued kernels 
        
-        """          
+        """
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
-        
+
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
@@ -294,31 +297,32 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 3-body energy-force gram matrix calculation' % (nnodes))
                 pool = ProcessingPool(nodes=nnodes)
-                
+
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
                 factor = (n + (nnodes - 1)) / nnodes
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)] # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-                
+                clist = [confs[splitind[i]:splitind[i + 1]] for i in
+                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+
                 # Using the dummy function which has a single argument
                 result = np.array(pool.map(self.dummy_calc_ef, clist))
                 result = np.concatenate(result).reshape((n, 1, 3))
                 pool.close()
                 pool.join()
-                
+
                 for i in np.arange(X.shape[0]):
                     for j in np.arange(X.shape[0]):
-                        gram[i, 3 * j:3 * j + 3] = result[j+i*X.shape[0]]
-                        
+                        gram[i, 3 * j:3 * j + 3] = result[j + i * X.shape[0]]
+
             else:
                 for i in np.arange(X.shape[0]):
                     for j in np.arange(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = \
                             self.k3_ef(X[i], X[j], self.theta[0], self.theta[1], self.theta[2])
-                        
+
             self.gram_ef = gram
             return gram
 
@@ -326,7 +330,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     def dummy_calc_ef(self, array):
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
-            result[i]= self.k3_ef(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])        
+            result[i] = self.k3_ef(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
         return result
 
     def calc_diag(self, X):
@@ -346,7 +350,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             diag[i] = self.k3_ee(X[i], X[i], self.theta[0], self.theta[1], self.theta[2])
 
         return diag
-
 
     @staticmethod
     @abstractmethod
@@ -440,15 +443,15 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
 
         delta_perm1 = delta_alphas12 * delta_alphas_jmkn
 
-#         # permutation 2 - not used in the current state
+        #         # permutation 2 - not used in the current state
 
-#         delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
-#         delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
-#         delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
+        #         delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
+        #         delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
+        #         delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
 
-#         delta_alphas_jnkm = delta_alphasjn[:, None, None, :] * delta_alphaskm[None, :, :, None]
+        #         delta_alphas_jnkm = delta_alphasjn[:, None, None, :] * delta_alphaskm[None, :, :, None]
 
-#         delta_perm2 = delta_alphas12 * delta_alphas_jnkm
+        #         delta_perm2 = delta_alphas12 * delta_alphas_jnkm
 
         # permutation 3
         delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
@@ -458,13 +461,13 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * \
                       delta_alphask2[None, :, None, None]
 
-#         # permutation 4 - not used in the current state
-#         delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
-#         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
-#         delta_alphaskn = delta_alpha2(alpha_k[:, None], alpha_n[None, :])
+        #         # permutation 4 - not used in the current state
+        #         delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
+        #         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
+        #         delta_alphaskn = delta_alpha2(alpha_k[:, None], alpha_n[None, :])
 
-#         delta_perm4 = delta_alphas1m[None, None, :, None] * delta_alphaskn[None, :, None, :] * \
-#                       delta_alphasj2[:, None, None, None]
+        #         delta_perm4 = delta_alphas1m[None, None, :, None] * delta_alphaskn[None, :, None, :] * \
+        #                       delta_alphasj2[:, None, None, None]
 
         # permutation 5
         delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
@@ -474,13 +477,13 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
                       delta_alphasj2[:, None, None, None]
 
-#         # permutation 6 - not used in the current state
-#         delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
-#         delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
-#         delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
+        #         # permutation 6 - not used in the current state
+        #         delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
+        #         delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
+        #         delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
 
-#         delta_perm6 = delta_alphas1n[None, None, None, :] * delta_alphasjm[:, None, :, None] * \
-#                       delta_alphask2[None, :, None, None]
+        #         delta_perm6 = delta_alphas1n[None, None, None, :] * delta_alphasjm[:, None, :, None] * \
+        #                       delta_alphask2[None, :, None, None]
 
         # --------------------------------------------------
         # BUILD THE KERNEL
@@ -500,15 +503,15 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         # final shape is M1 M1 M2 M2
 
         ker_jkmn = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
-        
+
         # Faster version of cutoff (less calculations)
         cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
-        cut_jk = (cut_j[:,None] * cut_j[None,:] * 
+        cut_jk = (cut_j[:, None] * cut_j[None, :] *
                   T.exp(-theta / T.abs_(rc - rjk[:, :])) *
                   (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
 
         cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
-        cut_mn = (cut_m[:,None] * cut_m[None,:] * 
+        cut_mn = (cut_m[:, None] * cut_m[None, :] *
                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
 
@@ -547,7 +550,6 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
 
         # WRAPPERS (we don't want to plug the position of the central element every time)
 
-        
         def k3_ee(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for energy-energy correlation
@@ -562,10 +564,9 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
             Returns:
                 kernel (float): scalar valued energy-energy 3-body kernel
                 
-            """            
+            """
             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
-        
         def k3_ef(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for energy-force correlation
@@ -582,8 +583,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
                 
             """
             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-        
-        
+
         def k3_ff(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for force-force correlation
@@ -695,7 +695,7 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
         delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
         delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
         delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
-        
+
         delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * \
                       delta_alphask2[None, :, None, None]
 
@@ -704,7 +704,7 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
         delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
         delta_alphas_j21n = delta_alphasj2[:, None] * delta_alphas1n[None, :]
-        
+
         delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
                       delta_alphasj2[:, None, None, None]
 
@@ -726,14 +726,13 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
         # final shape is M1 M1 M2 M2
         ker_jkmn = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
 
-        
         cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
-        cut_jk = (cut_j[:,None] * cut_j[None,:] * 
+        cut_jk = (cut_j[:, None] * cut_j[None, :] *
                   T.exp(-theta / T.abs_(rc - rjk[:, :])) *
                   (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
 
         cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
-        cut_mn = (cut_m[:,None] * cut_m[None,:] * 
+        cut_mn = (cut_m[:, None] * cut_m[None, :] *
                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
 
@@ -805,7 +804,6 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
                 
             """
             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-        
 
         def k3_ff(conf1, conf2, sig, theta, rc):
             """

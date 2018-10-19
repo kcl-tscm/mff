@@ -7,7 +7,7 @@ class Spline1D(InterpolatedUnivariateSpline):
     def __init__(self, x_range, f):
         """
 
-        :param x0: 1 dimensional array
+        :param x_range: 1 dimensional array
         :param f: 1-dimensional array
         """
 

@@ -7,10 +7,10 @@ Gaussian process regression module suited to learn and
 predict energies and forces
 
 Example:
-
-    >>>  gp = GaussianProcess(kernel, noise)
-    >>>  gp.fit(train_configurations, train_forces)
-    >>>  gp.predict(test_configurations)
+    Basic usage::
+        gp = GaussianProcess(kernel, noise)
+        gp.fit(train_configurations, train_forces)
+        gp.predict(test_configurations)
 
 Todo:
     * For module TODOs
@@ -46,6 +46,7 @@ class GaussianProcess(object):
         L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
         K (array): The kernel gram matrix
     """
+
     # optimizers "fmin_l_bfgs_b"
 
     def __init__(self, kernel=None, noise=1e-10,
@@ -66,9 +67,9 @@ class GaussianProcess(object):
         Returns:
             K (matrix): The force-force gram matrix, has dimensions 3N x 3N
         """
-        
+
         self.kernel_ = self.kernel
-        self.X_train_ = X       
+        self.X_train_ = X
         K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
         return K
 
@@ -81,13 +82,13 @@ class GaussianProcess(object):
         Returns:
             K (matrix): The energy energy gram matrix, has dimensions N x N
         """
-        
+
         self.kernel_ = self.kernel
         self.X_train_ = X
         K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
         return K
 
-    def fit(self, X, y, nnodes = 1):
+    def fit(self, X, y, nnodes=1):
         """Fit a Gaussian process regression model on training forces
 
         Args:
@@ -145,7 +146,7 @@ class GaussianProcess(object):
         K[np.diag_indices_from(K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
-            self.L_ = cholesky(K, lower=True) 
+            self.L_ = cholesky(K, lower=True)
         except np.linalg.LinAlgError as exc:
             exc.args = ("The kernel, %s, is not returning a "
                         "positive definite matrix. Try gradually "
@@ -153,19 +154,18 @@ class GaussianProcess(object):
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-        
+
         # Calculate the alpha weights using the Cholesky method
-        self.alpha_ = cho_solve((self.L_, True), self.y_train_) 
+        self.alpha_ = cho_solve((self.L_, True), self.y_train_)
         self.K = K
         self.energy_alpha_ = None
         self.energy_K = None
         self.fitted[0] = 'force'
-        self.n_train = len(self.y_train_)/3
-        
-        return self
-    
+        self.n_train = len(self.y_train_) / 3
 
-    def fit_force_and_energy(self, X, y_force, y_energy, nnodes = 1):
+        return self
+
+    def fit_force_and_energy(self, X, y_force, y_energy, nnodes=1):
         """Fit a Gaussian process regression model using forces and energies
 
         Args:
@@ -174,13 +174,13 @@ class GaussianProcess(object):
             y_energy (np.ndarray): training local energies
             nnodes (int): number of CPU workers to use, default is 1
 
-        """     
+        """
         self.kernel_ = self.kernel
         self.X_train_ = X
         self.y_train_ = np.reshape(y_force, (y_force.shape[0] * 3, 1))
         self.y_train_energy_ = np.reshape(y_energy, (y_energy.shape[0], 1))
 
-        if self.optimizer is not None:  
+        if self.optimizer is not None:
             logger.warning("Optimizer not yet implemented for force-energy training")
             '''
             
@@ -251,20 +251,20 @@ class GaussianProcess(object):
                         "GaussianProcessRegressor estimator."
                         % self.kernel_,) + exc.args
             raise
-            
+
         self.y_energy_and_force = np.vstack((self.y_train_energy_, self.y_train_))
-        
+
         # Calculate the alpha weights using the Cholesky method
         self.alpha_ = cho_solve((self.L_, True), self.y_energy_and_force)
         self.energy_alpha_ = None  # Used to distinguish pure energy fitting
         self.K = K
         self.energy_K = None  # Used to distinguish pure energy fitting
         self.fitted = ['force', 'energy']
-        self.n_train = len(self.y_energy_and_force)/4
+        self.n_train = len(self.y_energy_and_force) / 4
 
         return self
 
-    def fit_energy(self, X, y, nnodes = 1):  # Untested, log_marginal_linkelihood not working as for now
+    def fit_energy(self, X, y, nnodes=1):  # Untested, log_marginal_linkelihood not working as for now
         """Fit a Gaussian process regression model using local energies.
 
         Args:
@@ -275,12 +275,12 @@ class GaussianProcess(object):
             The energy of each configuration is E/N where E is the total
             snapshot energy and N the atoms in that snapshot
 
-        """  
+        """
         self.kernel_ = self.kernel
         self.X_train_ = X
         self.y_train_energy_ = np.reshape(y, (y.shape[0], 1))
 
-        if self.optimizer is not None: # TODO Debug
+        if self.optimizer is not None:  # TODO Debug
             logger.warning("Optimizer not yet implemented for energy training")
             '''
             # Choose hyperparameters based on maximizing the log-marginal
@@ -324,7 +324,7 @@ class GaussianProcess(object):
         self.log_marginal_likelihood_value_ = \
         self.log_marginal_likelihood(self.kernel_.theta)
         '''
-        
+
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K = self.kernel_.calc_gram_e(self.X_train_, nnodes)
@@ -350,7 +350,6 @@ class GaussianProcess(object):
 
         return self
 
-    
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model
 
@@ -371,7 +370,7 @@ class GaussianProcess(object):
         """
         if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
             X = np.reshape(X, (1, len(X), 5))
-            
+
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             y_mean = np.zeros(X.shape[0])
@@ -385,14 +384,14 @@ class GaussianProcess(object):
         else:  # Predict based on GP posterior
             if self.fitted == ['force', None]:  # Predict using force data
                 K_trans = self.kernel_.calc(X, self.X_train_)
-                y_mean = K_trans.dot(self.alpha_) 
+                y_mean = K_trans.dot(self.alpha_)
 
             elif self.fitted == [None, 'energy']:  # Predict using energy data
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 y_mean = K_force_energy.dot(self.energy_alpha_)
 
             else:  # Predict using both force and energy data
-                K_trans = self.kernel_.calc(X, self.X_train_)  
+                K_trans = self.kernel_.calc(X, self.X_train_)
                 K_force_energy = self.kernel_.calc_ef(self.X_train_, X).T
                 K = np.hstack((K_force_energy, K_trans))
                 y_mean = K.dot(self.alpha_)
@@ -402,7 +401,7 @@ class GaussianProcess(object):
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
                 K_inv = L_inv.dot(L_inv.T)
-                
+
                 # Compute variance of predictive distribution
                 y_var = self.kernel_.calc_diag(X)
                 fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
@@ -413,14 +412,13 @@ class GaussianProcess(object):
                 y_var_negative = y_var < 0
                 if np.any(y_var_negative):
                     logger.warning("Predicted variances smaller than 0. "
-                                  "Setting those variances to 0.")
+                                   "Setting those variances to 0.")
                     y_var[y_var_negative] = 0.0
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3)), np.reshape(np.sqrt(y_var),
                                                                                      (int(y_var.shape[0] / 3), 3))
             else:
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
-            
-            
+
     def predict_energy(self, X, return_std=False):
         """Predict energies from forces only using the Gaussian process regression model
 
@@ -467,7 +465,7 @@ class GaussianProcess(object):
                 K = np.hstack((K_energy, K_energy_force))
                 e_mean = K.dot(self.alpha_)
 
-            if return_std: 
+            if return_std:
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
@@ -482,14 +480,14 @@ class GaussianProcess(object):
                 e_var_negative = e_var < 0
                 if np.any(e_var_negative):
                     logger.warning("Predicted variances smaller than 0. "
-                                  "Setting those variances to 0.")
+                                   "Setting those variances to 0.")
                     e_var[e_var_negative] = 0.0
                 return e_mean, np.sqrt(e_var)
             else:
                 return e_mean
 
-    def log_marginal_likelihood(self, theta=None,
-                                eval_gradient=False):  # TODO: debug for energy and energy-force fitting
+    # TODO: debug for energy and energy-force fitting
+    def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         """Returns log-marginal likelihood of theta for training data.
 
         Args:
@@ -567,13 +565,14 @@ class GaussianProcess(object):
                 fmin_l_bfgs_b(obj_func, initial_theta, bounds=bounds)
             if convergence_dict["warnflag"] != 0:
                 logger.warning("fmin_l_bfgs_b terminated abnormally with the "
-                              " state: %s" % convergence_dict)
+                               " state: %s" % convergence_dict)
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
 
         return theta_opt, func_min
 
-    def pseudo_log_likelihood(self):  # TODO: debug for energy and energy-force fitting
+    # TODO: debug for energy and energy-force fitting
+    def pseudo_log_likelihood(self):
         """Returns pseudo log-likelihood of the training data.
 
         Args:
@@ -596,7 +595,7 @@ class GaussianProcess(object):
         """
         # kernel = self.kernel_.clone_with_theta(theta)
         kernel = self.kernel
-        #kernel.theta = theta
+        # kernel.theta = theta
 
         K = kernel.calc_gram(self.X_train_)
 
@@ -649,7 +648,7 @@ class GaussianProcess(object):
         """Load a saved GP model
 
         Args:
-            name (str): name of the file where the GP is saved
+            filename (str): name of the file where the GP is saved
 
         """
         self.kernel.kernel_name, \

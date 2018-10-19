@@ -1,12 +1,13 @@
 Models
 ======
 
+.. automodule:: m_ff.models
+   :noindex:
+
 The models are the classes used to build, train and test a Gaussian process, and to then build the relative mapped potential.
 There are six types of models at the moment, each one is used to handle 2-, 3-, or 2+3-body kernels in the case of one or two atomic species.
 When creating a model, it is therefore necessary to decide a priori the type of Gaussian process and, therefore, the type of mapped potential we want to obtain.
 
-
-..  _model_build:
 
 Building a model
 ----------------
@@ -97,10 +98,9 @@ To load a previously saved model of a known type (here for example a CombinedSin
 
 Model's complete reference
 --------------------------
+
 .. automodule:: m_ff.models.twobody
    :members:
-
-
 
 .. automodule:: m_ff.models.threebody
    :members:

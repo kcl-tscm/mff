@@ -1,6 +1,6 @@
 # Machine learning derived non-parametric force fields (M-FFs)
 
-Description of an M-FF.
+To read the full documentation check https://m-ff.readthedocs.io/en/master/index.html
 
 ## Table of Contents
 

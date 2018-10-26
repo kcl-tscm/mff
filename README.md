@@ -13,15 +13,12 @@ To read the full documentation check https://m-ff.readthedocs.io/en/master/index
 
 ## Background on M-FFs
 
-A bit of theory on M-FFs, with references to articles.
+The M-FF package uses Gaussian process regression to extract non-parametric 2- and 3- body force fields from ab-initio calculations.
+For a detailed description of the theory behind Gaussian process regression to predict forces and/or energies, and an explanation of the "mapping" technique used, please refer to [1].
+
+For an example use of the M-FF package to build 3-body force fields for Ni nanoclusters, please see [2].
 
 ## Install
-
-How to install the package, eventually we would like something like
-
-```sh
-$ python setup.py install
-```
 
 To install from source, uncompress the source files and, from the directory containing `setup.py`, run the following command:
     
@@ -60,7 +57,6 @@ A simple example on how to use the package, with typical parameters.
 
 ## References
 
-* A. Glielmo, C. Zeni, A. De Vita, *Efficient non-parametric n-body force fields from machine learning* (https://arxiv.org/abs/1801.04823)
+[1] A. Glielmo, C. Zeni, A. De Vita, *Efficient non-parametric n-body force fields from machine learning* (https://arxiv.org/abs/1801.04823)
 
-* C .Zeni, K. Rossi, A. Glielmo, N. Gaston, F. Baletto, A. De Vita *Building machine learning force fields for nanoclusters* (https://arxiv.org/abs/1802.01417)
-
+[2] C .Zeni, K. Rossi, A. Glielmo, N. Gaston, F. Baletto, A. De Vita *Building machine learning force fields for nanoclusters* (https://arxiv.org/abs/1802.01417)

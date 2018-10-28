@@ -1,3 +1,3 @@
 [submodule "tutorials"]
 	path = tutorials
-	url = git@github.com:kcl-tscm/mff-tutorials.git
+	url = https://github.com/kcl-tscm/mff-tutorials.git

@@ -4,7 +4,7 @@ Configurations
 ==============
 
 Module used to create ase calculators using interpolators
-constructed with the models module of the m_ff package.
+constructed with the models module of the mff package.
 These calculators can yield forces and energies for atoms objects
 at a very low computational cost.
 
@@ -557,7 +557,7 @@ class CombinedTwoSpecies(TwoBodyTwoSpecies, ThreeBodyTwoSpecies):
 
 if __name__ == '__main__':
     from ase.io import read
-    # from m_ff.interpolation import Spline3D, Spline1D
+    # from mff.interpolation import Spline3D, Spline1D
 
     logging.basicConfig(level=logging.INFO)
 

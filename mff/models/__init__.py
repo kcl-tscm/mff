@@ -1,5 +1,5 @@
 """
-.. module:: m_ff.models
+.. module:: mff.models
 
 """
 from .twobody import TwoBodySingleSpeciesModel, TwoBodyTwoSpeciesModel

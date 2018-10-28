@@ -4,8 +4,8 @@ import numpy as np
 from ase.io import read
 from pathlib import Path
 
-from m_ff.interpolation import Spline1D
-from m_ff.calculators import TwoBodySingleSpecies
+from mff.interpolation import Spline1D
+from mff.calculators import TwoBodySingleSpecies
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,8 +43,8 @@ if __name__ == '__main__':
         print('energy: {}'.format(atoms.get_potential_energy()))
 
     # ========== TwoBodySingleSpecies ==========
-    # INFO:m_ff.calculators:numbers is in system_changes
-    # INFO:m_ff.calculators:initialize
+    # INFO:mff.calculators:numbers is in system_changes
+    # INFO:mff.calculators:initialize
     # MAEF on forces: 0.9893 +- 0.4852
     # MAEF on forces: 0.9893 +- 0.4852
     # MAEF on forces: 0.9742 +- 0.4746

@@ -4,9 +4,9 @@ import numpy as np
 from ase.io import read
 from pathlib import Path
 
-from m_ff.configurations import SamplingLinspaceSingle
-from m_ff.interpolation import Spline1D
-from m_ff.calculators import TwoBodySingleSpecies
+from mff.configurations import SamplingLinspaceSingle
+from mff.interpolation import Spline1D
+from mff.calculators import TwoBodySingleSpecies
 
 logging.basicConfig(level=logging.INFO)
 

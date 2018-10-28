@@ -295,7 +295,7 @@ class ConfsTwoForces(Forces, SingleSpecies):
 
 if __name__ == '__main__':
     from ase.io import read
-    from m_ff.sampling import SamplingRandomSingle
+    from mff.sampling import SamplingRandomSingle
 
     testfiles = {
         'BIP_300': '../test/data/BIP_300/movie.xyz',

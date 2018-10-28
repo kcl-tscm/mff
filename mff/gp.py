@@ -25,8 +25,8 @@ import numpy as np
 
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.optimize import fmin_l_bfgs_b
-from m_ff import interpolation
-from m_ff import kernels
+from mff import interpolation
+from mff import kernels
 
 logger = logging.getLogger(__name__)
 

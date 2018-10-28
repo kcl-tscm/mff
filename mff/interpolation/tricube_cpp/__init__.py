@@ -1,6 +1,6 @@
 import numpy as np
 
-from m_ff.interpolation.tricube_cpp import _tricube
+from mff.interpolation.tricube_cpp import _tricube
 
 
 class Spline3D(object):

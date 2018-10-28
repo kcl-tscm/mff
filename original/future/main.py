@@ -4,11 +4,11 @@ from collections import defaultdict
 from ase import Atoms
 from ase.io import read
 
-from m_ff.configurations import ConfsTwoBodySingleForces
-from m_ff.sampling import SamplingLinspaceSingle
-from m_ff.gp import GaussianProcess
-from m_ff import kernels
-from m_ff.calculators import Calculator
+from mff.configurations import ConfsTwoBodySingleForces
+from mff.sampling import SamplingLinspaceSingle
+from mff.gp import GaussianProcess
+from mff import kernels
+from mff.calculators import Calculator
 
 if __name__ == '__main__':
 

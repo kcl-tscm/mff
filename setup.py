@@ -3,13 +3,13 @@ from numpy.distutils.core import setup, Extension
 
 
 tricube_cpp_module = Extension(
-    'm_ff.interpolation.tricube_cpp._tricube',
-    sources=["m_ff/interpolation/tricube_cpp/tricube_module.c", "m_ff/interpolation/tricube_cpp/_tricube.c"],
+    'mff.interpolation.tricube_cpp._tricube',
+    sources=["mff/interpolation/tricube_cpp/tricube_module.c", "mff/interpolation/tricube_cpp/_tricube.c"],
 )
 
 tricube_fortran_module = Extension(
-    'm_ff.interpolation.tricube_fortran._tricube',
-    sources=['m_ff/interpolation/tricube_fortran/_tricube.pyf', 'm_ff/interpolation/tricube_fortran/_tricube.c'],
+    'mff.interpolation.tricube_fortran._tricube',
+    sources=['mff/interpolation/tricube_fortran/_tricube.pyf', 'mff/interpolation/tricube_fortran/_tricube.c'],
 )
 
 with open("README.md", "r") as fh:

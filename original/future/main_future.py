@@ -1,9 +1,9 @@
 import json
 from collections import defaultdict
 from ase import Atoms
-from m_ff.calculators import Calculator
-from m_ff.configurations import ConfsSingleForces
-from m_ff.sampling import SamplingLinspaceSingle
+from mff.calculators import Calculator
+from mff.configurations import ConfsSingleForces
+from mff.sampling import SamplingLinspaceSingle
 
 
 if __name__ == '__main__':

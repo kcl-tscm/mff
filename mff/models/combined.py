@@ -18,7 +18,7 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
 
-    >>> from m_ff import models
+    >>> from mff import models
     >>> mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
                         sigma_2b, sigma_3b, sigma_2b, theta_3b, noise)
     >>> mymodel.fit(training_confs, training_forces)
@@ -36,9 +36,9 @@ import numpy as np
 
 from pathlib import Path
 
-from m_ff import gp
-from m_ff import kernels
-from m_ff import interpolation
+from mff import gp
+from mff import kernels
+from mff import interpolation
 
 from .base import Model
 import logging

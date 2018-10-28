@@ -1,6 +1,6 @@
 import numpy as np
 # noinspection PyUnresolvedReferences
-from m_ff.interpolation.tricube_fortran import _tricube
+from mff.interpolation.tricube_fortran import _tricube
 
 
 class Spline3D(object):

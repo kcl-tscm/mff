@@ -27,7 +27,7 @@ import numpy as np
 import theano.tensor as T
 
 from abc import ABCMeta, abstractmethod
-from m_ff.kernels.base import Kernel
+from mff.kernels.base import Kernel
 from theano import function, scan
 
 logger = logging.getLogger(__name__)

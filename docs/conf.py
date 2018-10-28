@@ -85,7 +85,7 @@ add_module_names = True
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
-modindex_common_prefix = ['m_ff', 'models']
+modindex_common_prefix = ['mff', 'models']
 
 
 # -- Options for HTML output -------------------------------------------------

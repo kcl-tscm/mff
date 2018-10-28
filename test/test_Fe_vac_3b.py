@@ -4,8 +4,8 @@ import numpy as np
 from ase.io import read
 from pathlib import Path
 
-from m_ff.interpolation import Spline3D
-from m_ff.calculators import ThreeBodySingleSpecies
+from mff.interpolation import Spline3D
+from mff.calculators import ThreeBodySingleSpecies
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,8 +44,8 @@ if __name__ == '__main__':
 
     # n_train = 10
     # ========== ThreeBodySingleSpecies ==========
-    # INFO:m_ff.calculators:numbers is in system_changes
-    # INFO:m_ff.calculators:initialize
+    # INFO:mff.calculators:numbers is in system_changes
+    # INFO:mff.calculators:initialize
     # MAEF on forces: 20365.7662 +- 9385.6598
     # -3056659.000264844
     # ========== Calculate MAEF for each steps ==========
@@ -63,8 +63,8 @@ if __name__ == '__main__':
 
     # n_train = 20
     # ========== ThreeBodySingleSpecies ==========
-    # INFO:m_ff.calculators:numbers is in system_changes
-    # INFO:m_ff.calculators:initialize
+    # INFO:mff.calculators:numbers is in system_changes
+    # INFO:mff.calculators:initialize
     # MAEF on forces: 82460.7472 +- 35603.8817
     # 2905106.355425914
     # ========== Calculate MAEF for each steps ==========

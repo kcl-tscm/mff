@@ -19,7 +19,7 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
 Example:
 
-    >>> from m_ff import models
+    >>> from mff import models
     >>> mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
     >>> mymodel.fit(training_confs, training_forces)
     >>> forces = mymodel.predict(test_configurations)
@@ -36,11 +36,11 @@ import json
 import numpy as np
 import warnings
 
-from m_ff import gp
-from m_ff import kernels
-from m_ff import interpolation
+from mff import gp
+from mff import kernels
+from mff import interpolation
 from pathlib import Path
-from m_ff.models.base import Model
+from mff.models.base import Model
 
 
 class ThreeBodySingleSpeciesModel(Model):

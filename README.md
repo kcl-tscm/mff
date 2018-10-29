@@ -1,6 +1,6 @@
-# Machine learning derived non-parametric force fields (M-FFs)
+# Machine learning derived non-parametric force fields (MFFs)
 
-To read the full documentation check https://m-ff.readthedocs.io/en/master/index.html
+To read the full documentation check https://mff.readthedocs.io/en/latest/
 
 ## Table of Contents
 
@@ -11,9 +11,9 @@ To read the full documentation check https://m-ff.readthedocs.io/en/master/index
 - [Maintainers](#maintainers)
 - [References](#references)
 
-## Background on M-FFs
+## Background on MFF
 
-The M-FF package uses Gaussian process regression to extract non-parametric 2- and 3- body force fields from ab-initio calculations.
+The MFF package uses Gaussian process regression to extract non-parametric 2- and 3- body force fields from ab-initio calculations.
 For a detailed description of the theory behind Gaussian process regression to predict forces and/or energies, and an explanation of the "mapping" technique used, please refer to [1].
 
 For an example use of the M-FF package to build 3-body force fields for Ni nanoclusters, please see [2].
@@ -37,11 +37,7 @@ If you build in place, you will also need to add your eqtools folder to your PYT
 Description on how to use the package.
 
 ```py
-import M_FF
-
-mff = M_FF()
-
-mff.build(traj.xyz)
+import mff
 
 ```
 

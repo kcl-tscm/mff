@@ -4,7 +4,7 @@ To read the full documentation check https://mff.readthedocs.io/en/latest/
 
 ## Table of Contents
 
-- [Background on M-FFs](#background)
+- [Background on MFFs](#background)
 - [Install](#install)
 - [Usage](#usage)
 - [Examples](#examples)

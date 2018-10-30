@@ -3,55 +3,55 @@ API Reference
 
 The "models" module
 -------------------
-:mod:`m_ff.models.twobody`
+:mod:`mff.models.twobody`
 
-:class:`m_ff.models.twobody.TwoBodyTwoSpeciesModel`
+:class:`mff.models.twobody.TwoBodyTwoSpeciesModel`
 
-:class:`m_ff.models.threebody.ThreeBodySingleSpeciesModel`
+:class:`mff.models.threebody.ThreeBodySingleSpeciesModel`
 
-:class:`m_ff.models.threebody.ThreeBodyTwoSpeciesModel`
+:class:`mff.models.threebody.ThreeBodyTwoSpeciesModel`
 
-:class:`m_ff.models.combined.CombinedSingleSpeciesModel`
+:class:`mff.models.combined.CombinedSingleSpeciesModel`
 
-:class:`m_ff.models.combined.CombinedTwoSpeciesModel`
+:class:`mff.models.combined.CombinedTwoSpeciesModel`
 
    
 The "gp" module
 ---------------
 
-:class:`m_ff.gp.GaussianProcess`
+:class:`mff.gp.GaussianProcess`
 
 The "configurations" module
 ---------------------------
 
-:class:`m_ff.configurations.Configurations`
+:class:`mff.configurations.Configurations`
 
 
 The "calculators" module
 ------------------------
 
-:class:`m_ff.calculators.TwoBodySingleSpecies`
+:class:`mff.calculators.TwoBodySingleSpecies`
 
-:class:`m_ff.calculators.TwoBodyTwoSpecies`
+:class:`mff.calculators.TwoBodyTwoSpecies`
 
-:class:`m_ff.calculators.ThreeBodySingleSpecies`
+:class:`mff.calculators.ThreeBodySingleSpecies`
 
-:class:`m_ff.calculators.ThreeBodyTwoSpecies`
+:class:`mff.calculators.ThreeBodyTwoSpecies`
 
-:class:`m_ff.calculators.CombinedSingleSpecies`
+:class:`mff.calculators.CombinedSingleSpecies`
 
-:class:`m_ff.calculators.CombinedTwoSpecies`
+:class:`mff.calculators.CombinedTwoSpecies`
 
 The "kernels" module
 --------------------
 
-:class:`m_ff.kernels.twobodykernel.TwoBodySingleSpeciesKernel`
+:class:`mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel`
 
-:class:`m_ff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel`
+:class:`mff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel`
 
-:class:`m_ff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel`
+:class:`mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel`
 
-:class:`m_ff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
+:class:`mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
 
 
 

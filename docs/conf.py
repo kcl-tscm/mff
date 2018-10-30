@@ -19,7 +19,7 @@ import sys
 
 # -- Project information -----------------------------------------------------
 
-project = 'M-FF'
+project = 'MFF'
 copyright = '2018, Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'
 author = 'Claudio Zeni, Aldo Glielmo, Adam Fekete, Alessandro De Vita'
 
@@ -151,7 +151,7 @@ html_show_copyright = False
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'M-FF'
+htmlhelp_basename = 'MFF'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -178,7 +178,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'm-ff.tex', 'm-ff Documentation',
+    (master_doc, 'mff.tex', 'mff Documentation',
      'Aldo, Claudio, Adam', 'manual'),
 ]
 
@@ -188,7 +188,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'm-ff', 'm-ff Documentation',
+    (master_doc, 'mff', 'mff Documentation',
      [author], 1)
 ]
 
@@ -199,8 +199,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'm-ff', 'm-ff Documentation',
-     author, 'm-ff', 'One line description of project.',
+    (master_doc, 'mff', 'mff Documentation',
+     author, 'mff', 'One line description of project.',
      'Miscellaneous'),
 ]
 

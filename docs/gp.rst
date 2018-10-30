@@ -1,14 +1,14 @@
 Gaussian Processes
 ==================
 
-.. automodule:: m_ff.gp
+.. automodule:: mff.gp
    :members:
 
 The "kernels" module
 --------------------
 
-.. automodule:: m_ff.kernels.twobodykernel
+.. automodule:: mff.kernels.twobodykernel
    :members:
 
-.. automodule:: m_ff.kernels.threebodykernel
+.. automodule:: mff.kernels.threebodykernel
    :members:

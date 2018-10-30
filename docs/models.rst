@@ -1,7 +1,7 @@
 Models
 ======
 
-.. automodule:: m_ff.models
+.. automodule:: mff.models
    :noindex:
 
 The models are the classes used to build, train and test a Gaussian process, and to then build the relative mapped potential.
@@ -13,20 +13,20 @@ Building a model
 ----------------
 To create a model based on a 2-body kernel for a monoatomic system::
 
-    from m_ff import models
+    from mff import models
     mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
 
 where the parameters refer to the atomic number of the species we are training the GP on, the cutoff radius we want to use, the lengthscale hyperparameter of the Gaussian Process, the hyperparameter governing the exponential decay of the cutoff function, and the noise associated with the output training data.
 In the case of a 2+3-body kernel for a monoatomic system::
 
-    from m_ff import models
+    from mff import models
     mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius, sigma_2b, theta_2b, sigma_3b, theta_3b, noise)
 
 where we have two additional hyperparameters since the lengthscale value and the cutoff decay ratio of the 2- and 3-body kernels contained inside the combined Gaussian Process are be independent.
 
 When dealing with a two-element system, the syntax is very similar, but the ``atomic_number`` is instead a list containing the atomic numbers of the two species, in increasing order::
 
-    from m_ff import models
+    from mff import models
     mymodel = models.CombinedTwoSpecies(atomic_numbers, cutoff_radius, sigma_2b, theta_2b, sigma_3b, theta_3b, noise)
 
 
@@ -99,11 +99,11 @@ To load a previously saved model of a known type (here for example a CombinedSin
 Model's complete reference
 --------------------------
 
-.. automodule:: m_ff.models.twobody
+.. automodule:: mff.models.twobody
    :members:
 
-.. automodule:: m_ff.models.threebody
+.. automodule:: mff.models.threebody
    :members:
 
-.. automodule:: m_ff.models.combined
+.. automodule:: mff.models.combined
    :members:

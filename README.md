@@ -42,12 +42,13 @@ import mff
 ```
 
 ## Examples
-This shows a simple example use of the package, starting from an .xzy trajectory ``filename" obtained through ab-initio methods and
+This shows a simple example use of the package, starting from an .xzy trajectory obtained through ab-initio methods and
 finishing with a 3-body MFF which can be used to run fast and accurate simulations within the python ASE framework.
 
 First, import the ab-initio trajectory file and create local atomic environments, force arrays and energy arrays:
 
 ```py
+import numpy as np
 from ase.io import read
 from mff.configurations import carve_confs
 traj = read(filename, format='extxyz')
@@ -57,7 +58,7 @@ elements, confs, forces, energies = carve_confs(traj, r_cut, n_data)
 
 ```
 
-Then, separate into training and testing set:
+Then, separate into training and test set:
 
 ```py
 ntr, ntest = 200, 100
@@ -68,7 +69,7 @@ tst_confs, tst_forces = confs[ind_tot[ntr:]], forces[ind_tot[ntr:]]
 
 ```
 
-Create the model and fit it:
+Create the model and fit it to the forces:
 
 ```py
 from mff import models
@@ -81,6 +82,7 @@ mymodel.fit(tr_confs, tr_forces)
 Test the model on a separate test set:
 ```py
 model_forces = mymodel.predict(tst_confs)
+errors = np.sqrt(np.sum((tst_forces - model_forces)**2, axis = 1))
 
 ```
 

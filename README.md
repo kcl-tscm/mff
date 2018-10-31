@@ -1,4 +1,4 @@
-# Machine learning non-parametric force fields (MFFs)
+# Machine learning nonparametric force fields (MFFs)
 
 To read the full documentation check https://mff.readthedocs.io/en/latest/
 

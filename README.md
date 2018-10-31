@@ -1,5 +1,7 @@
 # Machine learning nonparametric force fields (MFFs)
 
+[![DOI](https://zenodo.org/badge/123019663.svg)](https://zenodo.org/badge/latestdoi/123019663)
+
 To read the full documentation check https://mff.readthedocs.io/en/latest/
 
 ## Table of Contents

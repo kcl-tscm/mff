@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Configurations
-==============
+Calculators
+===========
 
 Module used to create ase calculators using interpolators
 constructed with the models module of the mff package.

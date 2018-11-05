@@ -1,39 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Two Body Model
-==============
 
-Module containing the TwoBodySingleSpecies and 
-TwoBodyTwoSpecies classes, which are used to handle
-the Gaussian process and the mapping algorithm used to build M-FFs.
-The model has to be first defined, then the Gaussian process must be
-trained using training configurations and forces (and/or energies).
-Once a model has been trained, it can be used to predict forces 
-(and/or energies) on unknonwn atomic configurations.
-A trained Gaussian process can then be mapped onto a tabulated 2-body
-potential via the ``build grid`` function call. A mapped model can be then
-saved, loaded and used to run molecular dynamics simulations via the
-calculator module.
-These mapped potentials retain the accuracy of the GP used to build them,
-while speeding up the calculations by a factor of 10^4 in typical scenarios.
 
-Example:
-
-    >>> from mff import models
-    >>> mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
-    >>> mymodel.fit(training_confs, training_forces)
-
-    >>> forces = mymodel.predict(test_configurations)
-
-    >>> mymodel.build_grid(grid_start, num_2b)
-    >>> mymodel.save("thismodel.json")
-
-    >>> mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import json
 import numpy as np
 import warnings

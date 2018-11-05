@@ -1,27 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Three Body Kernel
-=================
 
-Module that contains the expressions for the 3-body single-species and
-multi-species kernel. The module uses the Theano package to create the 
-energy-energy, force-energy and force-force kernels through automatic
-differentiation of the energy-energy kernel.
-The module is used to calculate the energy-energy, energy-force and 
-force-force gram matrices for the Gaussian processes, and supports 
-multi processing.
-The module is called by the gp.py script.
-
-Example:
-
-    >>> from threebodykernel import ThreeBodySingleSpeciesKernel
-    >>> kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
-    >>> ee_gram_matrix = kernel.calc_gram_e(training_configurations, number_nodes)
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import logging
 import numpy as np
 from abc import ABCMeta, abstractmethod

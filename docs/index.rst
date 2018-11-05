@@ -29,6 +29,22 @@ At the moment the package supports single- and two-element atomic environments; 
 
    genindex
 
+
+Maintainers
+-----------
+
+* Claudio Zeni (claudio.zeni@kcl.ac.uk),
+* Aldo Glielmo (aldo.glielmo@kcl.ac.uk),
+* Ádám Fekete (adam.fekete@kcl.ac.uk).
+
+References
+----------
+
+[1] A. Glielmo, C. Zeni, A. De Vita, *Efficient non-parametric n-body force fields from machine learning* (https://arxiv.org/abs/1801.04823)
+
+[2] C .Zeni, K. Rossi, A. Glielmo, N. Gaston, F. Baletto, A. De Vita *Building machine learning force fields for nanoclusters* (https://arxiv.org/abs/1802.01417)
+
+
 Indices and tables
 ==================
 

@@ -1,25 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Gaussian Process
-================
 
-Gaussian process regression module suited to learn and 
-predict energies and forces
-
-Example:
-
-    >>> gp = GaussianProcess(kernel, noise)
-    >>> gp.fit(train_configurations, train_forces)
-    >>> gp.predict(test_configurations)
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import logging
 import numpy as np
 
@@ -358,7 +338,7 @@ class GaussianProcess(object):
         standard deviation (return_std=True)
 
         Args:
-            X (np.ndarray): Target configurations where the GP is evaluated
+            X (list): Target configurations where the GP is evaluated
             return_std (bool): If True, the standard-deviation of the
                 predictive distribution of the target configurations is
                 returned along with the mean.
@@ -367,9 +347,40 @@ class GaussianProcess(object):
             y_mean (np.ndarray): Mean of predictive distribution at target configurations.
             y_std (np.ndarray): Standard deviation of predictive distribution at target
                 configurations. Only returned when return_std is True.
+                
         """
-        if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
-            X = np.reshape(X, (1, len(X), 5))
+        
+        y_mean = np.zeros((len(X), 3))
+        if return_std:
+            y_std = np.zeros((len(X), 3))
+            for i in np.arange(len(X)):
+                y_mean[i], y_std[i] = self.predict_single(X[i], return_std)
+            return y_mean, y_std
+        else:
+            for i in np.arange(len(X)):
+                y_mean[i] = self.predict_single(X[i], return_std)
+            return y_mean
+        
+    def predict_single(self, X, return_std=False):
+        """Predict forces using the Gaussian process regression model
+
+        We can also predict based on an unfitted model by using the GP prior.
+        In addition to the mean of the predictive distribution, also its
+        standard deviation (return_std=True)
+
+        Args:
+            X (np.ndarray): Target configuration where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
+
+        Returns:
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+                
+        """
+        X = np.reshape(X, (1, len(X), 5))
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
@@ -419,7 +430,39 @@ class GaussianProcess(object):
             else:
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
+            
     def predict_energy(self, X, return_std=False):
+        """Predict energies using the Gaussian process regression model
+
+        We can also predict based on an unfitted model by using the GP prior.
+        In addition to the mean of the predictive distribution, also its
+        standard deviation (return_std=True)
+
+        Args:
+            X (list): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
+
+        Returns:
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+                
+        """
+        
+        y_mean = np.zeros(len(X))
+        if return_std:
+            y_std = np.zeros(len(X))
+            for i in np.arange(len(X)):
+                y_mean[i], y_std[i] = self.predict_energy_single(X[i], return_std)
+            return y_mean, y_std
+        else:
+            for i in np.arange(len(X)):
+                y_mean[i] = self.predict_energy_single(X[i], return_std)
+            return y_mean
+        
+    def predict_energy_single(self, X, return_std=False):
         """Predict energies from forces only using the Gaussian process regression model
 
         This function evaluates the GP energies for a set of test configurations.

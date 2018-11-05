@@ -1,24 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-Configurations
-==============
-
-Module used to extract local atomic environments
-from ase atoms objects.
-
-Example:
-
-    >>> trajectory = ase.io.read(filename)
-    >>> elements, confs, forces, energies = configurations.carve_confs(
-                trajcetory, r_cut, n_data)
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 
 import logging
 import numpy as np
+
+from scipy.spatial.distance import cdist
 
 from abc import ABCMeta, abstractmethod
 from asap3 import FullNeighborList
@@ -139,10 +124,6 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
         ratios = np.sqrt(1.0 * elements_count) / np.sum(elements_count)
         ratios /= np.sum(ratios)
 
-    # if smart_sampling:
-    #     indices = [np.linspace(0, elc, int(ratio * n_data) - 1, dtype=np.int) for elc, ratio in zip(elements_count, ratios)]
-    # else:
-
     avg_natoms = len(flat_atom_number) // len(atoms)
     # Use randomly selected snapshots to roughly match n_data
     ind_snapshot = np.random.randint(0, len(atoms) - 1, n_data // avg_natoms)
@@ -154,19 +135,6 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
     for j in np.arange(len(atoms)):
         this_ind = []
         logger.info('Reading traj step {}'.format(j))
-
-        # if smart_sampling:
-        #     for k in np.arange(len(elements)):
-        #         count_el_atoms = sum(atom_number_list[j] == elements[k])
-        #         element_ind_count[k] += count_el_atoms
-        #         temp_ind = np.array([x for x in (indices[k] - element_ind_count_prev[k]) if (0 <= x < count_el_atoms)],
-        #                             dtype=np.int)
-        #
-        #         this_ind.append((np.where(atom_number_list[j] == elements[k]))[0][temp_ind])
-        #         element_ind_count_prev[k] += count_el_atoms
-        #
-        #     this_ind = np.concatenate(this_ind).ravel()
-        # else:
 
         if j in ind_snapshot:  # For every snapshot, if that was selected through random sampling, do the following
             positions = atoms[j].get_positions()
@@ -195,6 +163,72 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
 
     if boundaries is not None:
         logger.warning('When using boundaries, n_data is smaller than the one set by user')
+
+    return elements, confs, forces, energies
+
+def carve_2body_confs(atoms, r_cut, nbins = 100,  forces_label=None, energy_label=None):
+    """Extract atomic configurations, the forces acting on the central atoms
+    os said configurations, and the local energy values associeated.
+    This function is optimised to get configurations that contain a diverse set of
+    interatomic distances.
+
+    Args:
+        atoms (ase atoms object): Ase trajectory file, opened with ase.io.read
+        r_cut (float): Cutoff to use when carving out atomic environments
+        nbins (int): number of bins used to sample the distance values. An atomic configuration
+            is selected only if it contains at least a bond which length falls in an unoccupied bin, 
+            so that the final database will contain the most diverse set of bond lengths possible.
+        forces_label (str): Name of the force label in the trajectory file, if None default is "forces"
+        energy_label (str): Name of the energy label in the trajectory file, if None default is "energy"
+
+    Returns:
+        elements (array): Array of atomic numbers in increasing order
+        confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within
+            r_cut from the central one. The first 3 components are positions w.r.t
+            the central atom in Angstroms, the fourth is the atomic number of the 
+            central atom, the fifth the atomic number of each atom.
+        forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
+        energies (array): value of the local atomic energy in eV
+
+    """
+
+    confs, forces, energies = [], [], []
+
+    # Get the atomic number of each atom in the trajectory file
+    atom_number_list = [atom.get_atomic_numbers() for atom in atoms]
+    flat_atom_number = np.concatenate(atom_number_list)
+    elements, elements_count = np.unique(flat_atom_number, return_counts=True)
+    
+    # Histogram counting the number of bond length occurrences per lenght bin (tuple of arrays)
+    stored_histogram = np.zeros(nbins)
+
+    for j in np.arange(len(atoms)): # for every snapshot of the trajectory file
+        logger.info('Reading traj step {}'.format(j))
+        this_ind = []
+
+        distances = (cdist(atoms[j].get_positions(), atoms[j].get_positions()))
+        distances[np.where(distances > r_cut)] = None
+        
+        for i in np.arange(len(atoms[j])):
+            this_snapshot_histogram = np.histogram(distances[i], nbins, (0.0, r_cut))
+            if any(stored_histogram - this_snapshot_histogram[0] < 0):
+                this_ind.append(i)
+                stored_histogram += this_snapshot_histogram[0]
+
+        # Call the carve_from_snapshot function on the chosen atoms
+        if len(this_ind) > 0:
+            this_conf, this_force, this_energy = \
+                carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label)
+            confs.append(this_conf)
+            forces.append(this_force)
+            energies.append(this_energy)
+
+    # Reshape everything so that confs is a list of numpy arrays, forces is a numpy array and energies is a numpy array
+    confs = [item for sublist in confs for item in sublist]
+    forces = [item for sublist in forces for item in sublist]
+    forces = np.asarray(forces)
+    energies = np.asarray(energies)
+    confs = np.asarray(confs)
 
     return elements, confs, forces, energies
 

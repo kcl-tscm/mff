@@ -1,27 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Calculators
-===========
+#-*- coding: utf-8 -*-
 
-Module used to create ase calculators using interpolators
-constructed with the models module of the mff package.
-These calculators can yield forces and energies for atoms objects
-at a very low computational cost.
-
-WARNING: The atoms object must be such that the atoms are ordered
-with increasing atomic number for the two species calculator to work.
-
-Example:
-
-    >>> calc = calculators.CombinedTwoSpecies(
-            r_cut, element0, element1,  grid_2b, grid_3b, rep_alpha=1.4)
-    >>> atoms = atoms[np.argsort(atoms.get_atomic_numbers())]
-    >>> atoms.set_calculator(calc)
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import numpy as np
 import logging
 

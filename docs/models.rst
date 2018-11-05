@@ -96,14 +96,106 @@ To load a previously saved model of a known type (here for example a CombinedSin
     mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 
+
 Model's complete reference
 --------------------------
+
+
+Two Body Model
+--------------
+
+Module containing the TwoBodySingleSpecies and 
+TwoBodyTwoSpecies classes, which are used to handle
+the Gaussian process and the mapping algorithm used to build M-FFs.
+The model has to be first defined, then the Gaussian process must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 2-body
+potential via the ``build grid`` function call. A mapped model can be then
+saved, loaded and used to run molecular dynamics simulations via the
+calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example::
+
+ from mff import models
+ mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+ mymodel.fit(training_confs, training_forces)
+
+ forces = mymodel.predict(test_configurations)
+
+ mymodel.build_grid(grid_start, num_2b)
+ mymodel.save("thismodel.json")
+
+ mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
+
 
 .. automodule:: mff.models.twobody
    :members:
 
+
+Three Body Model
+----------------
+
+Module containing the ThreeBodySingleSpecies and 
+ThreeBodyTwoSpecies classes, which are used to handle the Gaussian 
+process regression and the mapping algorithm used to build M-FFs.
+The model has to be first defined, then the Gaussian process must be
+trained using training configurations and forces (and/or local energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 3-body
+potential via the ``build grid`` function call. A mapped model can be then
+saved, loaded and used to run molecular dynamics simulations via the
+calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example::
+
+    from mff import models
+    mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
+    mymodel.fit(training_confs, training_forces)
+    forces = mymodel.predict(test_configurations)
+    mymodel.build_grid(grid_start, num_3b)
+    mymodel.save("thismodel.json")
+    mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+
+
 .. automodule:: mff.models.threebody
    :members:
+
+
+
+Combined Model
+--------------
+
+Module that uses 2- and 3-body kernels to do Guassian process regression, 
+and to build 2- and 3-body mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 2-body
+potential  and a tabultaed 3-body potential via the ``build grid`` function call.
+A mapped model can be thensaved, loaded and used to run molecular 
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example::
+
+ from mff import models
+ mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
+                        sigma_2b, sigma_3b, sigma_2b, theta_3b, noise)
+ mymodel.fit(training_confs, training_forces)
+ forces = mymodel.predict(test_configurations)
+ mymodel.build_grid(grid_start, num_2b)
+ mymodel.save("thismodel.json")
+ mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
+
 
 .. automodule:: mff.models.combined
    :members:

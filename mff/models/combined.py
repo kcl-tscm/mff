@@ -746,7 +746,7 @@ class CombinedTwoSpeciesModel(Model):
 
         directory, prefix = path.parent, path.stem
 
-        ### SAVE THE 2B MODEL ###
+        ### SAVE THE MODEL ###
         params = {
             'model': self.__class__.__name__,
             'elements': self.elements,
@@ -780,8 +780,10 @@ class CombinedTwoSpeciesModel(Model):
 
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(directory / gp_filename_2b)
-
-        params['grid_2b']['filename'] = {}
+        
+#         if self.grid_2b:
+#             params['grid_2b']['filename'] = {}
+            
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_2b = '{}_grid_{}_num_{p[grid_2b][r_num]}.npz'.format(prefix, key, p=params)
@@ -792,10 +794,13 @@ class CombinedTwoSpeciesModel(Model):
         ### SAVE THE 3B MODEL ###
         gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
 
+
         params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(directory / gp_filename_3b)
 
-        params['grid_3b']['filename'] = {}
+#         if self.grid_3b:
+#             params['grid_3b']['filename'] = {}
+            
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)

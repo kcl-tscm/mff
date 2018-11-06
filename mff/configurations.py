@@ -4,9 +4,9 @@ import logging
 import numpy as np
 
 from scipy.spatial.distance import cdist
-
 from abc import ABCMeta, abstractmethod
 from asap3 import FullNeighborList
+from random import shuffle
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +166,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
 
     return elements, confs, forces, energies
 
+
 def carve_2body_confs(atoms, r_cut, nbins = 100,  forces_label=None, energy_label=None):
     """Extract atomic configurations, the forces acting on the central atoms
     os said configurations, and the local energy values associeated.
@@ -191,7 +192,8 @@ def carve_2body_confs(atoms, r_cut, nbins = 100,  forces_label=None, energy_labe
         energies (array): value of the local atomic energy in eV
 
     """
-
+    
+    shuffle(atoms)  # Randomize trajectory snapshot order to sample in an unbiased way
     confs, forces, energies = [], [], []
 
     # Get the atomic number of each atom in the trajectory file
@@ -199,7 +201,7 @@ def carve_2body_confs(atoms, r_cut, nbins = 100,  forces_label=None, energy_labe
     flat_atom_number = np.concatenate(atom_number_list)
     elements, elements_count = np.unique(flat_atom_number, return_counts=True)
     
-    # Histogram counting the number of bond length occurrences per lenght bin (tuple of arrays)
+    # Histogram counting the number of bond distances per bin
     stored_histogram = np.zeros(nbins)
 
     for j in np.arange(len(atoms)): # for every snapshot of the trajectory file
@@ -211,7 +213,87 @@ def carve_2body_confs(atoms, r_cut, nbins = 100,  forces_label=None, energy_labe
         
         for i in np.arange(len(atoms[j])):
             this_snapshot_histogram = np.histogram(distances[i], nbins, (0.0, r_cut))
-            if any(stored_histogram - this_snapshot_histogram[0] < 0):
+            if (stored_histogram - this_snapshot_histogram[0] < 0).any():
+                this_ind.append(i)
+                stored_histogram += this_snapshot_histogram[0]
+
+        # Call the carve_from_snapshot function on the chosen atoms
+        if len(this_ind) > 0:
+            this_conf, this_force, this_energy = \
+                carve_from_snapshot(atoms[j], this_ind, r_cut, forces_label, energy_label)
+            confs.append(this_conf)
+            forces.append(this_force)
+            energies.append(this_energy)
+
+    # Reshape everything so that confs is a list of numpy arrays, forces is a numpy array and energies is a numpy array
+    confs = [item for sublist in confs for item in sublist]
+    forces = [item for sublist in forces for item in sublist]
+    forces = np.asarray(forces)
+    energies = np.asarray(energies)
+    confs = np.asarray(confs)
+
+    return elements, confs, forces, energies
+
+def carve_3body_confs(atoms, r_cut, nbins = 50,  forces_label=None, energy_label=None):
+    """Extract atomic configurations, the forces acting on the central atoms
+    os said configurations, and the local energy values associeated.
+    This function is optimised to get configurations that contain a diverse set of
+    interatomic distances and angles.
+
+    Args:
+        atoms (ase atoms object): Ase trajectory file, opened with ase.io.read
+        r_cut (float): Cutoff to use when carving out atomic environments
+        nbins (int): number of bins used to sample the distance values. An atomic configuration
+            is selected only if it contains at least a triplet three distances fall in an unoccupied bin, 
+            so that the final database will contain the most diverse set of triplets possible.
+        forces_label (str): Name of the force label in the trajectory file, if None default is "forces"
+        energy_label (str): Name of the energy label in the trajectory file, if None default is "energy"
+
+    Returns:
+        elements (array): Array of atomic numbers in increasing order
+        confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within
+            r_cut from the central one. The first 3 components are positions w.r.t
+            the central atom in Angstroms, the fourth is the atomic number of the 
+            central atom, the fifth the atomic number of each atom.
+        forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
+        energies (array): value of the local atomic energy in eV
+
+    """
+    
+    shuffle(atoms)  # Randomize trajectory snapshot order to sample in an unbiased way
+    confs, forces, energies = [], [], []
+
+    # Get the atomic number of each atom in the trajectory file
+    atom_number_list = [atom.get_atomic_numbers() for atom in atoms]
+    flat_atom_number = np.concatenate(atom_number_list)
+    elements, elements_count = np.unique(flat_atom_number, return_counts=True)
+    
+    # Histogram counting the number of triplet distances per bin
+    stored_histogram = np.zeros((nbins, nbins, nbins))
+
+    for j in np.arange(len(atoms)): # for every snapshot of the trajectory file
+        logger.info('Reading traj step {}'.format(j))
+        this_ind = []
+
+        distances = (cdist(atoms[j].get_positions(), atoms[j].get_positions()))
+        distances[np.where(distances > r_cut)] = None
+        distances[np.where(distances == 0 )] = None
+        for i in np.arange(len(atoms[j])):
+            triplets = []
+            for k in np.where(distances[i] > 0 )[0]:
+                for l in np.where(distances[i] > 0 )[0]:
+                    if distances[k,l] > 0 :
+                        triplets.append([distances[i, k], distances[i, l], distances[k, l]])
+                        triplets.append([distances[i, k], distances[k, l], distances[i, l]])
+                        triplets.append([distances[k, l], distances[i, k], distances[i, l]])
+                        triplets.append([distances[k, l], distances[i, l], distances[i, k]])
+                        triplets.append([distances[i, l], distances[k, l], distances[i, k]])
+                        triplets.append([distances[i, l], distances[i, k], distances[k, l]])
+
+            triplets = np.reshape(triplets, (len(triplets), 3))               
+            this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
+                                                     range =  ((0.0, r_cut), (0.0, r_cut), (0.0, r_cut)))
+            if (stored_histogram - this_snapshot_histogram[0] < 0).any():
                 this_ind.append(i)
                 stored_histogram += this_snapshot_histogram[0]
 

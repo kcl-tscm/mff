@@ -19,7 +19,7 @@ To read the full documentation check https://mff.readthedocs.io/en/latest/
 The MFF package uses Gaussian process regression to extract non-parametric 2- and 3- body force fields from ab-initio calculations.
 For a detailed description of the theory behind Gaussian process regression to predict forces and/or energies, and an explanation of the mapping technique used, please refer to [1].
 
-For an example use of the M-FF package to build 3-body force fields for Ni nanoclusters, please see [2].
+For an example use of the MFF package to build 3-body force fields for Ni nanoclusters, please see [2].
 
 ## Install
 

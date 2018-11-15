@@ -99,15 +99,16 @@ void int_argsort(int outvec[], int invec[], int len){
 
 void voxel(double fin[], double f[], int tempx0, int tempx1, int tempx2, int ix0, int ix1, int ix2){
 	int findx, tempi, tempj, tempk;
+        int i, j, k;
 	findx = 0;
 
-	for(int i = tempx0 - 1; i < tempx0 + 3; i++){
+	for(i = tempx0 - 1; i < tempx0 + 3; i++){
 		tempi = clip(i, ix0);
 
-		for(int j = tempx1 - 1; j < tempx1 + 3; j++){
+		for(j = tempx1 - 1; j < tempx1 + 3; j++){
 			tempj = clip(j, ix1);
 
-			for(int k = tempx2 - 1; k < tempx2 + 3; k++){
+			for(k = tempx2 - 1; k < tempx2 + 3; k++){
 				tempk = clip(k, ix2);
 				fin[findx] = *(f + tempi * ix1 * ix2 + tempj * ix2 + tempk);
 				findx++;

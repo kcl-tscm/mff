@@ -99,7 +99,7 @@ void int_argsort(int outvec[], int invec[], int len){
 
 void voxel(double fin[], double f[], int tempx0, int tempx1, int tempx2, int ix0, int ix1, int ix2){
 	int findx, tempi, tempj, tempk;
-        int i, j, k;
+	int i, j, k;
 	findx = 0;
 
 	for(i = tempx0 - 1; i < tempx0 + 3; i++){

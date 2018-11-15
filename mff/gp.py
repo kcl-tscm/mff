@@ -144,6 +144,45 @@ class GaussianProcess(object):
         self.n_train = len(self.y_train_) / 3
 
         return self
+    
+    def fit_update_single(self, X2_up, y2_up, nnodes = 1):   
+        """
+        update an existing gram matrix with new entries 
+        
+        """
+        if len(np.shape(y2_up)) > 1:
+            logger.error(" Use the fit_update function for more than one input, quitting now")
+            return
+            
+        X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
+        y2_up = np.reshape(y2_up, (3, 1))
+        past_d = self.K.shape[0]
+        up_d = 3
+        new_d = past_d + up_d
+
+        gram_up_up = self.kernel_.calc_gram(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
+
+        Kvecs_up_past = self.kernel_.calc(X2_up, self.X_train_)  # Kernel between old and new entries
+
+        gram = np.zeros((new_d,new_d))
+
+        gram[0:past_d,0:past_d] = self.K
+        gram[past_d:new_d,past_d:new_d] = gram_up_up
+        gram[past_d:new_d, 0:past_d] = Kvecs_up_past
+        gram[0:past_d, past_d:new_d] = Kvecs_up_past.T
+        
+        self.X_train_ = np.asarray(self.X_train_.tolist()  + X2_up.tolist())
+        self.y_train_ = np.concatenate((self.y_train_, y2_up), axis = 0) 
+
+        self.K = gram
+
+        self.L_ = cholesky(self.K, lower=True)
+        self.alpha_ = cho_solve((self.L_, True), self.y_train_)
+
+    def fit_update(self, X2_up, y2_up, nnodes = 1):   
+        for i in np.arange(len(X2_up)):
+            self.fit_update_single(X2_up[i], y2_up[i], nnodes)
 
     def fit_force_and_energy(self, X, y_force, y_energy, nnodes=1):
         """Fit a Gaussian process regression model using forces and energies
@@ -635,7 +674,9 @@ class GaussianProcess(object):
                 Gradient of the log-marginal likelihood with respect to the kernel
                 hyperparameters at position theta.
                 Only returned when eval_gradient is True.
+                
         """
+        
         # kernel = self.kernel_.clone_with_theta(theta)
         kernel = self.kernel
         # kernel.theta = theta

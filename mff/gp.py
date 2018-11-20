@@ -147,7 +147,7 @@ class GaussianProcess(object):
     
     def fit_update_single(self, X2_up, y2_up, nnodes = 1):   
         """
-        update an existing gram matrix with new entries 
+        Update an existing force-force gram matrix with a single new datapoint 
         
         """
         if len(np.shape(y2_up)) > 1:
@@ -180,7 +180,11 @@ class GaussianProcess(object):
         self.L_ = cholesky(self.K, lower=True)
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)
 
-    def fit_update(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update(self, X2_up, y2_up, nnodes = 1):  
+        """
+        Update an existing force-force gram matrix with a list of new datapoints
+        
+        """
         for i in np.arange(len(X2_up)):
             self.fit_update_single(X2_up[i], y2_up[i], nnodes)
 
@@ -347,7 +351,7 @@ class GaussianProcess(object):
         # Precompute quantities required for predictions which are independent
         # of actual query points
         K = self.kernel_.calc_gram_e(self.X_train_, nnodes)
-        K[np.diag_indices_from(K)] += self.noise / 10.0
+        K[np.diag_indices_from(K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
             self.L_ = cholesky(K, lower=True)
@@ -369,6 +373,50 @@ class GaussianProcess(object):
 
         return self
 
+    def fit_update_single_energy(self, X2_up, y2_up, nnodes = 1):   
+        """
+        Update an existing energy-energy gram matrix with a single new datapoint 
+        
+        """
+        if len(np.shape(y2_up)) > 1:
+            logger.error(" Use the fit_update function for more than one input, quitting now")
+            return
+            
+        X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
+        y2_up = np.reshape(y2_up, 1)
+        past_d = self.energy_K.shape[0]
+        up_d = 1
+        new_d = past_d + up_d
+
+        gram_up_up = self.kernel_.calc_gram_e(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
+
+        Kvecs_up_past = self.kernel_.calc_ee(X2_up, self.X_train_)  # Kernel between old and new entries
+
+        gram = np.zeros((new_d,new_d))
+
+        gram[0:past_d,0:past_d] = self.energy_K
+        gram[past_d:new_d,past_d:new_d] = gram_up_up
+        gram[past_d:new_d, 0:past_d] = Kvecs_up_past
+        gram[0:past_d, past_d:new_d] = Kvecs_up_past.T
+        
+        self.X_train_ = np.asarray(self.X_train_.tolist()  + X2_up.tolist())
+        y2_up = np.reshape(y2_up, (1,1))
+        self.y_train_energy_ = np.concatenate((self.y_train_energy_, y2_up), axis = 0) 
+
+        self.energy_K = gram
+
+        self.L_ = cholesky(self.energy_K, lower=True)
+        self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)
+
+    def fit_update_energy(self, X2_up, y2_up, nnodes = 1):   
+        """
+        Update an existing energy-energy gram matrix with a list of new datapoints
+        
+        """
+        for i in np.arange(len(X2_up)):
+            self.fit_update_single_energy(X2_up[i], y2_up[i], nnodes)
+            
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model
 
@@ -446,7 +494,7 @@ class GaussianProcess(object):
                 K = np.hstack((K_force_energy, K_trans))
                 y_mean = K.dot(self.alpha_)
 
-            if return_std:
+            if return_std: ## TODO CHECK FOR ENERGY, FORCE and FORCE +ENERGY FIT
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
@@ -547,16 +595,27 @@ class GaussianProcess(object):
                 K = np.hstack((K_energy, K_energy_force))
                 e_mean = K.dot(self.alpha_)
 
-            if return_std:
+            if return_std: ## TODO CHECK FOR ENERGY, FORCE and FORCE +ENERGY FIT
                 # compute inverse K_inv of K based on its Cholesky
                 # decomposition L and its inverse L_inv
                 L_inv = solve_triangular(self.L_.T, np.eye(self.L_.shape[0]))
                 K_inv = L_inv.dot(L_inv.T)
                 # Compute variance of predictive distribution
-                e_var = self.kernel_.calc_diag_e(X)
-                fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
-                e_var -= fit
-
+                if self.fitted == ['force', None]:  # Predict using force data
+                    e_var = self.kernel_.calc_diag_e(X)
+                    fit = np.einsum("ij,ij->i", np.dot(K_trans, K_inv), K_trans)
+                    e_var -= fit
+                    
+                elif self.fitted == [None, 'energy']:  # Predict using force data
+                    e_var = self.kernel_.calc_diag_e(X)
+                    fit = np.einsum("ij,ij->i", np.dot(K_energy, K_inv), K_energy)
+                    e_var -= fit
+                    
+                else:  # Predict using force data
+                    e_var = self.kernel_.calc_diag_e(X)
+                    fit = np.einsum("ij,ij->i", np.dot(K, K_inv), K)
+                    e_var -= fit
+                    
                 # Check if any of the variances is negative because of
                 # numerical issues. If yes: set the variance to 0.
                 e_var_negative = e_var < 0

@@ -118,15 +118,14 @@ def carve_confs(atoms, r_cut, n_data, forces_label=None, energy_label=None, boun
         logger.warning('n_data is larger that total number of configuration')
         n_data = np.sum(elements_count)
         print('Setting n_data = {}'.format(n_data))
-
-    # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
+        ind_snapshot = np.arange(len(atoms))
+    else:
+            # Use randomly selected snapshots to roughly match n_data
+            ind_snapshot = np.random.randint(0, len(atoms), n_data // avg_natoms)
+            # Obtain the indices of the atoms we want in the final database from a linspace on the the flattened array
     if len(elements) > 1:
         ratios = np.sqrt(1.0 * elements_count) / np.sum(elements_count)
         ratios /= np.sum(ratios)
-
-    avg_natoms = len(flat_atom_number) // len(atoms)
-    # Use randomly selected snapshots to roughly match n_data
-    ind_snapshot = np.random.randint(0, len(atoms) - 1, n_data // avg_natoms)
 
     # Go through each trajectory step and find where the chosen indexes for all different elements are
     element_ind_count = np.zeros_like(elements)

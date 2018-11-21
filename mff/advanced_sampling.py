@@ -30,7 +30,9 @@ class Sampling(object):
         self.energies = energies
         self.forces = forces
         natoms = len(confs[0]) + 1
-        self.elements = confs[0][0,4]
+        atom_number_list = [confs[0,0,3] for conf in confs]
+        self.elements = np.unique(atom_number_list, return_counts=False)
+
         self.natoms = natoms
         
         
@@ -67,6 +69,49 @@ class Sampling(object):
         self.reduced_forces = reduced_forces
         
         
+    def get_the_right_model(self, ker):
+        if len(self.elements) == 1:
+            if ker == '2b':
+                return TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+            elif ker == '3b':
+                return CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0 
+            
+        else:
+            if ker == '2b':
+                return TwoBodyTwoSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+            elif ker == '3b':
+                return CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0      
+        
+    def get_the_right_kernel(self, ker):
+        if len(self.elements) == 1:
+            if ker == '2b':
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+            elif ker == '3b':
+                self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(
+                    theta=[self.sigma_3b, self.theta, self.r_cut]), noise= self.noise)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0 
+            
+        else:
+            if ker == '2b':
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+            elif ker == '3b':
+                self.gp3 = GaussianProcess(kernel= kernels.ThreeBodyTwoSpeciesKernel(
+                    theta=[self.sigma_3b, self.theta, self.r_cut]), noise= noise)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0     
+        
+        
     def train_test_split(self, confs=[], forces=[], energies=[], ntr = 0, ntest = None):
         ind = np.arange(len(confs))
         if ntest == None: # Use everything that is not training as test
@@ -80,8 +125,9 @@ class Sampling(object):
     def initialize_gps(self, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
         self.sigma_2b, self.sigma_3b, self.sigma_mb, self.noise, self.r_cut, self.theta = (
             sigma_2b, sigma_3b, sigma_mb, noise, r_cut, theta)
-        self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[sigma_3b, theta, r_cut]), noise= noise)
-        self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(theta=[sigma_3b, theta, r_cut]), noise= noise)
+        self.gp2 = self.get_the_right_kernel('2b')
+        self.gp3 = self.get_the_right_kernel('3b')
+
         
         
     def ker_2b(self, X1, X2):
@@ -133,15 +179,8 @@ class Sampling(object):
 
     
     def ivm_sampling(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):   # Check why it stops adding points
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+        
+        m = self.get_the_right_model(ker)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
         randints = np.random.randint(0, ndata, 2)
@@ -155,7 +194,7 @@ class Sampling(object):
                 worst_thing = np.argmax(pred_var)  # L1 norm
             else:
                 worst_thing = np.argmax(abs(pred - self.Y[mask]))  # L1 norm
-            m.gp.fit_update_single_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
+            m.update_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
             mask[mask][worst_thing] = False
             if(max(pred_var) < threshold_error):
                 break
@@ -219,15 +258,8 @@ class Sampling(object):
     
     
     def random_sampling(self, ker = '2b'):
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+        
+        m = self.get_the_right_model(ker)
         m.fit_energy(self.X, self.Y)
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
@@ -235,15 +267,8 @@ class Sampling(object):
 
 
     def test_gp_on_forces(self, index, ker = '2b'):
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+        
+        m = self.get_the_right_model(ker)
         m.fit(self.X[index], self.Y_force[index])
         y_hat = m.predict(self.x)
         error = self.y_force - y_hat

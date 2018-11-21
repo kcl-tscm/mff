@@ -228,12 +228,12 @@ class Sampling(object):
                 worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
             else:
                 worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask]), axis = 1))  # L1 norm
-            m.update(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
+            m.update_force(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
             mask[mask][worst_thing] = False
-            if(max(pred_var) < threshold_error):
+            if(max(np.sum(np.abs(pred_var), axis = 1)) < threshold_error):
                 break
         y_hat = m.predict(self.x)
-        error = mean_squared_error(y_hat, self.Y_force)
+        error = mean_squared_error(y_hat, self.y_force)
         return error, y_hat, [not i for i in mask]
     
     def grid_2b_sampling(self, nbins):

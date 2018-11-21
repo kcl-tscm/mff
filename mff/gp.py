@@ -182,11 +182,19 @@ class GaussianProcess(object):
 
     def fit_update(self, X2_up, y2_up, nnodes = 1):  
         """
-        Update an existing force-force gram matrix with a list of new datapoints
+        Update an existing energy-energy gram matrix with a list of new datapoints
         
+        Args:
+            X2_up (list): training configurations
+            y2_up (np.ndarray): training forces
+            nnodes (int): number of CPU workers to use, default is 1
+
         """
-        for i in np.arange(len(X2_up)):
-            self.fit_update_single(X2_up[i], y2_up[i], nnodes)
+        try:
+            for i in np.arange(len(X2_up)):
+                self.fit_update_single(X2_up[i], y2_up[i], nnodes)
+        except:
+            self.fit_update_single(X2_up, y2_up, nnodes)
 
     def fit_force_and_energy(self, X, y_force, y_energy, nnodes=1):
         """Fit a Gaussian process regression model using forces and energies
@@ -378,9 +386,9 @@ class GaussianProcess(object):
         Update an existing energy-energy gram matrix with a single new datapoint 
         
         """
-        if len(np.shape(y2_up)) > 1:
-            logger.error(" Use the fit_update function for more than one input, quitting now")
-            return
+#         if len(np.shape(y2_up)) > 1:
+#             logger.error(" Use the fit_update_energy function for more than one input, quitting now")
+#             return
             
         X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
         y2_up = np.reshape(y2_up, 1)
@@ -413,9 +421,17 @@ class GaussianProcess(object):
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
+        Args:
+            X2_up (list): training configurations
+            y2_up (np.ndarray): training energies
+            nnodes (int): number of CPU workers to use, default is 1
+
         """
-        for i in np.arange(len(X2_up)):
-            self.fit_update_single_energy(X2_up[i], y2_up[i], nnodes)
+        try:
+            for i in np.arange(len(X2_up)):
+                self.fit_update_single_energy(X2_up[i], y2_up[i], nnodes)
+        except:
+            self.fit_update_single_energy(X2_up, y2_up, nnodes)
             
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model
@@ -566,8 +582,8 @@ class GaussianProcess(object):
                 configurations. Only returned when return_std is True.
                 
         """
-        if len(np.shape(X)) < 3:  # If only a single conf is the input, reshape it
-            X = np.reshape(X, (1, len(X), 5))
+
+        X = np.reshape(X, (1, len(X), 5))
 
         if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel

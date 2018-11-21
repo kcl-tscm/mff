@@ -129,6 +129,56 @@ class CombinedSingleSpeciesModel(Model):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
         self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
+    def update_force(self, confs, forces, nnodes=1):
+        """ Update a fitted GP with a set of training energies using a 2- and
+        3-body single species force-force kernel functions. The 2-body Gaussian
+        process is first updated, then the 3-body GP is fitted to the difference
+        between the training forces and the 2-body predictions of forces on the 
+        training configurations.
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            
+        """
+        
+        self.gp_2b.fit_update(confs, forces, nnodes)
+
+        if len(np.shape(confs)) == 2:
+            two_body_forces = self.gp_2b.predict_single(confs)
+        else:
+            two_body_forces = self.gp_2b.predict(confs)
+
+        self.gp_3b.fit_update(confs, forces - two_body_forces, nnodes)
+        
+    def update_energy(self, confs, energies, nnodes=1):
+        """ Update a fitted GP with a set of training energies using a 2- and
+        3-body single species force-force kernel functions. The 2-body Gaussian
+        process is first updated, then the 3-body GP is fitted to the difference
+        between the training forces and the 2-body predictions of forces on the 
+        training configurations.
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            
+        """
+        self.gp_2b.fit_update_energy(confs, energies, nnodes)
+
+        if len(np.shape(confs)) == 2:
+            two_body_energies = self.gp_2b.predict_energy_single(confs)
+        else:
+            two_body_energies = self.gp_2b.predict_energy(confs)
+
+        self.gp_3b.fit_update_energy(confs, energies - two_body_energies, nnodes)
+        
+        
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
@@ -568,6 +618,55 @@ class CombinedTwoSpeciesModel(Model):
             two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
         self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
+    def update_force(self, confs, forces, nnodes=1):
+        """ Update a fitted GP with a set of training energies using a 2- and
+        3-body two species force-force kernel functions. The 2-body Gaussian
+        process is first updated, then the 3-body GP is fitted to the difference
+        between the training forces and the 2-body predictions of forces on the 
+        training configurations.
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            
+        """
+        
+        self.gp_2b.fit_update(confs, forces, nnodes)
+
+        if len(np.shape(confs)) == 2:
+            two_body_forces = self.gp_2b.predict_single(confs)
+        else:
+            two_body_forces = self.gp_2b.predict(confs)
+
+        self.gp_3b.fit_update(confs, forces - two_body_forces, nnodes)
+        
+    def update_energy(self, confs, energies, nnodes=1):
+        """ Update a fitted GP with a set of training energies using a 2- and
+        3-body two species force-force kernel functions. The 2-body Gaussian
+        process is first updated, then the 3-body GP is fitted to the difference
+        between the training forces and the 2-body predictions of forces on the 
+        training configurations.
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            
+        """
+        self.gp_2b.fit_update_energy(confs, energies, nnodes)
+
+        if len(np.shape(confs)) == 2:
+            two_body_energies = self.gp_2b.predict_energy_single(confs)
+        else:
+            two_body_energies = self.gp_2b.predict_energy(confs)
+
+        self.gp_3b.fit_update_energy(confs, energies - two_body_energies, nnodes)
+        
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.

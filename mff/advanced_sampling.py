@@ -1,13 +1,7 @@
-import sys
-sys.path.append('..')
-
-import os
 import logging
 import numpy as np
 import time
 from pathlib import Path
-os.environ["MKL_THREADING_LAYER"] = "GNU"
-
 from mff.models import TwoBodySingleSpeciesModel,  CombinedSingleSpeciesModel
 from mff.models import TwoBodyTwoSpeciesModel,  CombinedTwoSpeciesModel
 from mff.gp import GaussianProcess 
@@ -20,7 +14,23 @@ logging.basicConfig(level=logging.ERROR)
 
 
 class Sampling(object):
-    """ Sampling class
+    """ Sampling methods class
+    Class containing sampling methods to optimize the trainng database selection.
+    The class is currently set in order to work with local atomic energies, 
+    and is therefore made to be used in confined systems (nanoclusters, molecules).
+    Some of the mothods used can be applied to force training too (ivm_sampling ), 
+    or are independent to the training outputs (grid_2b sampling and grid_3b_sampling).
+    These methods can be used on systems with PBCs where a local energy is not well defined.
+
+    Args:
+        confs (list of arrays): List of the configurations as M*5 arrays
+        energies (array): Local atomic energies, one per configuration
+        forces (array): Forces acting on the central atoms of confs, one per configuration
+
+    Attributes:
+        elements (list): List of the atomic number of the atoms present in the system
+        natoms (int): Number of atoms in the system, used for nanoclusters
+        
     """
 
     def __init__(self, confs=None, energies=None,
@@ -30,11 +40,23 @@ class Sampling(object):
         self.energies = energies
         self.forces = forces
         natoms = len(confs[0]) + 1
-        self.elements = confs[0][0,4]
+        atom_number_list = [confs[0,0,3] for conf in confs]
+        self.elements = np.unique(atom_number_list, return_counts=False)
         self.natoms = natoms
         
         
     def clean_dataset(self, random = True):
+        ''' 
+        Function used to subsample from a complete trajectory only one atomic environment
+        per snapshot. This is necessary when training on energies of nanoclusters in order to assign
+        an unique energy value to every configuration and to avoid using redundant information 
+        in the form of local atomic environments centered around different atoms in the same snapshot.
+        
+        Args:
+            random (bool): If true, an atom at random is chosen every snapshot, if false always the first
+            atom in the configurations will be chosen to represent said snapshot
+        
+        '''
         confs, energies, forces = self.confs, self.energies, self.forces
         natoms = self.natoms
         
@@ -67,7 +89,62 @@ class Sampling(object):
         self.reduced_forces = reduced_forces
         
         
+    def get_the_right_model(self, ker):
+        if len(self.elements) == 1:
+            if ker == '2b':
+                return TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+            elif ker == '3b':
+                return CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0 
+            
+        else:
+            if ker == '2b':
+                return TwoBodyTwoSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+            elif ker == '3b':
+                return CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0      
+        
+    def get_the_right_kernel(self, ker):
+        if len(self.elements) == 1:
+            if ker == '2b':
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+            elif ker == '3b':
+                self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(
+                    theta=[self.sigma_3b, self.theta, self.r_cut]), noise= self.noise)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0 
+            
+        else:
+            if ker == '2b':
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+            elif ker == '3b':
+                self.gp3 = GaussianProcess(kernel= kernels.ThreeBodyTwoSpeciesKernel(
+                    theta=[self.sigma_3b, self.theta, self.r_cut]), noise= noise)
+            else:
+                print('Kernel type not understood, shutting down')
+                return 0     
+        
+        
     def train_test_split(self, confs=[], forces=[], energies=[], ntr = 0, ntest = None):
+        ''' 
+        Function used to subsample a training and a test set.
+        
+        Args:
+            confs (array or list): List of the configurations as M*5 arrays
+            energies (array): Local atomic energies, one per configuration
+            forces (array): Forces acting on the central atoms of confs, one per configuration
+            ntr (int): number of training points
+            ntest (int): Number of test points, if None, every point that is not a training point will be used
+                as a test point
+        
+        '''
         ind = np.arange(len(confs))
         if ntest == None: # Use everything that is not training as test
             ind_tot = np.random.choice(ind, size=len(confs), replace=False)        
@@ -78,11 +155,23 @@ class Sampling(object):
         
         
     def initialize_gps(self, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
+        ''' 
+        Function used to initialize the Gaussian processes and set their parameters throughout the whole class
+        
+        Args:
+            sigma_2b (float): Lengthscale parameter of the 2-body kernels in Amstrongs
+            sigma_3b (float): Lengthscale parameter of the 3-body kernels in Amstrongs
+            sigma_mb (float): Lengthscale parameter of the many-body kernel in Amstrongs
+            noise (float): Regularization parameter of the Gaussian process
+            r_cut (float): Cutoff function for the Gaussian process
+            theta (float): Decay lengthscale of the cutoff function for the Gaussian process
+
+        '''
         self.sigma_2b, self.sigma_3b, self.sigma_mb, self.noise, self.r_cut, self.theta = (
             sigma_2b, sigma_3b, sigma_mb, noise, r_cut, theta)
-        self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[sigma_3b, theta, r_cut]), noise= noise)
-        self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(theta=[sigma_3b, theta, r_cut]), noise= noise)
-        
+        self.gp2 = self.get_the_right_kernel('2b')
+        self.gp3 = self.get_the_right_kernel('3b')
+
         
     def ker_2b(self, X1, X2):
         X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
@@ -96,7 +185,7 @@ class Sampling(object):
         return ker
 
     
-    def soap(self, X1, X2):
+    def normalized_3b(self, X1, X2):
         X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
         ker = self.gp3.kernel.k3_ee(X1, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         ker_11 = self.gp3.kernel.k3_ee(X1, X1, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
@@ -120,8 +209,8 @@ class Sampling(object):
             rvm = RVR(kernel = self.ker_3b)
         if ker == 'mb':
             rvm = RVR(kernel = self.ker_mb)
-        if ker == 'soap':
-            rvm = RVR(kernel = self.soap)
+        if ker == 'normalized_3b':
+            rvm = RVR(kernel = self.normalized_3b)
         t1 = time.time()
         reshaped_X, reshaped_x = np.reshape(self.X, (len(self.X), 5*(self.natoms-1))), np.reshape(self.x, (len(self.x), 5*(self.natoms-1)))
         rvm.fit(reshaped_X, self.Y)
@@ -132,16 +221,8 @@ class Sampling(object):
         return mean_squared_error(y_hat,self.y), y_hat, rvm.active_
 
     
-    def ivm_sampling(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):   # Check why it stops adding points
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+    def ivm_sampling_energy(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
+        m = self.get_the_right_model(ker)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
         randints = np.random.randint(0, ndata, 2)
@@ -155,7 +236,7 @@ class Sampling(object):
                 worst_thing = np.argmax(pred_var)  # L1 norm
             else:
                 worst_thing = np.argmax(abs(pred - self.Y[mask]))  # L1 norm
-            m.gp.fit_update_single_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
+            m.update_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
             mask[mask][worst_thing] = False
             if(max(pred_var) < threshold_error):
                 break
@@ -163,6 +244,28 @@ class Sampling(object):
         error = mean_squared_error(y_hat, self.y)
         return error, y_hat, [not i for i in mask]
 
+    def ivm_sampling_force(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
+        m = self.get_the_right_model(ker)
+        ndata = len(self.Y_force)
+        mask = np.ones(ndata).astype(bool)
+        randints = np.random.randint(0, ndata, 2)
+        m.fit(self.X[randints], self.Y_force[randints])
+        mask[randints] = False
+        worst_thing = 1.0
+        for i in np.arange(min(max_iter, ndata-2)):
+            pred = m.predict(self.X[mask])
+            pred, pred_var =  m.predict(self.X[mask], return_std = True)
+            if use_pred_error:
+                worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
+            else:
+                worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask]), axis = 1))  # L1 norm
+            m.update_force(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
+            mask[mask][worst_thing] = False
+            if(max(np.sum(np.abs(pred_var), axis = 1)) < threshold_error):
+                break
+        y_hat = m.predict(self.x)
+        error = mean_squared_error(y_hat, self.y_force)
+        return error, y_hat, [not i for i in mask]
     
     def grid_2b_sampling(self, nbins):
         stored_histogram = np.zeros(nbins)
@@ -219,15 +322,8 @@ class Sampling(object):
     
     
     def random_sampling(self, ker = '2b'):
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+        
+        m = self.get_the_right_model(ker)
         m.fit_energy(self.X, self.Y)
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
@@ -235,15 +331,8 @@ class Sampling(object):
 
 
     def test_gp_on_forces(self, index, ker = '2b'):
-        if ker == '2b':
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-        elif ker == '3b':
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        else:
-            print('Kernel type not understood, shutting down')
-            return 0
-
+        
+        m = self.get_the_right_model(ker)
         m.fit(self.X[index], self.Y_force[index])
         y_hat = m.predict(self.x)
         error = self.y_force - y_hat

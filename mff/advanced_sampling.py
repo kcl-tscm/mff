@@ -1,13 +1,7 @@
-import sys
-sys.path.append('..')
-
-import os
 import logging
 import numpy as np
 import time
 from pathlib import Path
-os.environ["MKL_THREADING_LAYER"] = "GNU"
-
 from mff.models import TwoBodySingleSpeciesModel,  CombinedSingleSpeciesModel
 from mff.models import TwoBodyTwoSpeciesModel,  CombinedTwoSpeciesModel
 from mff.gp import GaussianProcess 
@@ -20,7 +14,24 @@ logging.basicConfig(level=logging.ERROR)
 
 
 class Sampling(object):
-    """ Sampling class
+    """ Sampling methods class
+    Class containing sampling methods to optimize the trainng database selection.
+    The class is currently set in order to work with local atomic energies, 
+    and is therefore made to be used in confined systems (nanoclusters, molecules).
+    Some of the mothods used can be applied to force training too (ivm_sampling ), 
+    or are independent to the training outputs (grid_2b sampling and grid_3b_sampling).
+    These methods can be used on systems with PBCs where a local energy is not well defined.
+
+    Args:
+        confs (list of arrays): A kernel object (typically a two or three body)
+        noise (float): The regularising noise level (typically named \sigma_n^2)
+        optimizer (str): The kind of optimization of marginal likelihood (not implemented yet)
+
+    Attributes:
+        X_train_ (list): The configurations used for training
+        alpha_ (array): The coefficients obtained during training
+        L_ (array): The lower triangular matrix from cholesky decomposition of gram matrix
+        K (array): The kernel gram matrix
     """
 
     def __init__(self, confs=None, energies=None,
@@ -178,7 +189,7 @@ class Sampling(object):
         return mean_squared_error(y_hat,self.y), y_hat, rvm.active_
 
     
-    def ivm_sampling(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):   # Check why it stops adding points
+    def ivm_sampling_energy(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
         
         m = self.get_the_right_model(ker)
         ndata = len(self.Y)
@@ -202,6 +213,28 @@ class Sampling(object):
         error = mean_squared_error(y_hat, self.y)
         return error, y_hat, [not i for i in mask]
 
+    def ivm_sampling_force(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
+        m = self.get_the_right_model(ker)
+        ndata = len(self.Y_force)
+        mask = np.ones(ndata).astype(bool)
+        randints = np.random.randint(0, ndata, 2)
+        m.fit(self.X[randints], self.Y_force[randints])
+        mask[randints] = False
+        worst_thing = 1.0
+        for i in np.arange(min(max_iter, ndata-2)):
+            pred = m.predict(self.X[mask])
+            pred, pred_var =  m.predict(self.X[mask], return_std = True)
+            if use_pred_error:
+                worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
+            else:
+                worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask]), axis = 1))  # L1 norm
+            m.update(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
+            mask[mask][worst_thing] = False
+            if(max(pred_var) < threshold_error):
+                break
+        y_hat = m.predict(self.x)
+        error = mean_squared_error(y_hat, self.Y_force)
+        return error, y_hat, [not i for i in mask]
     
     def grid_2b_sampling(self, nbins):
         stored_histogram = np.zeros(nbins)

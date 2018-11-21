@@ -182,8 +182,13 @@ class GaussianProcess(object):
 
     def fit_update(self, X2_up, y2_up, nnodes = 1):  
         """
-        Update an existing force-force gram matrix with a list of new datapoints
+        Update an existing energy-energy gram matrix with a list of new datapoints
         
+        Args:
+            X2_up (list): training configurations
+            y2_up (np.ndarray): training forces
+            nnodes (int): number of CPU workers to use, default is 1
+
         """
         try:
             for i in np.arange(len(X2_up)):
@@ -416,6 +421,11 @@ class GaussianProcess(object):
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
+        Args:
+            X2_up (list): training configurations
+            y2_up (np.ndarray): training energies
+            nnodes (int): number of CPU workers to use, default is 1
+
         """
         try:
             for i in np.arange(len(X2_up)):

@@ -2,6 +2,11 @@ import logging
 import numpy as np
 import time
 from pathlib import Path
+import sys
+sys.path.insert(0, '../')
+sys.path.insert(0, '../../')
+sys.path.insert(0, '../../pymf/pymf/')
+from pymf import cur
 from mff.models import TwoBodySingleSpeciesModel,  CombinedSingleSpeciesModel
 from mff.models import TwoBodyTwoSpeciesModel,  CombinedTwoSpeciesModel
 from mff.gp import GaussianProcess 
@@ -30,7 +35,9 @@ class Sampling(object):
     Attributes:
         elements (list): List of the atomic number of the atoms present in the system
         natoms (int): Number of atoms in the system, used for nanoclusters
-        
+        K2 (array): Gram matrix for the energy-energy 2-body kernel using the full reduced dataset
+        K3 (array): Gram matrix for the energy-energy 3-body kernel using the full reduced dataset
+
     """
 
     def __init__(self, confs=None, energies=None,
@@ -43,6 +50,8 @@ class Sampling(object):
         atom_number_list = [confs[0,0,3] for conf in confs]
         self.elements = np.unique(atom_number_list, return_counts=False)
         self.natoms = natoms
+        self.K2 = None
+        self.K3 = None
         
         
     def clean_dataset(self, random = True):
@@ -114,9 +123,11 @@ class Sampling(object):
         if len(self.elements) == 1:
             if ker == '2b':
                 self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+                self.gp2.nnodes = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(
                     theta=[self.sigma_3b, self.theta, self.r_cut]), noise= self.noise)
+                self.gp3.nnodes = 1
             else:
                 print('Kernel type not understood, shutting down')
                 return 0 
@@ -124,9 +135,11 @@ class Sampling(object):
         else:
             if ker == '2b':
                 self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+                self.gp2.nnodes = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodyTwoSpeciesKernel(
                     theta=[self.sigma_3b, self.theta, self.r_cut]), noise= noise)
+                self.gp3.nnodes = 1
             else:
                 print('Kernel type not understood, shutting down')
                 return 0     
@@ -169,8 +182,8 @@ class Sampling(object):
         '''
         self.sigma_2b, self.sigma_3b, self.sigma_mb, self.noise, self.r_cut, self.theta = (
             sigma_2b, sigma_3b, sigma_mb, noise, r_cut, theta)
-        self.gp2 = self.get_the_right_kernel('2b')
-        self.gp3 = self.get_the_right_kernel('3b')
+        self.get_the_right_kernel('2b')
+        self.get_the_right_kernel('3b')
 
         
     def ker_2b(self, X1, X2):
@@ -217,34 +230,34 @@ class Sampling(object):
         t2 = time.time()
         y_hat,var     = rvm.predict_dist(reshaped_x)
         rvs       = np.sum(rvm.active_)
-        print("RVM %s error on test set is %.4f, number of relevant vectors is %i, time %.4f" %(ker, mean_squared_error(y_hat,self.y), rvs, t2 - t1)) 
-        return mean_squared_error(y_hat,self.y), y_hat, rvm.active_
+        return mean_squared_error(y_hat,self.y), y_hat, np.arange(len(self.X))[rvm.active_]
 
     
-    def ivm_sampling_energy(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
+    def ivm_sampling_energy(self, ker = '2b', max_iter = 1000, batchsize = 10000,  use_pred_error = True):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
         randints = np.random.randint(0, ndata, 2)
         m.fit_energy(self.X[randints], self.Y[randints])
         mask[randints] = False
-        worst_thing = 1.0
+        if batchsize > ndata:
+            batchsize = ndata
         for i in np.arange(min(max_iter, ndata-2)):
-            pred = m.predict(self.X[mask])
-            pred, pred_var =  m.predict_energy(self.X[mask], return_std = True)
+            rand_test = np.random.randint(ndata-i-2, size = batchsize)
             if use_pred_error:
+                pred, pred_var =  m.predict_energy(self.X[mask][rand_test], return_std = True)
                 worst_thing = np.argmax(pred_var)  # L1 norm
             else:
-                worst_thing = np.argmax(abs(pred - self.Y[mask]))  # L1 norm
+                pred = m.predict_energy(self.X[mask][rand_test])
+                worst_thing = np.argmax(abs(pred - self.Y[mask][rand_test]))  # L1 norm
             m.update_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
-            mask[mask][worst_thing] = False
-            if(max(pred_var) < threshold_error):
-                break
+            mask[mask][rand_test][worst_thing] = False
+
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        return error, y_hat, [not i for i in mask]
+        return error, y_hat, np.arange(len(self.X))[~mask]
 
-    def ivm_sampling_force(self, ker = '2b', threshold_error = 0.002, max_iter = 1000, use_pred_error = True):
+    def ivm_sampling_force(self, ker = '2b',  max_iter = 10000, use_pred_error = True):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y_force)
         mask = np.ones(ndata).astype(bool)
@@ -253,19 +266,18 @@ class Sampling(object):
         mask[randints] = False
         worst_thing = 1.0
         for i in np.arange(min(max_iter, ndata-2)):
-            pred = m.predict(self.X[mask])
-            pred, pred_var =  m.predict(self.X[mask], return_std = True)
             if use_pred_error:
+                pred, pred_var =  m.predict(self.X[mask], return_std = True)
                 worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
             else:
+                pred = m.predict(self.X[mask])
                 worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask]), axis = 1))  # L1 norm
             m.update_force(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
             mask[mask][worst_thing] = False
-            if(max(np.sum(np.abs(pred_var), axis = 1)) < threshold_error):
-                break
         y_hat = m.predict(self.x)
         error = mean_squared_error(y_hat, self.y_force)
-        return error, y_hat, [not i for i in mask]
+        return error, y_hat, np.arange(len(self.X))[~mask]
+    
     
     def grid_2b_sampling(self, nbins):
         stored_histogram = np.zeros(nbins)
@@ -319,19 +331,49 @@ class Sampling(object):
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
         return error, y_hat, np.sort(index)
+
     
-    
-    def random_sampling(self, ker = '2b'):
+    def cur_sampling(self, k = 100, ker = '2b'):
+        if ker == '2b':
+            gram = self.K2
+        elif ker == '3b':
+            gram = self.K3
+        if gram is None:
+            if ker == '2b':
+                gram = self.gp2.calc_gram_ee(self.X)
+            elif ker == '3b':
+                gram = self.gp3.calc_gram_ee(self.X)    
         
+        c = cur.CUR(gram,rrank=k, crank=k)
+        c.factorize()
+        index = []
+        for i in np.arange(len(self.X)):
+            for j in np.arange(k):
+                if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
+                    index.append(i)
+        index = list(set(index))
+        m = self.get_the_right_model(ker)
+        m.fit_energy(self.X[index], self.Y[index])
+        y_hat = m.predict_energy(self.x)
+        error = mean_squared_error(y_hat, self.y)
+        return error, y_hat, np.arange(len(self.X))[index]
+                    
+        
+    def full_sampling(self, ker = '2b'):
         m = self.get_the_right_model(ker)
         m.fit_energy(self.X, self.Y)
+        if ker == '2b':
+            self.K2 = m.gp.energy_K
+        elif ker == '3b':
+            self.K2 = m.gp_2b.energy_K
+            self.K3 = m.gp_3b.energy_K
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
         return error, y_hat, np.arange(len(self.X))
 
 
-    def test_gp_on_forces(self, index, ker = '2b'):
-        
+    def test_gp_on_forces(self, index, ker = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):
+        self.sigma_2b, self.sigma_3b, self.noise = sig_2b, sig_3b, noise
         m = self.get_the_right_model(ker)
         m.fit(self.X[index], self.Y_force[index])
         y_hat = m.predict(self.x)

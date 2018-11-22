@@ -334,6 +334,7 @@ class Sampling(object):
 
     
     def cur_sampling(self, k = 100, ker = '2b'):
+        k = k//2 + 1
         if ker == '2b':
             gram = self.K2
         elif ker == '3b':

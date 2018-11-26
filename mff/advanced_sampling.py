@@ -96,8 +96,9 @@ class Sampling(object):
             reduced_forces[i] = forces[i*natoms+rand]
         
         self.reduced_energies = reduced_energies
-        self.reduced_confs = reduced_confs
         self.reduced_forces = reduced_forces
+        self.reduced_confs = reduced_confs
+        del confs, energies, forces, natoms, reduced_confs, reduced_forces, reduced_energies
         
         
     def get_the_right_model(self, ker):
@@ -167,6 +168,7 @@ class Sampling(object):
             ind_tot = np.random.choice(ind, size=ntr+ntest, replace=False)
         self.X, self.Y, self.Y_force = confs[ind_tot[:ntr]], energies[ind_tot[:ntr]], forces[ind_tot[:ntr]]
         self.x, self.y, self.y_force = confs[ind_tot[ntr:]], energies[ind_tot[ntr:]], forces[ind_tot[ntr:]]
+        del ind_tot, ind, confs, energies, forces
         
         
     def initialize_gps(self, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
@@ -191,12 +193,14 @@ class Sampling(object):
     def ker_2b(self, X1, X2):
         X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
         ker = self.gp2.kernel.k2_ee(X1, X2, sig=self.sigma_2b, rc=self.r_cut, theta=self.theta)
+        del X1, X2
         return ker
 
     
     def ker_3b(self, X1, X2):
         X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
         ker = self.gp3.kernel.k3_ee(X1, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
+        del X1, X2
         return ker
 
     
@@ -205,7 +209,9 @@ class Sampling(object):
         ker = self.gp3.kernel.k3_ee(X1, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         ker_11 = self.gp3.kernel.k3_ee(X1, X1, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         ker_22 = self.gp3.kernel.k3_ee(X2, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
-        return np.square(ker/np.sqrt(ker_11*ker_22))
+        ker2 = np.square(ker/np.sqrt(ker_11*ker_22))
+        del ker_11, ker_22, X1, X2, ker
+        return ker2
 
     
     def ker_mb(self, X1, X2):
@@ -214,6 +220,7 @@ class Sampling(object):
         outer = X1[:,None,:] - X2[None, :,:]
         ker = np.exp(-(np.sum(np.square(outer)/(2.0*self.sigma_mb**2), axis = 2)))
         ker = np.einsum('ij -> ', ker)
+        del outer, X1, X2
         return ker       
       
         
@@ -231,8 +238,10 @@ class Sampling(object):
         rvm.fit(reshaped_X, self.Y)
         t2 = time.time()
         y_hat,var     = rvm.predict_dist(reshaped_x)
-        rvs       = np.sum(rvm.active_)
-        return mean_squared_error(y_hat,self.y), y_hat, np.arange(len(self.X))[rvm.active_]
+        index = np.arange(len(self.X))[rvm.active_]
+        error = mean_squared_error(y_hat,self.y)
+        del var, rvm
+        return error, y_hat, index
 
     
     def ivm_sampling_energy(self, ker = '2b', max_iter = 1000, batchsize = 10000,  use_pred_error = True):
@@ -257,7 +266,9 @@ class Sampling(object):
 
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        return error, y_hat, np.arange(len(self.X))[~mask]
+        index = np.arange(len(self.X))[~mask]
+        del mask, worst_thing, pred, rand_test, m, ndata, randints
+        return error, y_hat, index
 
     def ivm_sampling_force(self, ker = '2b',  max_iter = 10000, batchsize = 10000, use_pred_error = True):
         m = self.get_the_right_model(ker)
@@ -281,7 +292,9 @@ class Sampling(object):
 
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        return error, y_hat, np.arange(len(self.X))[~mask]
+        index_return = np.arange(len(self.X))[~mask]
+        del mask, worst_thing, pred, rand_test, m, ndata, randints
+        return error, y_hat, index_return
     
     
     def grid_2b_sampling(self, nbins):
@@ -301,6 +314,7 @@ class Sampling(object):
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
+        del m, distances, this_snapshot_histogram, randomarange, stored_histogram, 
         return error, y_hat, np.sort(index)
     
     
@@ -335,6 +349,7 @@ class Sampling(object):
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
+        del m, stored_histogram, triplets, this_snapshot_histogram, distances, atoms, randomarange, ind
         return error, y_hat, np.sort(index)
 
     
@@ -362,7 +377,9 @@ class Sampling(object):
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        return error, y_hat, np.arange(len(self.X))[index]
+        index_return = np.arange(len(self.X))[index]
+        del m, index, c, gram, k
+        return error, y_hat, index_return
                     
         
     def full_sampling(self, ker = '2b'):
@@ -375,7 +392,9 @@ class Sampling(object):
             self.K3 = m.gp_3b.energy_K
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        return error, y_hat, np.arange(len(self.X))
+        index = np.arange(len(self.X))
+        del m
+        return error, y_hat, index
 
 
     def test_gp_on_forces(self, index, ker = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):
@@ -388,6 +407,7 @@ class Sampling(object):
         SMAEF = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
         RMSE = np.sqrt(np.mean((error) ** 2))   
         print("MAEF: %.4f SMAEF: %.4f RMSE: %.4f" %(MAEF, SMAEF, RMSE))
+        del m, error, y_hat
         return MAEF, SMAEF, RMSE
     
     

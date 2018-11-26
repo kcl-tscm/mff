@@ -14,6 +14,8 @@ from mff import kernels
 from skbayes.rvm_ard_models import RVR
 from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import cdist
+import random
+
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -237,13 +239,13 @@ class Sampling(object):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
-        randints = np.random.randint(0, ndata, 2)
+        randints = random.sample(range(ndata), 2)
         m.fit_energy(self.X[randints], self.Y[randints])
         mask[randints] = False
-        if batchsize > ndata:
-            batchsize = ndata
         for i in np.arange(min(max_iter, ndata-2)):
-            rand_test = np.random.randint(ndata-i-2, size = batchsize)
+            if batchsize > ndata-i-2:
+                batchsize = ndata-i-2
+            rand_test = random.sample(range(ndata-2-i), batchsize)
             if use_pred_error:
                 pred, pred_var =  m.predict_energy(self.X[mask][rand_test], return_std = True)
                 worst_thing = np.argmax(pred_var)  # L1 norm
@@ -251,31 +253,34 @@ class Sampling(object):
                 pred = m.predict_energy(self.X[mask][rand_test])
                 worst_thing = np.argmax(abs(pred - self.Y[mask][rand_test]))  # L1 norm
             m.update_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
-            mask[mask][rand_test][worst_thing] = False
+            mask[rand_test[worst_thing]] = False
 
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
         return error, y_hat, np.arange(len(self.X))[~mask]
 
-    def ivm_sampling_force(self, ker = '2b',  max_iter = 10000, use_pred_error = True):
+    def ivm_sampling_force(self, ker = '2b',  max_iter = 10000, batchsize = 10000, use_pred_error = True):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y_force)
         mask = np.ones(ndata).astype(bool)
-        randints = np.random.randint(0, ndata, 2)
+        randints = random.sample(range(ndata), 2)
         m.fit(self.X[randints], self.Y_force[randints])
         mask[randints] = False
-        worst_thing = 1.0
         for i in np.arange(min(max_iter, ndata-2)):
+            if batchsize > ndata-i-2:
+                batchsize = ndata-i-2
+            rand_test = random.sample(range(ndata-2-i), batchsize)
             if use_pred_error:
-                pred, pred_var =  m.predict(self.X[mask], return_std = True)
+                pred, pred_var =  m.predict(self.X[mask][rand_test], return_std = True)
                 worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
             else:
-                pred = m.predict(self.X[mask])
-                worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask]), axis = 1))  # L1 norm
+                pred = m.predict(self.X[mask][rand_test])
+                worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask][rand_test]), axis =1))  # L1 norm
             m.update_force(self.X[mask][worst_thing], self.Y_force[mask][worst_thing])
-            mask[mask][worst_thing] = False
-        y_hat = m.predict(self.x)
-        error = mean_squared_error(y_hat, self.y_force)
+            mask[rand_test[worst_thing]] = False
+
+        y_hat = m.predict_energy(self.x)
+        error = mean_squared_error(y_hat, self.y)
         return error, y_hat, np.arange(len(self.X))[~mask]
     
     

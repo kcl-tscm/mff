@@ -150,7 +150,7 @@ class GaussianProcess(object):
         Update an existing force-force gram matrix with a single new datapoint 
         
         """
-        if len(np.shape(y2_up)) > 1:
+        if len(np.shape(y2_up)) > 2:
             logger.error(" Use the fit_update function for more than one input, quitting now")
             return
             

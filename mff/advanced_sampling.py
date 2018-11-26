@@ -49,7 +49,7 @@ class Sampling(object):
         self.energies = energies
         self.forces = forces
         natoms = len(confs[0]) + 1
-        atom_number_list = [confs[0,0,3] for conf in confs]
+        atom_number_list = [conf[0,3] for conf in confs]
         self.elements = np.unique(atom_number_list, return_counts=False)
         self.natoms = natoms
         self.K2 = None

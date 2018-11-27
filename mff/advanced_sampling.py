@@ -125,7 +125,8 @@ class Sampling(object):
     def get_the_right_kernel(self, ker):
         if len(self.elements) == 1:
             if ker == '2b':
-                self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(
+                    theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
                 self.gp2.nnodes = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(
@@ -137,7 +138,8 @@ class Sampling(object):
             
         else:
             if ker == '2b':
-                self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
+                self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(
+                    theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
                 self.gp2.nnodes = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodyTwoSpeciesKernel(
@@ -148,7 +150,7 @@ class Sampling(object):
                 return 0     
         
         
-    def train_test_split(self, confs=[], forces=[], energies=[], ntr = 0, ntest = None):
+    def train_test_split(self, confs=[], forces=[], energies=[], ntr = 0, ntest = 10):
         ''' 
         Function used to subsample a training and a test set.
         
@@ -162,13 +164,12 @@ class Sampling(object):
         
         '''
         ind = np.arange(len(confs))
-        if ntest == None: # Use everything that is not training as test
-            ind_tot = np.random.choice(ind, size=len(confs), replace=False)        
-        else:
-            ind_tot = np.random.choice(ind, size=ntr+ntest, replace=False)
-        self.X, self.Y, self.Y_force = confs[ind_tot[:ntr]], energies[ind_tot[:ntr]], forces[ind_tot[:ntr]]
-        self.x, self.y, self.y_force = confs[ind_tot[ntr:]], energies[ind_tot[ntr:]], forces[ind_tot[ntr:]]
-        del ind_tot, ind, confs, energies, forces
+        ind_test = np.random.choice(ind, size=ntest, replace=False)
+        ind_train = list(set(ind) - set(ind_test))
+        self.X, self.Y, self.Y_force = confs[ind_train], energies[ind_train], forces[ind_train]
+        self.x, self.y, self.y_force = confs[ind_test], energies[ind_test], forces[ind_test]
+        del ind, ind_test, ind_train, confs, energies, forces
+        del self.reduced_energies, self.reduced_confs, self.reduced_forces
         
         
     def initialize_gps(self, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
@@ -224,7 +225,7 @@ class Sampling(object):
         return ker       
       
         
-    def rvm_sampling(self, ker = '2b'):
+    def rvm_sampling(self, batchsize = 1000, ker = '2b'):
         if ker == '2b':
             rvm = RVR(kernel = self.ker_2b)
         if ker == '3b':
@@ -233,25 +234,29 @@ class Sampling(object):
             rvm = RVR(kernel = self.ker_mb)
         if ker == 'normalized_3b':
             rvm = RVR(kernel = self.normalized_3b)
-        t1 = time.time()
+            
+        split = len(self.X)//batchsize + 1    # Decide the number of batches
+        batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
         reshaped_X, reshaped_x = np.reshape(self.X, (len(self.X), 5*(self.natoms-1))), np.reshape(self.x, (len(self.x), 5*(self.natoms-1)))
-        rvm.fit(reshaped_X, self.Y)
-        t2 = time.time()
+        index = []
+        for s in np.arange(len(batches)):
+            batch_index = list(set(index).union(batches[s]))
+            rvm.fit(reshaped_X[batch_index], self.Y[batch_index])
+            index = np.asarray(batch_index)[rvm.active_]
         y_hat,var     = rvm.predict_dist(reshaped_x)
-        index = np.arange(len(self.X))[rvm.active_]
         error = mean_squared_error(y_hat,self.y)
-        del var, rvm
+        del var, rvm, split, batches, batch_index, reshaped_X, reshaped_x
         return error, y_hat, index
 
     
-    def ivm_sampling_energy(self, ker = '2b', max_iter = 1000, batchsize = 10000,  use_pred_error = True):
+    def ivm_sampling_energy(self, ker = '2b', ntrain = 500, batchsize = 1000,  use_pred_error = True):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
         randints = random.sample(range(ndata), 2)
         m.fit_energy(self.X[randints], self.Y[randints])
         mask[randints] = False
-        for i in np.arange(min(max_iter, ndata-2)):
+        for i in np.arange(min(ntrain, ndata-2)):
             if batchsize > ndata-i-2:
                 batchsize = ndata-i-2
             rand_test = random.sample(range(ndata-2-i), batchsize)
@@ -270,20 +275,21 @@ class Sampling(object):
         del mask, worst_thing, pred, rand_test, m, ndata, randints
         return error, y_hat, index
 
-    def ivm_sampling_force(self, ker = '2b',  max_iter = 10000, batchsize = 10000, use_pred_error = True):
+    def ivm_sampling_force(self, ker = '2b',  ntrain = 500, batchsize = 1000, use_pred_error = True):
         m = self.get_the_right_model(ker)
         ndata = len(self.Y_force)
         mask = np.ones(ndata).astype(bool)
         randints = random.sample(range(ndata), 2)
         m.fit(self.X[randints], self.Y_force[randints])
         mask[randints] = False
-        for i in np.arange(min(max_iter, ndata-2)):
+        for i in np.arange(min(ntrain, ndata-2)):
             if batchsize > ndata-i-2:
                 batchsize = ndata-i-2
             rand_test = random.sample(range(ndata-2-i), batchsize)
             if use_pred_error:
                 pred, pred_var =  m.predict(self.X[mask][rand_test], return_std = True)
-                worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  # L1 norm
+                worst_thing = np.argmax(np.sum(np.abs(pred_var), axis = 1))  
+                # L1 norm
             else:
                 pred = m.predict(self.X[mask][rand_test])
                 worst_thing = np.argmax(np.sum(abs(pred - self.Y_force[mask][rand_test]), axis =1))  # L1 norm
@@ -297,7 +303,7 @@ class Sampling(object):
         return error, y_hat, index_return
     
     
-    def grid_2b_sampling(self, nbins):
+    def grid_2b_sampling(self, nbins = 100):
         stored_histogram = np.zeros(nbins)
         index = []
         ind = np.arange(len(self.X))
@@ -318,7 +324,7 @@ class Sampling(object):
         return error, y_hat, np.sort(index)
     
     
-    def grid_3b_sampling(self, nbins):
+    def grid_3b_sampling(self, nbins = 20):
         stored_histogram = np.zeros((nbins, nbins, nbins))
         index = []
         ind = np.arange(len(self.X))
@@ -353,48 +359,48 @@ class Sampling(object):
         return error, y_hat, np.sort(index)
 
     
-    def cur_sampling(self, k = 100, ker = '2b'):
-        k = k//2 + 1
-        if ker == '2b':
-            gram = self.K2
-        elif ker == '3b':
-            gram = self.K3
-        if gram is None:
-            if ker == '2b':
-                gram = self.gp2.calc_gram_ee(self.X)
-            elif ker == '3b':
-                gram = self.gp3.calc_gram_ee(self.X)    
-        
-        c = cur.CUR(gram,rrank=k, crank=k)
-        c.factorize()
+    def cur_sampling(self, ntrain = 1000, batchsize = 500, ker = '2b'):
+        ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
+        split = len(self.X)//batchsize + 1    # Decide the number of batches
+        batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
         index = []
-        for i in np.arange(len(self.X)):
-            for j in np.arange(k):
-                if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
-                    index.append(i)
-        index = list(set(index))
+        for s in np.arange(split):
+            batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
+            complete_batch = self.X[batch_index]
+            if ker == '2b':
+                gram = self.gp2.calc_gram_ee(complete_batch)
+            elif ker == '3b':
+                gram = self.gp3.calc_gram_ee(complete_batch)   
+                
+            c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
+            c.factorize()
+            index = []
+            for i in np.arange(len(batch_index)):    # For all points in the batch
+                for j in np.arange(ntrain):        # For all points in the decomposition
+                    if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
+                        index.append(batch_index[i])
+            index = list(set(index))
+        
         m = self.get_the_right_model(ker)
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
         index_return = np.arange(len(self.X))[index]
-        del m, index, c, gram, k
+        del m, index, c, gram, ntrain, complete_batch, batch_index
         return error, y_hat, index_return
                     
         
-    def full_sampling(self, ker = '2b'):
+    def full_sampling(self, ntrain = 500, ker = '2b'):
+        ind = np.arange(len(self.X))
+        ind_train = np.random.choice(ind, size=ntrain, replace=False)
+        train_confs = self.X[ind_train]
+        train_energy = self.Y[ind_train]
         m = self.get_the_right_model(ker)
-        m.fit_energy(self.X, self.Y)
-        if ker == '2b':
-            self.K2 = m.gp.energy_K
-        elif ker == '3b':
-            self.K2 = m.gp_2b.energy_K
-            self.K3 = m.gp_3b.energy_K
+        m.fit_energy(train_confs, train_energy)
         y_hat = m.predict_energy(self.x)
         error = mean_squared_error(y_hat, self.y)
-        index = np.arange(len(self.X))
-        del m
-        return error, y_hat, index
+        del m, train_confs, train_energy
+        return error, y_hat, ind_train
 
 
     def test_gp_on_forces(self, index, ker = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):

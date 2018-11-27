@@ -28,12 +28,19 @@ class Sampling(object):
     Some of the mothods used can be applied to force training too (ivm_sampling ), 
     or are independent to the training outputs (grid_2b sampling and grid_3b_sampling).
     These methods can be used on systems with PBCs where a local energy is not well defined.
+    The class also initializes two GP objects to use in some of its methods.
 
     Args:
         confs (list of arrays): List of the configurations as M*5 arrays
         energies (array): Local atomic energies, one per configuration
         forces (array): Forces acting on the central atoms of confs, one per configuration
-
+        sigma_2b (float): Lengthscale parameter of the 2-body kernels in Amstrongs
+        sigma_3b (float): Lengthscale parameter of the 3-body kernels in Amstrongs
+        sigma_mb (float): Lengthscale parameter of the many-body kernel in Amstrongs
+        noise (float): Regularization parameter of the Gaussian process
+        r_cut (float): Cutoff function for the Gaussian process
+        theta (float): Decay lengthscale of the cutoff function for the Gaussian process
+            
     Attributes:
         elements (list): List of the atomic number of the atoms present in the system
         natoms (int): Number of atoms in the system, used for nanoclusters
@@ -43,7 +50,7 @@ class Sampling(object):
     """
 
     def __init__(self, confs=None, energies=None,
-                 forces=None):
+                 forces=None, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
         
         self.confs = confs
         self.energies = energies
@@ -54,9 +61,13 @@ class Sampling(object):
         self.natoms = natoms
         self.K2 = None
         self.K3 = None
+        self.sigma_2b, self.sigma_3b, self.sigma_mb, self.noise, self.r_cut, self.theta = (
+            sigma_2b, sigma_3b, sigma_mb, noise, r_cut, theta)
+        self.get_the_right_kernel('2b')
+        self.get_the_right_kernel('3b')
         
         
-    def clean_dataset(self, random = True):
+    def clean_dataset(self, randomized = True, shuffling = True):
         ''' 
         Function used to subsample from a complete trajectory only one atomic environment
         per snapshot. This is necessary when training on energies of nanoclusters in order to assign
@@ -64,9 +75,11 @@ class Sampling(object):
         in the form of local atomic environments centered around different atoms in the same snapshot.
         
         Args:
-            random (bool): If true, an atom at random is chosen every snapshot, if false always the first
-            atom in the configurations will be chosen to represent said snapshot
-        
+            randomized (bool): If True, an atom at random is chosen every snapshot, if false always the first
+                atom in the configurations will be chosen to represent said snapshot.
+            shuffling (bool): if True, once the dataset is created, it is shuffled randomly in order to 
+                avoid any bias during incremental training set optimization methods (e.g. rvm, cur, ivm).
+                
         '''
         confs, energies, forces = self.confs, self.energies, self.forces
         natoms = self.natoms
@@ -87,7 +100,7 @@ class Sampling(object):
         reduced_confs = np.zeros((len(confs)//natoms, natoms-1, 5))
         reduced_forces = np.zeros((len(confs)//natoms, 3))
         for i in np.arange(len(confs)//natoms):
-            if random:
+            if randomized:
                 rand = np.random.randint(0, natoms, 1)
             else:
                 rand = 0
@@ -95,10 +108,16 @@ class Sampling(object):
             reduced_confs[i] = confs[i*natoms+rand]
             reduced_forces[i] = forces[i*natoms+rand]
         
+        if shuffling:
+            shuffled_order = np.arange(len(reduced_energies))
+            random.shuffle(shuffled_order)
+            reduced_energies, reduced_forces, reduced_confs = (
+                reduced_energies[shuffled_order], reduced_forces[shuffled_order], reduced_confs[shuffled_order])
+        
         self.reduced_energies = reduced_energies
         self.reduced_forces = reduced_forces
         self.reduced_confs = reduced_confs
-        del confs, energies, forces, natoms, reduced_confs, reduced_forces, reduced_energies
+        del confs, energies, forces, natoms, reduced_confs, reduced_forces, reduced_energies, shuffled_order
         
         
     def get_the_right_model(self, ker):
@@ -171,26 +190,7 @@ class Sampling(object):
         del ind, ind_test, ind_train, confs, energies, forces
         del self.reduced_energies, self.reduced_confs, self.reduced_forces
         
-        
-    def initialize_gps(self, sigma_2b = 0.05, sigma_3b = 0.1, sigma_mb = 0.2, noise = 0.001, r_cut = 8.5, theta = 0.5):
-        ''' 
-        Function used to initialize the Gaussian processes and set their parameters throughout the whole class
-        
-        Args:
-            sigma_2b (float): Lengthscale parameter of the 2-body kernels in Amstrongs
-            sigma_3b (float): Lengthscale parameter of the 3-body kernels in Amstrongs
-            sigma_mb (float): Lengthscale parameter of the many-body kernel in Amstrongs
-            noise (float): Regularization parameter of the Gaussian process
-            r_cut (float): Cutoff function for the Gaussian process
-            theta (float): Decay lengthscale of the cutoff function for the Gaussian process
 
-        '''
-        self.sigma_2b, self.sigma_3b, self.sigma_mb, self.noise, self.r_cut, self.theta = (
-            sigma_2b, sigma_3b, sigma_mb, noise, r_cut, theta)
-        self.get_the_right_kernel('2b')
-        self.get_the_right_kernel('3b')
-
-        
     def ker_2b(self, X1, X2):
         X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
         ker = self.gp2.kernel.k2_ee(X1, X2, sig=self.sigma_2b, rc=self.r_cut, theta=self.theta)
@@ -225,14 +225,15 @@ class Sampling(object):
         return ker       
       
         
-    def rvm_sampling(self, batchsize = 1000, ker = '2b'):
-        if ker == '2b':
+    def rvm(self, method = '2b',  batchsize = 1000):
+        t0 = time.time()
+        if method == '2b':
             rvm = RVR(kernel = self.ker_2b)
-        if ker == '3b':
+        if method == '3b':
             rvm = RVR(kernel = self.ker_3b)
-        if ker == 'mb':
+        if method == 'mb':
             rvm = RVR(kernel = self.ker_mb)
-        if ker == 'normalized_3b':
+        if method == 'normalized_3b':
             rvm = RVR(kernel = self.normalized_3b)
             
         split = len(self.X)//batchsize + 1    # Decide the number of batches
@@ -244,19 +245,24 @@ class Sampling(object):
             rvm.fit(reshaped_X[batch_index], self.Y[batch_index])
             index = np.asarray(batch_index)[rvm.active_]
         y_hat,var     = rvm.predict_dist(reshaped_x)
-        error = mean_squared_error(y_hat,self.y)
-        del var, rvm, split, batches, batch_index, reshaped_X, reshaped_x
-        return error, y_hat, index
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2))  
+        del var, rvm, split, batches, batch_index, reshaped_X, reshaped_x, y_hat, error
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index), tf-t0
 
     
-    def ivm_sampling_energy(self, ker = '2b', ntrain = 500, batchsize = 1000,  use_pred_error = True):
-        m = self.get_the_right_model(ker)
+    def ivm_e(self, method = '2b', ntrain = 500, batchsize = 1000,  use_pred_error = True):
+        t0 = time.time()
+        m = self.get_the_right_model(method)
         ndata = len(self.Y)
         mask = np.ones(ndata).astype(bool)
         randints = random.sample(range(ndata), 2)
         m.fit_energy(self.X[randints], self.Y[randints])
         mask[randints] = False
-        for i in np.arange(min(ntrain, ndata-2)):
+        for i in np.arange(min(ntrain-2, ndata-2)):
             if batchsize > ndata-i-2:
                 batchsize = ndata-i-2
             rand_test = random.sample(range(ndata-2-i), batchsize)
@@ -270,19 +276,24 @@ class Sampling(object):
             mask[rand_test[worst_thing]] = False
 
         y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2)) 
         index = np.arange(len(self.X))[~mask]
-        del mask, worst_thing, pred, rand_test, m, ndata, randints
-        return error, y_hat, index
+        del mask, worst_thing, pred, rand_test, m, ndata, randints, y_hat
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index), tf-t0
 
-    def ivm_sampling_force(self, ker = '2b',  ntrain = 500, batchsize = 1000, use_pred_error = True):
-        m = self.get_the_right_model(ker)
+    def ivm_f(self, method = '2b',  ntrain = 500, batchsize = 1000, use_pred_error = True):
+        t0 = time.time()
+        m = self.get_the_right_model(method)
         ndata = len(self.Y_force)
         mask = np.ones(ndata).astype(bool)
         randints = random.sample(range(ndata), 2)
         m.fit(self.X[randints], self.Y_force[randints])
         mask[randints] = False
-        for i in np.arange(min(ntrain, ndata-2)):
+        for i in np.arange(min(ntrain-2, ndata-2)):
             if batchsize > ndata-i-2:
                 batchsize = ndata-i-2
             rand_test = random.sample(range(ndata-2-i), batchsize)
@@ -297,69 +308,77 @@ class Sampling(object):
             mask[rand_test[worst_thing]] = False
 
         y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2))  
         index_return = np.arange(len(self.X))[~mask]
-        del mask, worst_thing, pred, rand_test, m, ndata, randints
-        return error, y_hat, index_return
+        del mask, worst_thing, pred, rand_test, m, ndata, randints, error
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index_return), tf-t0
     
     
-    def grid_2b_sampling(self, nbins = 100):
-        stored_histogram = np.zeros(nbins)
-        index = []
-        ind = np.arange(len(self.X))
-        randomarange = np.random.choice(ind, size=len(self.X), replace=False)
-        for j in randomarange: # for every snapshot of the trajectory file
-            distances = np.sqrt(np.einsum('id -> d', np.square(self.X[j,:,:3])))
-            distances[np.where(distances > self.r_cut)] = None
-            this_snapshot_histogram = np.histogram(distances, nbins, (0.0, self.r_cut))
-            if (stored_histogram - this_snapshot_histogram[0] < 0).any():
-                index.append(j)
-                stored_histogram += this_snapshot_histogram[0]
-                
-        m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+    def grid(self, method = '2b', nbins = 100):
+        t0 = time.time()
+        if method == '2b':
+            stored_histogram = np.zeros(nbins)
+            index = []
+            ind = np.arange(len(self.X))
+            randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+            for j in randomarange: # for every snapshot of the trajectory file
+                distances = np.sqrt(np.einsum('id -> d', np.square(self.X[j,:,:3])))
+                distances[np.where(distances > self.r_cut)] = None
+                this_snapshot_histogram = np.histogram(distances, nbins, (0.0, self.r_cut))
+                if (stored_histogram - this_snapshot_histogram[0] < 0).any():
+                    index.append(j)
+                    stored_histogram += this_snapshot_histogram[0]
+
+            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+        elif method == '3b':
+            stored_histogram = np.zeros((nbins, nbins, nbins))
+            index = []
+            ind = np.arange(len(self.X))
+            randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+            for j in randomarange: # for every snapshot of the trajectory file
+                atoms = np.vstack(([0., 0., 0.], self.X[j][:,:3]))
+                distances  = cdist(atoms, atoms)
+                distances[np.where(distances > self.r_cut)] = None
+                distances[np.where(distances == 0 )] = None
+                triplets = []
+                for k in np.argwhere(distances[:,0] > 0 ):
+                    for l in np.argwhere(distances[0,:] > 0 ):
+                        if distances[k,l] > 0 :
+                            triplets.append([distances[0, k], distances[0, l], distances[k, l]])
+                            triplets.append([distances[0, l], distances[k, l], distances[0, k]])
+                            triplets.append([distances[k, l], distances[0, k], distances[0, l]])
+
+                triplets = np.reshape(triplets, (len(triplets), 3)) 
+                this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
+                                                         range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
+
+                if (stored_histogram - this_snapshot_histogram[0] < 0).any():
+                    index.append(j)
+                    stored_histogram += this_snapshot_histogram[0]
+
+            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+        else:
+            print('Method must be either 2b or 3b')
+            return 0
+        
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
-        del m, distances, this_snapshot_histogram, randomarange, stored_histogram, 
-        return error, y_hat, np.sort(index)
-    
-    
-    def grid_3b_sampling(self, nbins = 20):
-        stored_histogram = np.zeros((nbins, nbins, nbins))
-        index = []
-        ind = np.arange(len(self.X))
-        randomarange = np.random.choice(ind, size=len(self.X), replace=False)
-        for j in randomarange: # for every snapshot of the trajectory file
-            atoms = np.vstack(([0., 0., 0.], self.X[j][:,:3]))
-            distances  = cdist(atoms, atoms)
-            distances[np.where(distances > self.r_cut)] = None
-            distances[np.where(distances == 0 )] = None
-            triplets = []
-            for k in np.argwhere(distances[:,0] > 0 ):
-                for l in np.argwhere(distances[0,:] > 0 ):
-                    if distances[k,l] > 0 :
-                        triplets.append([distances[0, k], distances[0, l], distances[k, l]])
-                        triplets.append([distances[0, l], distances[k, l], distances[0, k]])
-                        triplets.append([distances[k, l], distances[0, k], distances[0, l]])
-                        
-            triplets = np.reshape(triplets, (len(triplets), 3)) 
-            this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
-                                                     range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
-            
-            if (stored_histogram - this_snapshot_histogram[0] < 0).any():
-                index.append(j)
-                stored_histogram += this_snapshot_histogram[0]
-                
-        m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                               , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
-        m.fit_energy(self.X[index], self.Y[index])
-        y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
-        del m, stored_histogram, triplets, this_snapshot_histogram, distances, atoms, randomarange, ind
-        return error, y_hat, np.sort(index)
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2))   
+        del m, distances, this_snapshot_histogram, randomarange, stored_histogram, y_hat, error
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index), tf-t0
 
     
-    def cur_sampling(self, ntrain = 1000, batchsize = 500, ker = '2b'):
+    def cur(self, method = '2b', ntrain = 1000, batchsize = 500):
+        t0 = time.time()
         ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
         split = len(self.X)//batchsize + 1    # Decide the number of batches
         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
@@ -367,11 +386,13 @@ class Sampling(object):
         for s in np.arange(split):
             batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
             complete_batch = self.X[batch_index]
-            if ker == '2b':
+            if method == '2b':
                 gram = self.gp2.calc_gram_ee(complete_batch)
-            elif ker == '3b':
+            elif method == '3b':
                 gram = self.gp3.calc_gram_ee(complete_batch)   
-                
+            else:
+                print('Method must be either 2b or 3b')
+                return 0
             c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
             c.factorize()
             index = []
@@ -381,31 +402,40 @@ class Sampling(object):
                         index.append(batch_index[i])
             index = list(set(index))
         
-        m = self.get_the_right_model(ker)
+        m = self.get_the_right_model(method)
         m.fit_energy(self.X[index], self.Y[index])
         y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2)) 
         index_return = np.arange(len(self.X))[index]
-        del m, index, c, gram, ntrain, complete_batch, batch_index
-        return error, y_hat, index_return
+        del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index_return), tf-t0
                     
         
-    def full_sampling(self, ntrain = 500, ker = '2b'):
+    def random(self, method = '2b', ntrain = 500):
+        t0 = time.time()
         ind = np.arange(len(self.X))
         ind_train = np.random.choice(ind, size=ntrain, replace=False)
         train_confs = self.X[ind_train]
         train_energy = self.Y[ind_train]
-        m = self.get_the_right_model(ker)
+        m = self.get_the_right_model(method)
         m.fit_energy(train_confs, train_energy)
         y_hat = m.predict_energy(self.x)
-        error = mean_squared_error(y_hat, self.y)
-        del m, train_confs, train_energy
-        return error, y_hat, ind_train
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2)) 
+        del m, train_confs, train_energy, error, y_hat
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(ind_train), tf-t0
+    
 
-
-    def test_gp_on_forces(self, index, ker = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):
+    def test_forces(self, index, method = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):
         self.sigma_2b, self.sigma_3b, self.noise = sig_2b, sig_3b, noise
-        m = self.get_the_right_model(ker)
+        m = self.get_the_right_model(method)
         m.fit(self.X[index], self.Y_force[index])
         y_hat = m.predict(self.x)
         error = self.y_force - y_hat
@@ -413,7 +443,7 @@ class Sampling(object):
         SMAEF = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
         RMSE = np.sqrt(np.mean((error) ** 2))   
         print("MAEF: %.4f SMAEF: %.4f RMSE: %.4f" %(MAEF, SMAEF, RMSE))
-        del m, error, y_hat
+        del m, error, y_hat, index
         return MAEF, SMAEF, RMSE
     
     

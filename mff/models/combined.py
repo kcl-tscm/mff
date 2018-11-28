@@ -71,9 +71,7 @@ class CombinedSingleSpeciesModel(Model):
         self.gp_2b.fit(confs, forces, nnodes)
 
         ntr = len(confs)
-        two_body_forces = np.zeros((ntr, 3))
-        for i in np.arange(ntr):
-            two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
+        two_body_forces = self.gp_2b.predict(confs)
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
@@ -95,9 +93,7 @@ class CombinedSingleSpeciesModel(Model):
         self.gp_2b.fit_energy(confs, energies, nnodes)
 
         ntr = len(confs)
-        two_body_energies = np.zeros(ntr)
-        for i in np.arange(ntr):
-            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
+        two_body_energies = self.gp_2b.predict_energy(confs)
 
         self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
 
@@ -121,12 +117,8 @@ class CombinedSingleSpeciesModel(Model):
         self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
 
         ntr = len(confs)
-        two_body_energies = np.zeros(ntr)
-        two_body_forces = np.zeros((ntr, 3))
-
-        for i in np.arange(ntr):
-            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
-            two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
+        two_body_forces = self.gp_2b.predict(confs)
+        two_body_energies = self.gp_2b.predict_energy(confs)
         self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
 
     def update_force(self, confs, forces, nnodes=1):

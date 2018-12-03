@@ -8,6 +8,8 @@ from abc import ABCMeta, abstractmethod
 from mff.kernels.base import Kernel
 from theano import function, scan
 
+from scipy.spatial.distance import cdist
+
 logger = logging.getLogger(__name__)
 
 
@@ -340,6 +342,152 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         return None, None, None
 
 
+# class TwoBodySingleSpeciesKernel(BaseTwoBody):
+#     """Two body single species kernel.
+
+#     Args:
+#         theta[0] (float): lengthscale of the kernel
+#         theta[1] (float): decay rate of the cutoff function
+#         theta[2] (float): cutoff radius
+        
+#     """
+
+#     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+#         super().__init__(kernel_name='TwoBodySingleSpecies', theta=theta, bounds=bounds)
+
+#     @staticmethod
+#     def compile_theano():
+#         """
+#         This function generates theano compiled kernels for energy and force learning
+
+#         The position of the atoms relative to the central one, and their chemical species
+#         are defined by a matrix of dimension Mx5 here called r1 and r2.
+
+#         Returns:
+#             k2_ee (func): energy-energy kernel
+#             k2_ef (func): energy-force kernel
+#             k2_ff (func): force-force kernel
+#         """
+
+#         logger.info("Started compilation of theano two body single species kernels")
+#         # --------------------------------------------------
+#         # INITIAL DEFINITIONS
+#         # --------------------------------------------------
+
+#         # positions of central atoms
+#         r1, r2 = T.dvectors('r1d', 'r2d')
+#         # positions of neighbours
+#         rho1, rho2 = T.dmatrices('rho1', 'rho2')
+#         # lengthscale hyperparameter
+#         sig = T.dscalar('sig')
+#         # cutoff hyperparameters
+#         theta = T.dscalar('theta')
+#         rc = T.dscalar('rc')
+
+#         # positions of neighbours without chemical species (3D space assumed)
+#         rho1s = rho1[:, 0:3]
+#         rho2s = rho2[:, 0:3]
+        
+        
+#         # --------------------------------------------------
+#         # RELATIVE DISTANCES TO CENTRAL VECTOR
+#         # --------------------------------------------------
+
+#         # first and second configuration
+#         r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+#         r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+
+#         # Cutoff function
+#         k_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+
+#         cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+#                  (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+
+#         k_jm = k_jm * cut_jm
+
+#         # kernel
+#         k = T.sum(k_jm)
+
+#         # --------------------------------------------------
+#         # FINAL FUNCTIONS
+#         # --------------------------------------------------
+
+#         # energy energy kernel
+#         k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
+#                             allow_input_downcast=False, on_unused_input='warn')
+
+#         # energy force kernel - Used to predict energies from forces
+#         k_ef = T.grad(k, r2)
+#         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+#                             allow_input_downcast=False, on_unused_input='warn')
+
+#         # force force kernel
+#         k_ff = T.grad(k, r1)
+#         k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+#                                  sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
+
+#         k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
+#                             allow_input_downcast=False, on_unused_input='warn')
+
+#         # --------------------------------------------------
+#         # WRAPPERS (we don't want to plug the position of the central element every time)
+#         # --------------------------------------------------
+
+#         def k2_ee(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-energy correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (float): scalar valued energy-energy 2-body kernel
+                
+#             """
+#             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         def k2_ef(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-force correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (array): 3x1 energy-force 2-body kernel
+                
+#             """
+#             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         def k2_ff(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for force-force correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (matrix): 3x3 force-force 2-body kernel
+                
+#             """
+#             return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         logger.info("Ended compilation of theano two body single species kernels")
+
+#         return k2_ee, k2_ef, k2_ff
+
 class TwoBodySingleSpeciesKernel(BaseTwoBody):
     """Two body single species kernel.
 
@@ -385,25 +533,45 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         # positions of neighbours without chemical species (3D space assumed)
         rho1s = rho1[:, 0:3]
         rho2s = rho2[:, 0:3]
-
-        # --------------------------------------------------
-        # RELATIVE DISTANCES TO CENTRAL VECTOR
-        # --------------------------------------------------
-
-        # first and second configuration
+        
         r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
         r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+        rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
+        rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
+        
+        se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+        se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
+        se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
+        se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
 
-        # Cutoff function
-        k_ij = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+        cut_jkmn = (0.5 * (1 + T.sgn(rc - rjk[:, :, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, None, :, :]))) * \
+                 (T.exp(-theta / abs(rc - rjk[:, :, None, None])) * T.exp(-theta / abs(rc - rmn[None, None, :, :])))
+    
+        cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+                 (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+        
+        cut_jkm = (0.5 * (1 + T.sgn(rc - rjk[:, :, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, None, :]))) * \
+                 (T.exp(-theta / abs(rc - rjk[:, :, None])) * T.exp(-theta / abs(rc - r2m[None, None, :])))
 
-        cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                 (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
+        cut_jmn = (0.5 * (1 + T.sgn(rc - r1j[:, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, :, :]))) * \
+                 (T.exp(-theta / abs(rc - r1j[:, None, None])) * T.exp(-theta / abs(rc - rmn[None, :, :])))
+        
+        
+        se_jm = se_jm*cut_jm
+        se_jkmn = se_jkmn*cut_jkmn
+        se_jk2m = se_jk2m*cut_jkm
+        se_1jmn = se_1jmn*cut_jmn
 
-        k_ij = k_ij * cut_ij
+        mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
+        mask_mn = T.triu(T.ones_like(rmn)) - T.identity_like(rmn)
+        
+        se_jkmn = se_jkmn*mask_jk[:,:,None, None]*mask_mn[None, None,:,:]
+        se_jk2m = se_jk2m*mask_jk[:,:,None]
+        se_1jmn = se_1jmn*mask_mn[None,:,:]
+        
+        k = T.sum(se_jkmn) + T.sum(se_jk2m) + T.sum(se_1jmn) + T.sum(se_jm)
+        kloc = T.sum(se_jm)
 
-        # kernel
-        k = T.sum(k_ij)
 
         # --------------------------------------------------
         # FINAL FUNCTIONS
@@ -417,9 +585,9 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         k_ef = T.grad(k, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
                             allow_input_downcast=False, on_unused_input='warn')
-
-        # force force kernel
-        k_ff = T.grad(k, r1)
+        
+        # force force kernel - it uses only local atom pairs to avoid useless computation
+        k_ff = T.grad(kloc, r1)
         k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
                                  sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
@@ -445,8 +613,8 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
                 kernel (float): scalar valued energy-energy 2-body kernel
                 
             """
-            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
-
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc) 
+        
         def k2_ef(conf1, conf2, sig, theta, rc):
             """
             Two body kernel for energy-force correlation
@@ -484,8 +652,195 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         logger.info("Ended compilation of theano two body single species kernels")
 
         return k2_ee, k2_ef, k2_ff
+    
+    
+# class TwoBodyTwoSpeciesKernel(BaseTwoBody):
+#     """Two body two species kernel.
 
+#     Args:
+#         theta[0] (float): lengthscale of the kernel
+#         theta[1] (float): decay rate of the cutoff function
+#         theta[2] (float): cutoff radius
+        
+#     """
 
+#     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+#         super().__init__(kernel_name='TwoBody', theta=theta, bounds=bounds)
+
+#     @staticmethod
+#     def compile_theano():
+#         """
+#         This function generates theano compiled kernels for energy and force learning
+
+#         The position of the atoms relative to the central one, and their chemical species
+#         are defined by a matrix of dimension Mx5 here called r1 and r2.
+
+#         Returns:
+#             k2_ee (func): energy-energy kernel
+#             k2_ef (func): energy-force kernel
+#             k2_ff (func): force-force kernel
+#         """
+
+#         logger.info("Started compilation of theano two body kernels")
+#         # --------------------------------------------------
+#         # INITIAL DEFINITIONS
+#         # --------------------------------------------------
+
+#         # positions of central atoms
+#         r1, r2 = T.dvectors('r1d', 'r2d')
+#         # positions of neighbours
+#         rho1, rho2 = T.dmatrices('rho1', 'rho2')
+#         # lengthscale hyperparameter
+#         sig = T.dscalar('sig')
+#         # cutoff hyperparameters
+#         theta = T.dscalar('theta')
+#         rc = T.dscalar('rc')
+
+#         # positions of neighbours without chemical species (3D space assumed)
+#         rho1s = rho1[:, 0:3]
+#         rho2s = rho2[:, 0:3]
+#         alpha_1 = rho1[:, 3:4].flatten()
+#         alpha_2 = rho2[:, 3:4].flatten()
+#         alpha_j = rho1[:, 4:5].flatten()
+#         alpha_m = rho2[:, 4:5].flatten()
+
+#         # --------------------------------------------------
+#         # RELATIVE DISTANCES TO CENTRAL VECTOR
+#         # --------------------------------------------------
+
+#         # first and second configuration
+#         r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+#         r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+
+#         # --------------------------------------------------
+#         # CHEMICAL SPECIES MASK
+#         # --------------------------------------------------
+
+#         # numerical kronecker
+#         def delta_alpha2(a1j, a2m):
+#             d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
+#             return d
+
+#         delta_alphas12 = delta_alpha2(alpha_1[:, None], alpha_2[None, :])
+#         delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
+#         delta_alphas1m = delta_alpha2(alpha_1[:, None], alpha_m[None, :])
+#         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
+
+#         # Cutoff function
+#         k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2)) * (
+#                 delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2))
+
+#         cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+#                  (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
+
+#         k_ij = k_ij * cut_ij
+
+#         # kernel
+#         k = T.sum(k_ij)
+
+#         # --------------------------------------------------
+#         # FINAL FUNCTIONS
+#         # --------------------------------------------------
+
+#         # energy energy kernel
+#         k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
+#                             allow_input_downcast=False, on_unused_input='ignore')
+
+#         # energy force kernel
+#         k_ef = T.grad(k, r2)
+#         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+#                             allow_input_downcast=False, on_unused_input='ignore')
+
+#         # force force kernel
+#         k_ff = T.grad(k, r1)
+#         k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+#                                  sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
+
+#         k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
+#                             allow_input_downcast=False, on_unused_input='ignore')
+
+#         # --------------------------------------------------
+#         # WRAPPERS (we don't want to plug the position of the central element every time)
+#         # --------------------------------------------------
+
+#         def k2_ee(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-energy correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (float): scalar valued energy-energy 2-body kernel
+                
+#             """
+#             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         def k2_ee_global(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-energy correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (float): scalar valued energy-energy 2-body kernel
+                
+#             """
+#             conf1, conf2 = conf1[:,:3], conf2[:, :3]
+#             conf1_tot, conf2_tot = np.vstack(([0.0, 0.0, 0.0], conf1)), np.vstack(([0.0, 0.0, 0.0], conf2))
+            
+            
+#             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
+        
+#         def k2_ef(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-force correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (array): 3x1 energy-force 2-body kernel
+                
+#             """
+#             return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         def k2_ff(conf1, conf2, sig, theta, rc):
+#             """
+#             Two body kernel for energy-energy correlation
+
+#             Args:
+#                 conf1 (array): first configuration.
+#                 conf2 (array): second configuration.
+#                 sig (float): lengthscale hyperparameter theta[0]
+#                 theta (float): cutoff decay rate hyperparameter theta[1]
+#                 rc (float): cutoff distance hyperparameter theta[2]
+
+#             Returns:
+#                 kernel (matrix): 3x3 force-force 2-body kernel
+                
+#             """
+#             return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+
+#         logger.info("Ended compilation of theano two body kernels")
+
+#         return k2_ee, k2_ef, k2_ff
+
+    
 class TwoBodyTwoSpeciesKernel(BaseTwoBody):
     """Two body two species kernel.
 
@@ -531,24 +886,12 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         # positions of neighbours without chemical species (3D space assumed)
         rho1s = rho1[:, 0:3]
         rho2s = rho2[:, 0:3]
-        alpha_1 = rho1[:, 3:4].flatten()
-        alpha_2 = rho2[:, 3:4].flatten()
-        alpha_j = rho1[:, 4:5].flatten()
-        alpha_m = rho2[:, 4:5].flatten()
-
-        # --------------------------------------------------
-        # RELATIVE DISTANCES TO CENTRAL VECTOR
-        # --------------------------------------------------
-
-        # first and second configuration
-        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-
-        # --------------------------------------------------
-        # CHEMICAL SPECIES MASK
-        # --------------------------------------------------
-
-        # numerical kronecker
+        alpha_1 = rho1[:, 3]#.flatten()
+        alpha_2 = rho2[:, 3]#.flatten()
+        alpha_j = rho1[:, 4]#.flatten()
+        alpha_m = rho2[:, 4]#.flatten()
+        
+                # numerical kronecker
         def delta_alpha2(a1j, a2m):
             d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
             return d
@@ -557,18 +900,52 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
         delta_alphas1m = delta_alpha2(alpha_1[:, None], alpha_m[None, :])
         delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
+        
+        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+        rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
+        rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
+        
+        # Get the squared exponential kernels
+        se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+        se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
+        se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
+        se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
 
-        # Cutoff function
-        k_ij = (T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2)) * (
-                delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2))
+        # Define cutoff functions 
+        cut_jkmn = (0.5 * (1 + T.sgn(rc - rjk[:, :, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, None, :, :]))) * \
+                 (T.exp(-theta / abs(rc - rjk[:, :, None, None])) * T.exp(-theta / abs(rc - rmn[None, None, :, :])))
+    
+        cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+                 (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+        
+        cut_jkm = (0.5 * (1 + T.sgn(rc - rjk[:, :, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, None, :]))) * \
+                 (T.exp(-theta / abs(rc - rjk[:, :, None])) * T.exp(-theta / abs(rc - r2m[None, None, :])))
 
-        cut_ij = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                 (T.exp(-theta / (rc - r1j[:, None])) * T.exp(-theta / (rc - r2m[None, :])))
+        cut_jmn = (0.5 * (1 + T.sgn(rc - r1j[:, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, :, :]))) * \
+                 (T.exp(-theta / abs(rc - r1j[:, None, None])) * T.exp(-theta / abs(rc - rmn[None, :, :])))
+        
+        # Apply cutoffs and chemical species masks
+        se_jm = se_jm*cut_jm* (delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2)
+        se_jkmn = se_jkmn*cut_jkmn * (
+            delta_alphasjm[:,None,:,None] * delta_alphasjm[None,:,None,:] + delta_alphasjm[:,None,None,:] * delta_alphasjm[None,:,:,None])
+        se_jk2m = se_jk2m*cut_jkm*(
+            delta_alphasj2[:,None,:] * delta_alphasjm[None,:,:] + delta_alphasj2[None,:,:] * delta_alphasjm[:,None,:])
+        se_1jmn = se_1jmn*cut_jmn*(
+            delta_alphas1m[:,:,None] * delta_alphasjm[:,None,:] + delta_alphas1m[:,None,:] * delta_alphasjm[:,:,None])
 
-        k_ij = k_ij * cut_ij
-
-        # kernel
-        k = T.sum(k_ij)
+        # Add mask of zeros to avoid double counting bonds
+        mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
+        mask_mn = T.triu(T.ones_like(rmn)) - T.identity_like(rmn)
+        
+        # Apply masks
+        se_jkmn = se_jkmn*mask_jk[:,:,None, None]*mask_mn[None, None,:,:]
+        se_jk2m = se_jk2m*mask_jk[:,:,None]
+        se_1jmn = se_1jmn*mask_mn[None,:,:]
+        
+        # Calculate global kernel k and local kernel kloc
+        k = T.sum(se_jkmn) + T.sum(se_jk2m) + T.sum(se_1jmn) + T.sum(se_jm)
+        kloc = T.sum(se_jm)
 
         # --------------------------------------------------
         # FINAL FUNCTIONS
@@ -576,24 +953,24 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
 
         # energy energy kernel
         k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
-                            allow_input_downcast=False, on_unused_input='ignore')
+                            allow_input_downcast=False, on_unused_input='warn')
 
-        # energy force kernel
+        # energy force kernel - Used to predict energies from forces
         k_ef = T.grad(k, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
-                            allow_input_downcast=False, on_unused_input='ignore')
-
-        # force force kernel
-        k_ff = T.grad(k, r1)
+                            allow_input_downcast=False, on_unused_input='warn')
+        
+        # force force kernel - it uses only local atom pairs to avoid useless computation
+        k_ff = T.grad(kloc, r1)
         k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
                                  sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
         k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
-                            allow_input_downcast=False, on_unused_input='ignore')
+                            allow_input_downcast=False, on_unused_input='warn')
 
-        # --------------------------------------------------
-        # WRAPPERS (we don't want to plug the position of the central element every time)
-        # --------------------------------------------------
+#         # --------------------------------------------------
+#         # WRAPPERS (we don't want to plug the position of the central element every time)
+#         # --------------------------------------------------
 
         def k2_ee(conf1, conf2, sig, theta, rc):
             """
@@ -612,6 +989,28 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
             """
             return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
 
+        def k2_ee_global(conf1, conf2, sig, theta, rc):
+            """
+            Two body kernel for energy-energy correlation
+
+            Args:
+                conf1 (array): first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                theta (float): cutoff decay rate hyperparameter theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
+
+            Returns:
+                kernel (float): scalar valued energy-energy 2-body kernel
+                
+            """
+            conf1, conf2 = conf1[:,:3], conf2[:, :3]
+            conf1_tot, conf2_tot = np.vstack(([0.0, 0.0, 0.0], conf1)), np.vstack(([0.0, 0.0, 0.0], conf2))
+            
+            
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+        
+        
         def k2_ef(conf1, conf2, sig, theta, rc):
             """
             Two body kernel for energy-force correlation

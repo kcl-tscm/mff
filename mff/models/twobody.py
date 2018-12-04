@@ -136,7 +136,7 @@ class TwoBodySingleSpeciesModel(Model):
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP
+        """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -153,6 +153,24 @@ class TwoBodySingleSpeciesModel(Model):
 
         return self.gp.predict_energy(confs, return_std)
 
+    def predict_energy_map(self, confs, return_std=False):
+        """ Predict the local energies of the central atoms of confs using a GP
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+            energies_errors (array): errors associated to the energies predictions,
+                returned only if return_std is True
+
+        """
+
+        return self.gp.predict_energy_map(confs)
+    
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -194,7 +212,7 @@ class TwoBodySingleSpeciesModel(Model):
         confs[:, 0, 0] = dists
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
 
-        grid_data = self.gp.predict_energy(confs)
+        grid_data = self.gp.predict_energy_map(confs)
         self.grid = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
@@ -411,7 +429,7 @@ class TwoBodyTwoSpeciesModel(Model):
         return self.gp.predict(confs, return_std)
 
     def predict_energy(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
+        """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -428,6 +446,25 @@ class TwoBodyTwoSpeciesModel(Model):
 
         return self.gp.predict_energy(confs, return_std)
 
+    
+    def predict_energy_map(self, confs, return_std=False):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+            energies_errors (array): errors associated to the energies predictions,
+                returned only if return_std is True
+
+        """
+
+        return self.gp.predict_energy_map(confs)
+    
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -471,13 +508,13 @@ class TwoBodyTwoSpeciesModel(Model):
         confs[:, 0, 0] = dists
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[0]
-        grid_0_0_data = self.gp.predict_energy(confs)
+        grid_0_0_data = self.gp.predict_energy_map(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[1]
-        grid_0_1_data = self.gp.predict_energy(confs)
+        grid_0_1_data = self.gp.predict_energy_map(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[1], self.elements[1]
-        grid_1_1_data = self.gp.predict_energy(confs)
+        grid_1_1_data = self.gp.predict_energy_map(confs)
 
         self.grid[(0, 0)] = interpolation.Spline1D(dists, grid_0_0_data)
         self.grid[(0, 1)] = interpolation.Spline1D(dists, grid_0_1_data)

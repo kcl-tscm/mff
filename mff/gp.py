@@ -643,6 +643,81 @@ class GaussianProcess(object):
             else:
                 return e_mean
 
+    def predict_energy_map(self, X, return_std=False):
+        """Predict energies using the Gaussian process regression model
+
+        We can also predict based on an unfitted model by using the GP prior.
+        In addition to the mean of the predictive distribution, also its
+        standard deviation (return_std=True)
+
+        Args:
+            X (list): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
+
+        Returns:
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+                
+        """
+        
+        y_mean = np.zeros(len(X))
+        if return_std:
+            y_std = np.zeros(len(X))
+            for i in np.arange(len(X)):
+                y_mean[i], y_std[i] = self.predict_energy_single_map(X[i])
+            return y_mean, y_std
+        else:
+            for i in np.arange(len(X)):
+                y_mean[i] = self.predict_energy_single_map(X[i])
+            return y_mean
+        
+    def predict_energy_single_map(self, X, return_std=False):
+        """Predict energies from forces only using the Gaussian process regression model
+
+        This function evaluates the GP energies for a set of test configurations.
+
+        Args:
+            X (np.ndarray): Target configurations where the GP is evaluated
+            return_std (bool): If True, the standard-deviation of the
+                predictive distribution of the target configurations is
+                returned along with the mean.
+
+        Returns:
+            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
+            y_std (np.ndarray): Standard deviation of predictive distribution at target
+                configurations. Only returned when return_std is True.
+                
+        """
+
+        X = np.reshape(X, (1, len(X), 5))
+
+        if not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
+            kernel = self.kernel
+            e_mean = np.zeros(X.shape[0])
+            logger.warning("No training data, predicting based on prior")
+            return e_mean
+
+        else:  # Predict based on GP posterior
+
+            if self.fitted == ['force', None]:  # Predict using force data
+                K_trans = self.kernel_.calc_ef_loc(X, self.X_train_)
+                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
+
+            elif self.fitted == [None, 'energy']:  # Predict using energy data
+                K_energy = self.kernel_.calc_ee(X, self.X_train_)
+                e_mean = K_energy.dot(self.energy_alpha_)
+
+            else:  # Predict using both force and energy data
+                K_energy = self.kernel_.calc_ee(X, self.X_train_)
+                K_energy_force = self.kernel_.calc_ef_loc(X, self.X_train_)
+                K = np.hstack((K_energy, K_energy_force))
+                e_mean = K.dot(self.alpha_)
+                
+            return e_mean
+            
     # TODO: debug for energy and energy-force fitting
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         """Returns log-marginal likelihood of theta for training data.

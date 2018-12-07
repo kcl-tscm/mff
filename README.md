@@ -23,17 +23,29 @@ For an example use of the MFF package to build 3-body force fields for Ni nanocl
 
 ## Install
 
-To install from source, uncompress the source files and, from the directory containing `setup.py`, run the following command:
+Clone the repo into a folder:
+
+    git clone https://github.com/kcl-tscm/mff.git
+    cd mff
+
+Create a base environment for the mff package
+
+    conda env create -f mff-env.yaml
+ 
+Based on your system activate the conda environment with one of the following two option:
+
+    conda activate mff-env
+    source activate mff-env
+
+
+To install from source run the following command:
     
     python setup.py install
 
-Or, to build in place, run:
+Or, to build in place for development, run:
     
-    python setup.py build_ext --inplace
+    python setup.py develop
 
-If you build in place, you will also need to add your eqtools folder to your PYTHONPATH shell variable:
-    
-    export PYTHONPATH=$PYTHONPATH:/path/to/where/you/put/
 
 ## Usage
 

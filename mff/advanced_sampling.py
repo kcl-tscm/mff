@@ -26,8 +26,8 @@ class Sampling(object):
     Class containing sampling methods to optimize the trainng database selection.
     The class is currently set in order to work with local atomic energies, 
     and is therefore made to be used in confined systems (nanoclusters, molecules).
-    Some of the mothods used can be applied to force training too (ivm_sampling ), 
-    or are independent to the training outputs (grid_2b sampling and grid_3b_sampling).
+    Some of the mothods used can be applied to force training too (ivm, random), 
+    or are independent to the training outputs (grid).
     These methods can be used on systems with PBCs where a local energy is not well defined.
     The class also initializes two GP objects to use in some of its methods.
 
@@ -68,37 +68,37 @@ class Sampling(object):
         self.get_the_right_kernel('3b')
         
 
-    def read_xyz(self, filename, r_cut, randomized = True, shuffling = True, forces_label=None, energy_label=None):
-        from ase.io import read
-        traj = read(filename, index=slice(None), format='extxyz')
-        confs, forces, energies = [], [], []
-        for i in np.arange(len(traj)):
-            if randomized:
-                rand = np.random.randint(0, len(traj[i]), 1)
-            else:
-                rand = 0                
-            co, fe, en = carve_from_snapshot(traj[i], rand, r_cut, forces_label=forces_label, energy_label=energy_label)
-            if len(co[0]) == self.natoms - 1:
-                confs.append(co[0])
-                forces.append(fe)
-                energies.append(en)
+#     def read_xyz(self, filename, r_cut, randomized = True, shuffling = True, forces_label=None, energy_label=None):
+#         from ase.io import read
+#         traj = read(filename, index=slice(None), format='extxyz')
+#         confs, forces, energies = [], [], []
+#         for i in np.arange(len(traj)):
+#             if randomized:
+#                 rand = np.random.randint(0, len(traj[i]), 1)
+#             else:
+#                 rand = 0                
+#             co, fe, en = carve_from_snapshot(traj[i], rand, r_cut, forces_label=forces_label, energy_label=energy_label)
+#             if len(co[0]) == self.natoms - 1:
+#                 confs.append(co[0])
+#                 forces.append(fe)
+#                 energies.append(en)
         
-        confs = np.reshape(confs, (len(confs), self.natoms-1, 5))
-        forces = np.reshape(forces, (len(forces), 3))
+#         confs = np.reshape(confs, (len(confs), self.natoms-1, 5))
+#         forces = np.reshape(forces, (len(forces), 3))
 
-        # Bring energies to zero mean
-        energies = np.reshape(energies, len(energies))
-        energies -= np.mean(energies)
+#         # Bring energies to zero mean
+#         energies = np.reshape(energies, len(energies))
+#         energies -= np.mean(energies)
         
-        if shuffling:
-            shuffled_order = np.arange(len(energies))
-            random.shuffle(shuffled_order)
-            energies, forces, confs = energies[shuffled_order], forces[shuffled_order], confs[shuffled_order]
+#         if shuffling:
+#             shuffled_order = np.arange(len(energies))
+#             random.shuffle(shuffled_order)
+#             energies, forces, confs = energies[shuffled_order], forces[shuffled_order], confs[shuffled_order]
 
-        self.reduced_energies = energies
-        self.reduced_forces = forces
-        self.reduced_confs = confs
-        del confs, energies, forces, shuffled_order, traj
+#         self.reduced_energies = energies
+#         self.reduced_forces = forces
+#         self.reduced_confs = confs
+#         del confs, energies, forces, shuffled_order, traj
                                          
     def clean_dataset(self, randomized = True, shuffling = True):
         ''' 
@@ -268,6 +268,26 @@ class Sampling(object):
       
         
     def rvm(self, method = '2b',  batchsize = 1000):
+        ''' 
+        Relevance vector machine sampling. This method uses a 2- or 2-body kernel and trains it on the energies of the
+        partitioned training dataset. The algortihm starts from a dataset containing a batchsize number of training
+        configurations extracted from the whole training set at random. Subsequently, a rvm method is called and a
+        variable number of configurations is selected. These are then included in the next batch, and the operation
+        is repeated until every point in the training dataset was included at least once.
+        The function then returns the indexes of the points returned by the last call of the rvm method.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            batchsize (int): number of training points to include in each iteration of the gram matrix calculation
+            
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         t0 = time.time()
         if method == '2b':
             rvm = RVR(kernel = self.ker_2b)
@@ -293,10 +313,35 @@ class Sampling(object):
         RMSE = np.sqrt(np.mean((error) ** 2))  
         del var, rvm, split, batches, batch_index, reshaped_X, reshaped_x, y_hat, error
         tf = time.time()
-        return MAE, SMAE, RMSE, list(index), tf-t0
+        total_time = tf-t0
+        index = list(index)
+        return MAE, SMAE, RMSE, index, total_time
 
     
-    def ivm_e(self, method = '2b', ntrain = 500, batchsize = 1000,  use_pred_error = True):
+    def ivm_e(self, method = '2b', ntrain = 500, batchsize = 1000,  use_pred_error = True, error_metric = 'energy'):
+        '''
+        Importance vector machine sampling for energies. This method uses a 2- or 2-body energy kernel and trains 
+        it on the energies of the partitioned training dataset. The algortihm starts from two configurations chosen at 
+        random. At each iteration, the predicted variance or on the observed error calculated on batchsize configurations
+        from the training set is calculated, and the configuration with the highest value is included in the final set.
+        The method finishes when ntrain configurations are included in the final set.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            ntrain (int): Number of training points to extract from the training dataset
+            batchsize (int): number of training points to use in each iteration of the error prediction
+            use_pred_error (bool): if true, the predicted variance is used as a metric of the ivm, if false the
+                observed error is used instead
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+            
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         t0 = time.time()
         m = self.get_the_right_model(method)
         ndata = len(self.Y)
@@ -317,18 +362,50 @@ class Sampling(object):
             m.update_energy(self.X[mask][worst_thing], self.Y[mask][worst_thing])
             mask[rand_test[worst_thing]] = False
 
-        y_hat = m.predict_energy(self.x)
-        error = y_hat - self.y
-        MAE = np.mean(np.abs(error))
-        SMAE = np.std(np.abs(error))
-        RMSE = np.sqrt(np.mean((error) ** 2)) 
+        if error_metric == 'force':
+            y_hat = m.predict(self.x)
+            error = y_hat - self.y_force
+            MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
+            SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
+            RMSE = np.sqrt(np.mean((error) ** 2))   
+        else:
+            y_hat = m.predict_energy(self.x)
+            error = y_hat - self.y
+            MAE = np.mean(np.abs(error))
+            SMAE = np.std(np.abs(error))
+            RMSE = np.sqrt(np.mean((error) ** 2))  
         index = np.arange(len(self.X))[~mask]
         del mask, worst_thing, pred, rand_test, m, ndata, randints, y_hat
         tf = time.time()
-        return MAE, SMAE, RMSE, list(index), tf-t0
+        index = list(index)
+        total_time = tf-t0
+        return MAE, SMAE, RMSE, index, total_time
 
     
     def ivm_f(self, method = '2b',  ntrain = 500, batchsize = 1000, use_pred_error = True, error_metric = 'energy'):
+        '''
+        Importance vector machine sampling for forces. This method uses a 2- or 2-body energy kernel and trains 
+        it on the energies of the partitioned training dataset. The algortihm starts from two configurations chosen at 
+        random. At each iteration, the predicted variance or on the observed error calculated on batchsize configurations
+        from the training set is calculated, and the configuration with the highest value is included in the final set.
+        The method finishes when ntrain configurations are included in the final set.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            ntrain (int): Number of training points to extract from the training dataset
+            batchsize (int): number of training points to use in each iteration of the error prediction
+            use_pred_error (bool): if true, the predicted variance is used as a metric of the ivm, if false the
+                observed error is used instead
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         t0 = time.time()
         m = self.get_the_right_model(method)
         ndata = len(self.Y_force)
@@ -362,13 +439,36 @@ class Sampling(object):
             MAE = np.mean(np.abs(error))
             SMAE = np.std(np.abs(error))
             RMSE = np.sqrt(np.mean((error) ** 2))  
-        index_return = np.arange(len(self.X))[~mask]
+        index = list(np.arange(len(self.X))[~mask])
         del mask, worst_thing, pred, rand_test, m, ndata, randints, error
         tf = time.time()
-        return MAE, SMAE, RMSE, list(index_return), tf-t0
+        total_time = tf-t0
+        return MAE, SMAE, RMSE, index, total_time
     
     
     def grid(self, method = '2b', nbins = 100, error_metric = 'energy'):
+        '''
+        Grid sampling, based either on interatomic distances (2b) or on triplets of interatomic distances (3b).
+        Training configurations are shuffled and are then included in the final database only if they contain a
+        distance value (or a triplet of distance values) which is not yet present in the binned histogram of
+        distance values (or triplets of distance values) of the final database. This method is very fast since it 
+        does not evaluate kernel functions nor gram matrices.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            nbins (int): Number of bins to use when building an histogram of interatomic distances.
+                If method is 2b, this will specify the value only for distances from the central atom, if
+                method is 3b, this will specify the value for triplets of distances.
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         t0 = time.time()
         if method == '2b':
             stored_histogram = np.zeros(nbins)
@@ -433,7 +533,9 @@ class Sampling(object):
             RMSE = np.sqrt(np.mean((error) ** 2))   
         del m, distances, this_snapshot_histogram, randomarange, stored_histogram, y_hat, error
         tf = time.time()
-        return MAE, SMAE, RMSE, list(index), tf-t0
+        total_time = tf-t0
+        index = list(index)
+        return MAE, SMAE, RMSE, index, total_time
 
     
     def cur(self, method = '2b', ntrain = 1000, batchsize = 500):
@@ -475,6 +577,22 @@ class Sampling(object):
                     
         
     def random(self, method = '2b', ntrain = 500, error_metric = 'energy'):
+        '''
+        Random subsampling of training points from the larger training dataset.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            ntrain (int): Number of points to include in the final dataset.
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         t0 = time.time()
         ind = np.arange(len(self.X))
         ind_train = np.random.choice(ind, size=ntrain, replace=False)
@@ -499,10 +617,28 @@ class Sampling(object):
             
         del m, train_confs, train_energy, train_forces, error, y_hat
         tf = time.time()
-        return MAE, SMAE, RMSE, list(ind_train), tf-t0
+        index = list(ind_train)
+        total_time = tf-t0
+        return MAE, SMAE, RMSE, index, total_time
     
 
     def test_forces(self, index, method = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):
+        '''
+        Random subsampling of training points from the larger training dataset.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            ntrain (int): Number of points to include in the final dataset.
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
         self.sigma_2b, self.sigma_3b, self.noise = sig_2b, sig_3b, noise
         m = self.get_the_right_model(method)
         m.fit(self.X[index], self.Y_force[index])

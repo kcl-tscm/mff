@@ -117,6 +117,10 @@ class Sampling(object):
         confs, energies, forces = self.confs, self.energies, self.forces
         natoms = self.natoms
         
+        # Bring energies to zero mean
+        energies = np.reshape(energies, len(energies))
+        energies -= np.mean(energies)
+        
         # Transform confs into a numpy array
         arrayed_confs = np.zeros((len(forces), natoms-1, 5))
         for i in np.arange(len(confs)):
@@ -124,13 +128,9 @@ class Sampling(object):
                 arrayed_confs[i] = confs[i][:natoms-1, :]
             except:
                 print("Number of atoms in the configurations is not the expected one")
-                np.delete(arrayed_confs, i)
-                np.delete(confs, i)
-                np.delete(forces, i)
-            
-        # Bring energies to zero mean
-        energies = np.reshape(energies, len(energies))
-        energies -= np.mean(energies)
+                arrayed_confs[i] = np.zeros((natoms-1, 5))
+                energies[i] = 0
+                forces[i] = np.zeros(3)
 
         # Extract one conf, energy and force per snapshot
         # The particular atom can be chosen at random (random = True)
@@ -153,6 +153,11 @@ class Sampling(object):
             reduced_energies, reduced_forces, reduced_confs = (
                 reduced_energies[shuffled_order], reduced_forces[shuffled_order], reduced_confs[shuffled_order])
         
+        # Strip the data of every possible configuration which was discarded because it had the wrong number of atoms
+        reduced_energies = reduced_energies[np.where(reduced_energies != 0)]
+        reduced_forces = reduced_forces[np.where(reduced_energies != 0)]
+        reduced_confs = reduced_confs[np.where(reduced_energies != 0)]
+
         self.reduced_energies = reduced_energies
         self.reduced_forces = reduced_forces
         self.reduced_confs = reduced_confs
@@ -234,21 +239,21 @@ class Sampling(object):
         
 
     def ker_2b(self, X1, X2):
-        X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
+        X1, X2 = np.reshape(X1, (self.natoms - 1 ,5)), np.reshape(X2, (self.natoms - 1,5))
         ker = self.gp2.kernel.k2_ee(X1, X2, sig=self.sigma_2b, rc=self.r_cut, theta=self.theta)
         del X1, X2
         return ker
 
     
     def ker_3b(self, X1, X2):
-        X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
+        X1, X2 = np.reshape(X1, (self.natoms - 1,5)), np.reshape(X2, (self.natoms - 1,5))
         ker = self.gp3.kernel.k3_ee(X1, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         del X1, X2
         return ker
 
     
     def normalized_3b(self, X1, X2):
-        X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
+        X1, X2 = np.reshape(X1, (self.natoms - 1,5)), np.reshape(X2, (self.natoms - 1,5))
         ker = self.gp3.kernel.k3_ee(X1, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         ker_11 = self.gp3.kernel.k3_ee(X1, X1, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
         ker_22 = self.gp3.kernel.k3_ee(X2, X2, sig=self.sigma_3b, rc=self.r_cut, theta=self.theta)
@@ -258,7 +263,7 @@ class Sampling(object):
 
     
     def ker_mb(self, X1, X2):
-        X1, X2 = np.reshape(X1, (18,5)), np.reshape(X2, (18,5))
+        X1, X2 = np.reshape(X1, (self.natoms - 1,5)), np.reshape(X2, (self.natoms - 1,5))
         X1, X2 = X1[:,:3], X2[:,:3]
         outer = X1[:,None,:] - X2[None, :,:]
         ker = np.exp(-(np.sum(np.square(outer)/(2.0*self.sigma_mb**2), axis = 2)))

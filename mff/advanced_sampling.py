@@ -613,7 +613,7 @@ class Sampling(object):
             SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
             RMSE = np.sqrt(np.mean((error) ** 2))    
         else:
-            m.fit_energy(train_confs, train_forces)
+            m.fit_energy(train_confs, train_energy)
             y_hat = m.predict_energy(self.x)
             error = y_hat - self.y
             MAE = np.mean(np.abs(error))

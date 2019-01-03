@@ -888,12 +888,28 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         cut_jk = (cut_j[:, None] * cut_j[None, :] *
                   T.exp(-theta / T.abs_(rc - rjk[:, :])) *
                   (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
-
+        
+        cut_jkl = (cut_j[:, None, None] * cut_j[None, :, None] * cut_j[None, None, :] *
+                  T.exp(-theta / T.abs_(rc - rjk[:, :, None])) *
+                  (0.5 * (T.sgn(rc - rjk) + 1))[:, :, None] * 
+                  T.exp(-theta / T.abs_(rc - rjk[:, None, :])) *
+                  (0.5 * (T.sgn(rc - rjk) + 1))[:, None, :] * 
+                  T.exp(-theta / T.abs_(rc - rjk[None, :, :])) *
+                  (0.5 * (T.sgn(rc - rjk) + 1))[None, :, :] )     
+        
         cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
         cut_mn = (cut_m[:, None] * cut_m[None, :] *
                   T.exp(-theta / T.abs_(rc - rmn[:, :])) *
                   (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
 
+        cut_mno = (cut_m[:, None, None] * cut_m[None, :, None] * cut_m[None, None, :] *
+                  T.exp(-theta / T.abs_(rc - rmn[:, :, None])) *
+                  (0.5 * (T.sgn(rc - rmn) + 1))[:, :, None] * 
+                  T.exp(-theta / T.abs_(rc - rmn[:, None, :])) *
+                  (0.5 * (T.sgn(rc - rmn) + 1))[:, None, :] * 
+                  T.exp(-theta / T.abs_(rc - rmn[None, :, :])) *
+                  (0.5 * (T.sgn(rc - rmn) + 1))[None, :, :] )     
+        
         # --------------------------------------------------
         # REMOVE DIAGONAL ELEMENTS
         # --------------------------------------------------

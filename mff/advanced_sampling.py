@@ -16,6 +16,7 @@ from skbayes.rvm_ard_models import RVR
 from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import cdist
 import random
+from itertools import product, combinations_with_replacement
 
 
 logging.basicConfig(level=logging.ERROR)
@@ -57,8 +58,7 @@ class Sampling(object):
         self.energies = energies
         self.forces = forces
         natoms = len(confs[0]) + 1
-        atom_number_list = [conf[0,3] for conf in confs]
-        self.elements = np.unique(atom_number_list, return_counts=False)
+        self.elements = list(np.sort(list(set(confs[:,:,3:].flatten().tolist()))))        
         self.natoms = natoms
         self.K2 = None
         self.K3 = None
@@ -478,48 +478,124 @@ class Sampling(object):
         '''
         t0 = time.time()
         if method == '2b':
-            stored_histogram = np.zeros(nbins)
-            index = []
-            ind = np.arange(len(self.X))
-            randomarange = np.random.choice(ind, size=len(self.X), replace=False)
-            for j in randomarange: # for every snapshot of the trajectory file
-                distances = np.sqrt(np.einsum('id -> i', np.square(self.X[j][:,:3])))
-                distances[np.where(distances > self.r_cut)] = None
-                this_snapshot_histogram = np.histogram(distances, nbins, (0.0, self.r_cut))
-                if (stored_histogram - this_snapshot_histogram[0] < 0).any():
-                    index.append(j)
-                    stored_histogram += this_snapshot_histogram[0]
+            if len(self.elements) == 1:
+                stored_histogram = np.zeros(nbins)
+                index = []
+                ind = np.arange(len(self.X))
+                randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+                for j in randomarange: # for every snapshot of the trajectory file
+                    distances = np.sqrt(np.einsum('id -> i', np.square(self.X[j][:,:3])))
+                    distances[np.where(distances > self.r_cut)] = None
+                    this_snapshot_histogram = np.histogram(distances, nbins, (0.0, self.r_cut))
+                    if (stored_histogram - this_snapshot_histogram[0] < 0).any():
+                        index.append(j)
+                        stored_histogram += this_snapshot_histogram[0]
 
-            m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
-            
+                m = TwoBodySingleSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+
+            if len(self.elements) == 2:
+                stored_histogram = np.zeros((nbins, 3))
+                index = []
+                ind = np.arange(len(self.X))
+                randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+                for j in randomarange: # for every snapshot of the trajectory file
+                    distances = np.sqrt(np.einsum('id -> i', np.square(self.X[j][:,:3])))
+                    distances[np.where(distances > self.r_cut)] = None
+                    element_pairs = list(combinations_with_replacement(self.elements, 2))
+                    for k in range(3):
+                        if k == 1:  #In the case of two different elements, we have to account for permutation invariance
+                            this_element_pair = np.union1d(
+                                np.intersect1d(
+                                np.where(self.X[j][:,3] == element_pairs[k][0]), np.where(self.X[j][:,4] == element_pairs[k][1])), 
+                                np.intersect1d(
+                                np.where(self.X[j][:,3] == element_pairs[k][1]), np.where(self.X[j][:,4] == element_pairs[k][0])))
+                        else:
+                            this_element_pair = np.intersect1d(
+                                np.where(self.X[j][:,3] == element_pairs[k][0]), np.where(self.X[j][:,4] == element_pairs[k][1]))
+                        distances_this = distances[this_element_pair]
+                        
+                        this_snapshot_histogram = np.histogram(distances_this, nbins, (0.0, self.r_cut))
+                        if (stored_histogram[:,k] - this_snapshot_histogram[0] < 0).any():
+                            index.append(j)
+                            stored_histogram[:,k] += this_snapshot_histogram[0]
+
+                m = TwoBodyTwoSpeciesModel(self.elements, self.r_cut, self.sigma_2b, self.theta, self.noise)
+                
+                
         elif method == '3b':
-            stored_histogram = np.zeros((nbins, nbins, nbins))
-            index = []
-            ind = np.arange(len(self.X))
-            randomarange = np.random.choice(ind, size=len(self.X), replace=False)
-            for j in randomarange: # for every snapshot of the trajectory file
-                atoms = np.vstack(([0., 0., 0.], self.X[j][:,:3]))
-                distances  = cdist(atoms, atoms)
-                distances[np.where(distances > self.r_cut)] = None
-                distances[np.where(distances == 0 )] = None
-                triplets = []
-                for k in np.argwhere(distances[:,0] > 0 ):
-                    for l in np.argwhere(distances[0,:] > 0 ):
-                        if distances[k,l] > 0 :
-                            triplets.append([distances[0, k], distances[0, l], distances[k, l]])
-                            triplets.append([distances[0, l], distances[k, l], distances[0, k]])
-                            triplets.append([distances[k, l], distances[0, k], distances[0, l]])
+            if len(self.elements) == 1:
+                stored_histogram = np.zeros((nbins, nbins, nbins))
+                index = []
+                ind = np.arange(len(self.X))
+                randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+                for j in randomarange: # for every snapshot of the trajectory file
+                    atoms = np.vstack(([0., 0., 0.], self.X[j][:,:3]))
+                    distances  = cdist(atoms, atoms)
+                    distances[np.where(distances > self.r_cut)] = None
+                    distances[np.where(distances == 0 )] = None
+                    triplets = []
+                    for k in np.argwhere(distances[:,0] > 0 ):
+                        for l in np.argwhere(distances[0,:] > 0 ):
+                            if distances[k,l] > 0 :
+                                triplets.append([distances[0, k], distances[0, l], distances[k, l]])
+                                triplets.append([distances[0, l], distances[k, l], distances[0, k]])
+                                triplets.append([distances[k, l], distances[0, k], distances[0, l]])
 
-                triplets = np.reshape(triplets, (len(triplets), 3)) 
-                this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
-                                                         range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
+                    triplets = np.reshape(triplets, (len(triplets), 3)) 
+                    
+                    for k in np.arange(4):
+                        valid_triplets = []
+                        this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
+                                                                 range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
 
-                if (stored_histogram - this_snapshot_histogram[0] < 0).any():
-                    index.append(j)
-                    stored_histogram += this_snapshot_histogram[0]
+                        if (stored_histogram[k] - this_snapshot_histogram[0] < 0).any():
+                            index.append(j)
+                            stored_histogram[k] += this_snapshot_histogram[0]
+                            
+                    if (stored_histogram - this_snapshot_histogram[0] < 0).any():
+                        index.append(j)
+                        stored_histogram += this_snapshot_histogram[0]
 
-            m = CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
-                                                   , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+                m = CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                       , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+                
+            elif len(self.elements) == 2:
+                stored_histogram = np.zeros((nbins, nbins, nbins, 4))
+                index = []
+                ind = np.arange(len(self.X))
+                randomarange = np.random.choice(ind, size=len(self.X), replace=False)
+                for j in randomarange: # for every snapshot of the trajectory file
+                    atoms = np.vstack(([0., 0., 0.], self.X[j][:,:3]))
+                    distances  = cdist(atoms, atoms)
+                    distances[np.where(distances > self.r_cut)] = None
+                    distances[np.where(distances == 0 )] = None
+                    possible_triplets = list(combinations_with_replacement(self.elements, 3))
+                    triplets = []
+                    elements_triplets = []
+                    for k in np.argwhere(distances[:,0] > 0 ):
+                        for l in np.argwhere(distances[0,:] > 0 ):
+                            if distances[k,l] > 0 :
+                                elements_triplets.append(np.sort([self.X[j][0,3], self.X[j][k-1,4], self.X[j][l-1,4]]))
+                                triplets.append([distances[0, k], distances[0, l], distances[k, l]])                                
+                                triplets.append([distances[0, l], distances[k, l], distances[0, k]])                                
+                                triplets.append([distances[k, l], distances[0, k], distances[0, l]])
+                                
+                    elements_triplets = np.reshape(elements_triplets, (len(elements_triplets), 3))
+#                     elements_triplets = np.repeat(elements_triplets, 3, axis = 0)
+                    triplets = np.reshape(triplets, (len(triplets), 3)) 
+                    this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
+                                                             range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
+                    for k in np.arange(4):
+                        valid_triplets = triplets[np.where(elements_triplets == possible_triplets[k]), :][0]
+                        this_snapshot_histogram = np.histogramdd(valid_triplets, bins = (nbins, nbins, nbins), 
+                                                                 range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
+
+                        if (stored_histogram[:,:,:,k] - this_snapshot_histogram[0] < 0).any():
+                            index.append(j)
+                            stored_histogram[:,:,:,k] += this_snapshot_histogram[0]
+                m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+                                                       , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
+                
         else:
             print('Method must be either 2b or 3b')
             return 0
@@ -542,11 +618,11 @@ class Sampling(object):
             del m, distances, this_snapshot_histogram, randomarange, stored_histogram, y_hat, error
             tf = time.time()
             total_time = tf-t0
-            index = list(index)
+            index = list(set(index))
             return MAE, SMAE, RMSE, index, total_time
         
         else:
-            index = list(index)
+            index = list(set(index))
             return index
 
     

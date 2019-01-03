@@ -815,7 +815,10 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         alpha_j = rho1[:, 4].flatten()
         alpha_m = rho2[:, 4].flatten()
 
-
+        alpha_k = rho1[:, 4].flatten()
+        alpha_n = rho2[:, 4].flatten()
+        
+        
         # --------------------------------------------------
         # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
         # --------------------------------------------------

@@ -444,6 +444,7 @@ class Sampling(object):
             MAE = np.mean(np.abs(error))
             SMAE = np.std(np.abs(error))
             RMSE = np.sqrt(np.mean((error) ** 2))  
+            
         index = list(np.arange(len(self.X))[~mask])
         del mask, worst_thing, pred, rand_test, m, ndata, randints, error
         tf = time.time()
@@ -451,7 +452,7 @@ class Sampling(object):
         return MAE, SMAE, RMSE, index, total_time
     
     
-    def grid(self, method = '2b', nbins = 100, error_metric = 'energy'):
+    def grid(self, method = '2b', nbins = 100, error_metric = 'energy', return_error = True):
         '''
         Grid sampling, based either on interatomic distances (2b) or on triplets of interatomic distances (3b).
         Training configurations are shuffled and are then included in the final database only if they contain a
@@ -465,6 +466,7 @@ class Sampling(object):
                 If method is 2b, this will specify the value only for distances from the central atom, if
                 method is 3b, this will specify the value for triplets of distances.
             errror_metric (str): specifies whether the final error is calculated on energies or on forces
+            return_error (bool): if true, error on test set using sampled database is returned
 
         Returns:
             MAE (float): Mean absolute error made by the final iteration of the method on the test set
@@ -516,34 +518,39 @@ class Sampling(object):
                     index.append(j)
                     stored_histogram += this_snapshot_histogram[0]
 
-            m = CombinedTwoSpeciesModel(elements=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
+            m = CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
                                                    , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
         else:
             print('Method must be either 2b or 3b')
             return 0
-
-        if error_metric == 'force':
-            m.fit(self.X[index], self.Y_force[index])
-            y_hat = m.predict(self.x)
-            error = y_hat - self.y_force
-            MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
-            SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
-            RMSE = np.sqrt(np.mean((error) ** 2))    
+        
+        if return_error:
+            if error_metric == 'force':
+                m.fit(self.X[index], self.Y_force[index])
+                y_hat = m.predict(self.x)
+                error = y_hat - self.y_force
+                MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
+                SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
+                RMSE = np.sqrt(np.mean((error) ** 2))    
+            else:
+                m.fit_energy(self.X[index], self.Y[index])
+                y_hat = m.predict_energy(self.x)
+                error = y_hat - self.y
+                MAE = np.mean(np.abs(error))
+                SMAE = np.std(np.abs(error))
+                RMSE = np.sqrt(np.mean((error) ** 2))   
+            del m, distances, this_snapshot_histogram, randomarange, stored_histogram, y_hat, error
+            tf = time.time()
+            total_time = tf-t0
+            index = list(index)
+            return MAE, SMAE, RMSE, index, total_time
+        
         else:
-            m.fit_energy(self.X[index], self.Y[index])
-            y_hat = m.predict_energy(self.x)
-            error = y_hat - self.y
-            MAE = np.mean(np.abs(error))
-            SMAE = np.std(np.abs(error))
-            RMSE = np.sqrt(np.mean((error) ** 2))   
-        del m, distances, this_snapshot_histogram, randomarange, stored_histogram, y_hat, error
-        tf = time.time()
-        total_time = tf-t0
-        index = list(index)
-        return MAE, SMAE, RMSE, index, total_time
+            index = list(index)
+            return index
 
     
-    def cur(self, method = '2b', ntrain = 1000, batchsize = 500):
+    def cur_old(self, method = '2b', ntrain = 1000, batchsize = 500):
         t0 = time.time()
         ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
         split = len(self.X)//batchsize + 1    # Decide the number of batches
@@ -561,12 +568,12 @@ class Sampling(object):
                 return 0
             c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
             c.factorize()
-            index = []
             for i in np.arange(len(batch_index)):    # For all points in the batch
                 for j in np.arange(ntrain):        # For all points in the decomposition
                     if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
                         index.append(batch_index[i])
-            index = list(set(index))
+                        
+        index = list(set(index))
         
         m = self.get_the_right_model(method)
         m.fit_energy(self.X[index], self.Y[index])
@@ -579,8 +586,48 @@ class Sampling(object):
         del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
         tf = time.time()
         return MAE, SMAE, RMSE, list(index_return), tf-t0
-                    
+               
         
+    def cur(self, method = '2b', ntrain = 1000, batchsize = 500):
+        t0 = time.time()
+        split = len(self.X)//batchsize + 1    # Decide the number of batches
+        batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
+        index = []
+        for s in np.arange(split):
+            batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
+            complete_batch = self.X[batch_index]
+            if method == '2b':
+                gram = self.gp2.calc_gram_ee(complete_batch)
+            elif method == '3b':
+                gram = self.gp3.calc_gram_ee(complete_batch)   
+            else:
+                print('Method must be either 2b or 3b')
+                return 0
+
+            for i in np.arange(ntrain//split):
+                c = cur.CUR(gram, k=1)
+                c.factorize()
+                this_index = np.argmax(c.sample_probability()[1])
+                index.append(this_index)  # Get the index of the column with the highest probability of being chosen
+                gram = np.delete(gram, this_index, axis=1)
+                gram = np.delete(gram, this_index, axis=0)
+
+            
+        index = list(set(index))
+        
+        m = self.get_the_right_model(method)
+        m.fit_energy(self.X[index], self.Y[index])
+        y_hat = m.predict_energy(self.x)
+        error = y_hat - self.y
+        MAE = np.mean(np.abs(error))
+        SMAE = np.std(np.abs(error))
+        RMSE = np.sqrt(np.mean((error) ** 2)) 
+        index_return = np.arange(len(self.X))[index]
+        del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
+        tf = time.time()
+        return MAE, SMAE, RMSE, list(index_return), tf-t0
+    
+    
     def random(self, method = '2b', ntrain = 500, error_metric = 'energy'):
         '''
         Random subsampling of training points from the larger training dataset.

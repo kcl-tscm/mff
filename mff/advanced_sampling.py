@@ -543,15 +543,9 @@ class Sampling(object):
 
                     triplets = np.reshape(triplets, (len(triplets), 3)) 
                     
-                    for k in np.arange(4):
-                        valid_triplets = []
-                        this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
+                    this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
                                                                  range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
-
-                        if (stored_histogram[k] - this_snapshot_histogram[0] < 0).any():
-                            index.append(j)
-                            stored_histogram[k] += this_snapshot_histogram[0]
-                            
+                           
                     if (stored_histogram - this_snapshot_histogram[0] < 0).any():
                         index.append(j)
                         stored_histogram += this_snapshot_histogram[0]

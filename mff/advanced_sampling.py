@@ -58,7 +58,7 @@ class Sampling(object):
         self.energies = energies
         self.forces = forces
         natoms = len(confs[0]) + 1
-        self.elements = list(np.sort(list(set(confs[:,:,3:].flatten().tolist()))))        
+        self.elements = list(np.sort(list(set(confs[0][:,3:].flatten().tolist()))))        
         self.natoms = natoms
         self.K2 = None
         self.K3 = None
@@ -99,7 +99,10 @@ class Sampling(object):
 #         self.reduced_forces = forces
 #         self.reduced_confs = confs
 #         del confs, energies, forces, shuffled_order, traj
-                                         
+
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+    
     def clean_dataset(self, randomized = True, shuffling = True):
         ''' 
         Function used to subsample from a complete trajectory only one atomic environment
@@ -549,7 +552,7 @@ class Sampling(object):
                     if (stored_histogram - this_snapshot_histogram[0] < 0).any():
                         index.append(j)
                         stored_histogram += this_snapshot_histogram[0]
-
+                    
                 m = CombinedSingleSpeciesModel(element=self.elements, noise=self.noise, sigma_2b=self.sigma_2b
                                                        , sigma_3b=self.sigma_3b, theta_3b=self.theta, r_cut=self.r_cut, theta_2b=self.theta)
                 
@@ -620,82 +623,159 @@ class Sampling(object):
             return index
 
     
-    def cur_old(self, method = '2b', ntrain = 1000, batchsize = 500):
-        t0 = time.time()
-        ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
-        split = len(self.X)//batchsize + 1    # Decide the number of batches
-        batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
-        index = []
-        for s in np.arange(split):
-            batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
-            complete_batch = self.X[batch_index]
-            if method == '2b':
-                gram = self.gp2.calc_gram_ee(complete_batch)
-            elif method == '3b':
-                gram = self.gp3.calc_gram_ee(complete_batch)   
-            else:
-                print('Method must be either 2b or 3b')
-                return 0
-            c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
-            c.factorize()
-            for i in np.arange(len(batch_index)):    # For all points in the batch
-                for j in np.arange(ntrain):        # For all points in the decomposition
-                    if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
-                        index.append(batch_index[i])
+#     def cur_old(self, method = '2b', ntrain = 1000, batchsize = 500):
+#         t0 = time.time()
+#         ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
+#         split = len(self.X)//batchsize + 1    # Decide the number of batches
+#         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
+#         index = []
+#         for s in np.arange(split):
+#             batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
+#             complete_batch = self.X[batch_index]
+#             if method == '2b':
+#                 gram = self.gp2.calc_gram_ee(complete_batch)
+#             elif method == '3b':
+#                 gram = self.gp3.calc_gram_ee(complete_batch)   
+#             else:
+#                 print('Method must be either 2b or 3b')
+#                 return 0
+#             c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
+#             c.factorize()
+#             for i in np.arange(len(batch_index)):    # For all points in the batch
+#                 for j in np.arange(ntrain):        # For all points in the decomposition
+#                     if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
+#                         index.append(batch_index[i])
                         
-        index = list(set(index))
+#         index = list(set(index))
         
-        m = self.get_the_right_model(method)
-        m.fit_energy(self.X[index], self.Y[index])
-        y_hat = m.predict_energy(self.x)
-        error = y_hat - self.y
-        MAE = np.mean(np.abs(error))
-        SMAE = np.std(np.abs(error))
-        RMSE = np.sqrt(np.mean((error) ** 2)) 
-        index_return = np.arange(len(self.X))[index]
-        del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
-        tf = time.time()
-        return MAE, SMAE, RMSE, list(index_return), tf-t0
+#         m = self.get_the_right_model(method)
+#         m.fit_energy(self.X[index], self.Y[index])
+#         y_hat = m.predict_energy(self.x)
+#         error = y_hat - self.y
+#         MAE = np.mean(np.abs(error))
+#         SMAE = np.std(np.abs(error))
+#         RMSE = np.sqrt(np.mean((error) ** 2)) 
+#         index_return = np.arange(len(self.X))[index]
+#         del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
+#         tf = time.time()
+#         return MAE, SMAE, RMSE, list(index_return), tf-t0
                
         
-    def cur(self, method = '2b', ntrain = 1000, batchsize = 500):
+    def cur(self, method = '2b', ntrain = 1000, batchsize = 1000, error_metric = 'energy'):
         t0 = time.time()
         split = len(self.X)//batchsize + 1    # Decide the number of batches
         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
         index = []
+        ntr_per_batch = ntrain//split
         for s in np.arange(split):
-            batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
-            complete_batch = self.X[batch_index]
+            #batches[s] = list(batches[s])
+            batch_confs = self.X[batches[s]]
             if method == '2b':
-                gram = self.gp2.calc_gram_ee(complete_batch)
+                gram = self.gp2.calc_gram_ee(batch_confs)
             elif method == '3b':
-                gram = self.gp3.calc_gram_ee(complete_batch)   
+                gram = self.gp3.calc_gram_ee(batch_confs)   
             else:
                 print('Method must be either 2b or 3b')
                 return 0
-
-            for i in np.arange(ntrain//split):
-                c = cur.CUR(gram, k=1)
-                c.factorize()
-                this_index = np.argmax(c.sample_probability()[1])
-                index.append(this_index)  # Get the index of the column with the highest probability of being chosen
-                gram = np.delete(gram, this_index, axis=1)
-                gram = np.delete(gram, this_index, axis=0)
-
             
-        index = list(set(index))
-        
+            u, p, v = np.linalg.svd(gram)
+            v2 = np.square(v)
+            score = np.sum(v2[:ntr_per_batch], axis = 0)/ntr_per_batch
+            
+            # Calculate the score value of the nth percentile of the score distribution. This is used when randomly selecting the columns
+            median = np.percentile(score, int(100 - 100*(ntr_per_batch/len(score))))  
+            std = np.std(score)
+            
+            # Choose randomly the columns with probability proportional to a sigmoid function applied to the score, centred on median
+            prob = np.minimum(np.ones(len(score)), self.sigmoid((score-median)/std/(ntr_per_batch/len(score))))
+            rand = np.random.uniform(size = len(score))
+            accepted = np.sign(prob - rand)
+            accepted = ((accepted+1)//2).astype(bool)
+            watever = batches[s]
+            these_ones = watever[accepted]
+            index.append(these_ones)
+
+            del score, accepted, prob, median, std, gram, u, s, v
+            
+        index = np.concatenate(index).ravel().tolist()
+
         m = self.get_the_right_model(method)
-        m.fit_energy(self.X[index], self.Y[index])
-        y_hat = m.predict_energy(self.x)
-        error = y_hat - self.y
-        MAE = np.mean(np.abs(error))
-        SMAE = np.std(np.abs(error))
-        RMSE = np.sqrt(np.mean((error) ** 2)) 
+        if error_metric == 'energy':
+            m.fit_energy(self.X[index], self.Y[index])
+            y_hat = m.predict_energy(self.x)
+            error = y_hat - self.y
+            MAE = np.mean(np.abs(error))
+            SMAE = np.std(np.abs(error))
+            RMSE = np.sqrt(np.mean((error) ** 2)) 
+        else:
+            m.fit(self.X[index], self.Y_force[index])
+            y_hat = m.predict(self.x)
+            error = y_hat - self.y_force
+            MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
+            SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
+            RMSE = np.sqrt(np.mean((error) ** 2))  
+
         index_return = np.arange(len(self.X))[index]
-        del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
+        del error, y_hat, m
         tf = time.time()
         return MAE, SMAE, RMSE, list(index_return), tf-t0
+
+#     def cur_old2(self, method = '2b', ntrain = 1000, batchsize = 500, error_metric = 'energy'):
+#         t0 = time.time()
+#         split = len(self.X)//batchsize + 1    # Decide the number of batches
+#         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
+#         index = []
+#         for s in np.arange(split):
+# #             batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
+# #             complete_batch = self.X[batch_index]
+
+#             complete_batch = self.X[batches[s]]
+#             if method == '2b':
+#                 gram = self.gp2.calc_gram_ee(complete_batch)
+#             elif method == '3b':
+#                 gram = self.gp3.calc_gram_ee(complete_batch)   
+#             else:
+#                 print('Method must be either 2b or 3b')
+#                 return 0
+            
+            
+#             c = cur.CUR(gram, k=1)
+#             c.factorize()
+#             sample_probs = np.reshape(c.sample_probability()[1], len(c.sample_probability()[1]))
+#             this_index =  sample_probs.argsort()[-ntrain//split:][::-1]
+#             index.append(batches[s][this_index])
+            
+# #             for i in np.arange(ntrain//split): # Select ntrain//split training points from each batch
+# #                 c = cur.CUR(gram, k=1)
+# #                 c.factorize()
+# #                 this_index = np.argmax(c.sample_probability()[1])
+# #                 index.append(batches[s][this_index])  # Get the index of the column with the highest probability of being chosen
+# #                 gram = np.delete(gram, this_index, axis=1)
+# #                 gram = np.delete(gram, this_index, axis=0)
+# #                 print(this_index)
+#         index = np.concatenate(index).ravel().tolist()
+
+#         index = list(set(index))
+#         m = self.get_the_right_model(method)
+#         if error_metric == 'energy':
+#             m.fit_energy(self.X[index], self.Y[index])
+#             y_hat = m.predict_energy(self.x)
+#             error = y_hat - self.y
+#             MAE = np.mean(np.abs(error))
+#             SMAE = np.std(np.abs(error))
+#             RMSE = np.sqrt(np.mean((error) ** 2)) 
+#         else:
+#             m.fit(self.X[index], self.Y_force[index])
+#             y_hat = m.predict(self.x)
+#             error = y_hat - self.y_force
+#             MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
+#             SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
+#             RMSE = np.sqrt(np.mean((error) ** 2))  
+
+#         index_return = np.arange(len(self.X))[index]
+#         del m, index, c, gram, ntrain, complete_batch,  error, y_hat
+#         tf = time.time()
+#         return MAE, SMAE, RMSE, list(index_return), tf-t0
     
     
     def random(self, method = '2b', ntrain = 500, error_metric = 'energy'):

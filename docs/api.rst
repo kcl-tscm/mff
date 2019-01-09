@@ -53,5 +53,9 @@ The "kernels" module
 
 :class:`mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
 
+The "advanced_sampling" module
+--------------------
+
+:class:`mff.advanced_sampling`
 
 

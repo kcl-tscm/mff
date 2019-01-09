@@ -4,9 +4,6 @@ import time
 from pathlib import Path
 import sys
 sys.path.insert(0, '../')
-sys.path.insert(0, '../../')
-sys.path.insert(0, '../../pymf/pymf/')
-from pymf import cur
 from mff.models import TwoBodySingleSpeciesModel,  CombinedSingleSpeciesModel
 from mff.models import TwoBodyTwoSpeciesModel,  CombinedTwoSpeciesModel
 from mff.configurations import carve_from_snapshot
@@ -216,7 +213,7 @@ class Sampling(object):
                 return 0     
         
         
-    def train_test_split(self, confs=[], forces=[], energies=[], ntest = 10):
+    def train_test_split(self, confs, forces = None, energies= None, ntest = 10):
         ''' 
         Function used to subsample a training and a test set: the test set is extracted at random
         and the remaining dataset is trated as a training set (from which we then subsample using the various methods).
@@ -229,6 +226,15 @@ class Sampling(object):
                 as a test point
         
         '''
+        
+        if forces is None:
+            forces = np.zeros((len(confs), 3))
+            print('No forces in the input')
+
+        if energies is None:
+            energies = np.zeros(len(confs))
+            print('No energies in the input')
+            
         ind = np.arange(len(confs))
         ind_test = np.random.choice(ind, size=ntest, replace=False)
         ind_train = list(set(ind) - set(ind_test))
@@ -277,9 +283,9 @@ class Sampling(object):
         
     def rvm(self, method = '2b',  batchsize = 1000):
         ''' 
-        Relevance vector machine sampling. This method uses a 2- or 2-body kernel and trains it on the energies of the
+        Relevance vector machine sampling. This method trains a 2-, 3- or many-body kernel on the energies of the
         partitioned training dataset. The algortihm starts from a dataset containing a batchsize number of training
-        configurations extracted from the whole training set at random. Subsequently, a rvm method is called and a
+        configurations extracted from the whole dataset at random. Subsequently, a rvm method is called and a
         variable number of configurations is selected. These are then included in the next batch, and the operation
         is repeated until every point in the training dataset was included at least once.
         The function then returns the indexes of the points returned by the last call of the rvm method.
@@ -578,7 +584,6 @@ class Sampling(object):
                                 triplets.append([distances[k, l], distances[0, k], distances[0, l]])
                                 
                     elements_triplets = np.reshape(elements_triplets, (len(elements_triplets), 3))
-#                     elements_triplets = np.repeat(elements_triplets, 3, axis = 0)
                     triplets = np.reshape(triplets, (len(triplets), 3)) 
                     this_snapshot_histogram = np.histogramdd(triplets, bins = (nbins, nbins, nbins), 
                                                              range =  ((0.0, self.r_cut), (0.0, self.r_cut), (0.0, self.r_cut)))
@@ -621,47 +626,33 @@ class Sampling(object):
         else:
             index = list(set(index))
             return index
-
-    
-#     def cur_old(self, method = '2b', ntrain = 1000, batchsize = 500):
-#         t0 = time.time()
-#         ntrain = ntrain//2 + 1    # Needed since we take the columns AND rows from the decomposition
-#         split = len(self.X)//batchsize + 1    # Decide the number of batches
-#         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
-#         index = []
-#         for s in np.arange(split):
-#             batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
-#             complete_batch = self.X[batch_index]
-#             if method == '2b':
-#                 gram = self.gp2.calc_gram_ee(complete_batch)
-#             elif method == '3b':
-#                 gram = self.gp3.calc_gram_ee(complete_batch)   
-#             else:
-#                 print('Method must be either 2b or 3b')
-#                 return 0
-#             c = cur.CUR(gram,rrank=ntrain, crank=ntrain)
-#             c.factorize()
-#             for i in np.arange(len(batch_index)):    # For all points in the batch
-#                 for j in np.arange(ntrain):        # For all points in the decomposition
-#                     if(all(gram[:,i] == c.U[:,j]) or all(gram[i,:] == c.V[j,:])):
-#                         index.append(batch_index[i])
-                        
-#         index = list(set(index))
-        
-#         m = self.get_the_right_model(method)
-#         m.fit_energy(self.X[index], self.Y[index])
-#         y_hat = m.predict_energy(self.x)
-#         error = y_hat - self.y
-#         MAE = np.mean(np.abs(error))
-#         SMAE = np.std(np.abs(error))
-#         RMSE = np.sqrt(np.mean((error) ** 2)) 
-#         index_return = np.arange(len(self.X))[index]
-#         del m, index, c, gram, ntrain, complete_batch, batch_index, error, y_hat
-#         tf = time.time()
-#         return MAE, SMAE, RMSE, list(index_return), tf-t0
                
         
     def cur(self, method = '2b', ntrain = 1000, batchsize = 1000, error_metric = 'energy'):
+        '''
+        Sampling using the CUR decomposition technique.
+        The complete dataset is first divided into batches, then the energy-energy Gram matrix is
+        calculated for each batch. An svd decomposition is subsequently applied to each gram matrix,
+        and a number of entries (columns) is selected based on their importance score.
+        The method is calibrated so that the final number of training points selected is roughly equal
+        to the input parameter ntrain.
+        
+        Args:
+            method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
+            ntrain (int): Number of training points to be selected from the whole dataset
+            batchsize (int): Number of data points to be used for each calculation of the gram matrix.
+                Lower values make the computation faster but the error might be higher.
+            errror_metric (str): specifies whether the final error is calculated on energies or on forces
+
+        Returns:
+            MAE (float): Mean absolute error made by the final iteration of the method on the test set
+            SMAE (float):Standard deviation of the absolute error made by the final iteration of the method on the test set
+            RMSE (float): Root mean squared error made by the final iteration of the method on the test set
+            index (list): List containing the indexes of all the selected training points
+            total_time (float): Excecution time in seconds
+        
+        '''
+        
         t0 = time.time()
         split = len(self.X)//batchsize + 1    # Decide the number of batches
         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
@@ -719,63 +710,6 @@ class Sampling(object):
         del error, y_hat, m
         tf = time.time()
         return MAE, SMAE, RMSE, list(index_return), tf-t0
-
-#     def cur_old2(self, method = '2b', ntrain = 1000, batchsize = 500, error_metric = 'energy'):
-#         t0 = time.time()
-#         split = len(self.X)//batchsize + 1    # Decide the number of batches
-#         batches = np.array_split(range(len(self.X)),split)  # Create a number of evenly sized batches
-#         index = []
-#         for s in np.arange(split):
-# #             batch_index = list(set(index).union(batches[s]))  # For the last batch, take the last batchsize points
-# #             complete_batch = self.X[batch_index]
-
-#             complete_batch = self.X[batches[s]]
-#             if method == '2b':
-#                 gram = self.gp2.calc_gram_ee(complete_batch)
-#             elif method == '3b':
-#                 gram = self.gp3.calc_gram_ee(complete_batch)   
-#             else:
-#                 print('Method must be either 2b or 3b')
-#                 return 0
-            
-            
-#             c = cur.CUR(gram, k=1)
-#             c.factorize()
-#             sample_probs = np.reshape(c.sample_probability()[1], len(c.sample_probability()[1]))
-#             this_index =  sample_probs.argsort()[-ntrain//split:][::-1]
-#             index.append(batches[s][this_index])
-            
-# #             for i in np.arange(ntrain//split): # Select ntrain//split training points from each batch
-# #                 c = cur.CUR(gram, k=1)
-# #                 c.factorize()
-# #                 this_index = np.argmax(c.sample_probability()[1])
-# #                 index.append(batches[s][this_index])  # Get the index of the column with the highest probability of being chosen
-# #                 gram = np.delete(gram, this_index, axis=1)
-# #                 gram = np.delete(gram, this_index, axis=0)
-# #                 print(this_index)
-#         index = np.concatenate(index).ravel().tolist()
-
-#         index = list(set(index))
-#         m = self.get_the_right_model(method)
-#         if error_metric == 'energy':
-#             m.fit_energy(self.X[index], self.Y[index])
-#             y_hat = m.predict_energy(self.x)
-#             error = y_hat - self.y
-#             MAE = np.mean(np.abs(error))
-#             SMAE = np.std(np.abs(error))
-#             RMSE = np.sqrt(np.mean((error) ** 2)) 
-#         else:
-#             m.fit(self.X[index], self.Y_force[index])
-#             y_hat = m.predict(self.x)
-#             error = y_hat - self.y_force
-#             MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
-#             SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
-#             RMSE = np.sqrt(np.mean((error) ** 2))  
-
-#         index_return = np.arange(len(self.X))[index]
-#         del m, index, c, gram, ntrain, complete_batch,  error, y_hat
-#         tf = time.time()
-#         return MAE, SMAE, RMSE, list(index_return), tf-t0
     
     
     def random(self, method = '2b', ntrain = 500, error_metric = 'energy'):

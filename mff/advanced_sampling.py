@@ -1,22 +1,26 @@
 import logging
 import numpy as np
 import time
-from pathlib import Path
 import sys
+import random
 sys.path.insert(0, '../')
+
+from pathlib import Path
 from mff.models import TwoBodySingleSpeciesModel,  CombinedSingleSpeciesModel
 from mff.models import TwoBodyTwoSpeciesModel,  CombinedTwoSpeciesModel
 from mff.configurations import carve_from_snapshot
 from mff.gp import GaussianProcess 
 from mff import kernels
-from skbayes.rvm_ard_models import RVR
-from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import cdist
-import random
 from itertools import product, combinations_with_replacement
 
+try:
+    from skbayes.rvm_ard_models import RVR
+    from sklearn.metrics import mean_squared_error
+except:
+    print("No skbayes module found, rvm sampling cannot be used")
 
-logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 
 class Sampling(object):

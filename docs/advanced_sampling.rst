@@ -1,7 +1,7 @@
 Advanced Sampling
 =================
 
-This module contains some functions that can be used in order to subsample from very large datasets.
+This module contains functions that can be used in order to subsample from very large datasets.
 
 
 Theory/Introduction

@@ -22,6 +22,7 @@ At the moment the package supports single- and two-element atomic environments; 
    confs
    gp
    calculators
+   advanced_sampling
    api
 
 .. toctree::

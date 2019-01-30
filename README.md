@@ -4,7 +4,7 @@
 
 To read the full documentation check https://mff.readthedocs.io/en/latest/
 
-![alt text](https://github.com/kcl-tscm/mff/blob/master/docs/_static/mff_logo_2.svg)
+![alt text](https://github.com/kcl-tscm/mff/blob/master/docs/_static/mff_logo_mac_compatible.svg)
 ## Table of Contents
 
 - [Background on MFFs](#background)

@@ -241,7 +241,7 @@ class Sampling(object):
             
         ind = np.arange(len(confs))
         ind_test = np.random.choice(ind, size=ntest, replace=False)
-        ind_train = list(set(ind) - set(ind_test))
+        ind_train = np.array(list(set(ind) - set(ind_test)))
         self.X, self.Y, self.Y_force = confs[ind_train], energies[ind_train], forces[ind_train]
         self.x, self.y, self.y_force = confs[ind_test], energies[ind_test], forces[ind_test]
         del ind, ind_test, ind_train, confs, energies, forces
@@ -716,7 +716,7 @@ class Sampling(object):
         return MAE, SMAE, RMSE, list(index_return), tf-t0
     
     
-    def random(self, method = '2b', ntrain = 500, error_metric = 'energy'):
+    def random(self, method = '2b', ntrain = 500, error_metric = 'energy', return_error=True ):
         '''
         Random subsampling of training points from the larger training dataset.
         
@@ -724,6 +724,7 @@ class Sampling(object):
             method (str): 2b or 3b, speciefies which energy kernel to use to calculate the gram matrix
             ntrain (int): Number of points to include in the final dataset.
             errror_metric (str): specifies whether the final error is calculated on energies or on forces
+            return_error (bool): if True, train a GP and run a test
 
         Returns:
             MAE (float): Mean absolute error made by the final iteration of the method on the test set
@@ -733,33 +734,39 @@ class Sampling(object):
             total_time (float): Excecution time in seconds
         
         '''
-        t0 = time.time()
         ind = np.arange(len(self.X))
         ind_train = np.random.choice(ind, size=ntrain, replace=False)
-        train_confs = self.X[ind_train]
-        train_energy = self.Y[ind_train]
-        train_forces = self.Y_force[ind_train]
-        m = self.get_the_right_model(method)
-        if error_metric == 'force':
-            m.fit(train_confs, train_forces)
-            y_hat = m.predict(self.x)
-            error = y_hat - self.y_force
-            MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
-            SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
-            RMSE = np.sqrt(np.mean((error) ** 2))    
-        else:
-            m.fit_energy(train_confs, train_energy)
-            y_hat = m.predict_energy(self.x)
-            error = y_hat - self.y
-            MAE = np.mean(np.abs(error))
-            SMAE = np.std(np.abs(error))
-            RMSE = np.sqrt(np.mean((error) ** 2))   
+
+        if return_error:
+            t0 = time.time()
+            train_confs = self.X[ind_train]
+            train_energy = self.Y[ind_train]
+            train_forces = self.Y_force[ind_train]
+            m = self.get_the_right_model(method)
+            if error_metric == 'force':
+                m.fit(train_confs, train_forces)
+                y_hat = m.predict(self.x)
+                error = y_hat - self.y_force
+                MAE = np.mean(np.sqrt(np.sum(np.square(error), axis=1)))
+                SMAE = np.std(np.sqrt(np.sum(np.square(error), axis=1)))
+                RMSE = np.sqrt(np.mean((error) ** 2))    
+            else:
+                m.fit_energy(train_confs, train_energy)
+                y_hat = m.predict_energy(self.x)
+                error = y_hat - self.y
+                MAE = np.mean(np.abs(error))
+                SMAE = np.std(np.abs(error))
+                RMSE = np.sqrt(np.mean((error) ** 2))   
+
+            del m, train_confs, train_energy, train_forces, error, y_hat
             
-        del m, train_confs, train_energy, train_forces, error, y_hat
-        tf = time.time()
-        index = list(ind_train)
-        total_time = tf-t0
-        return MAE, SMAE, RMSE, index, total_time
+            tf = time.time()
+            index = list(ind_train)
+            total_time = tf-t0
+            return MAE, SMAE, RMSE, index, total_time
+        
+        else:
+            return list(ind_train)
     
 
     def test_forces(self, index, method = '2b', sig_2b = 0.2, sig_3b = 0.8, noise = 0.001):

@@ -4,6 +4,8 @@
 
 To read the full documentation check https://mff.readthedocs.io/en/latest/
 
+An example tutorial jupyter notebook can be found in the "Tutorials" folder.
+
 ![alt text](https://github.com/kcl-tscm/mff/blob/master/docs/_static/mff_logo_2.svg)
 ## Table of Contents
 

@@ -36,16 +36,12 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
 
     """
 
-    # See if there are forces and energies, get them for the chosen atoms
-    if (atoms.get_cell() == np.zeros((3, 3))).all():
-        atoms.set_cell(100.0 * np.identity(3))
-        logger.warning('No cell values found, setting to a 100 x 100 x 100 cube')
+
 
     if forces_label:
         forces = atoms.arrays.get(forces_label)
     else:
         forces = atoms.get_forces()
-        forces_label = 'forces'
 
     if energy_label and energy_label != 'energy':
         energy = atoms.arrays.get(energy_label)
@@ -67,6 +63,11 @@ def carve_from_snapshot(atoms, atoms_ind, r_cut, forces_label=None, energy_label
     if energy is None:
         logger.info('Energy in the xyz file is not present, or is not called %s' % (energy_label))
 
+    # See if there are forces and energies, get them for the chosen atoms
+    if (atoms.get_cell() == np.zeros((3, 3))).all():
+        atoms.set_cell(100.0 * np.identity(3))
+        logger.info('No cell values found, setting to a 100 x 100 x 100 cube')
+        
     # Build local configurations for every indexed atom
     nl = FullNeighborList(r_cut, atoms=atoms)
     confs = []

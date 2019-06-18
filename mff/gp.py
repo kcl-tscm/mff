@@ -896,7 +896,7 @@ class GaussianProcess(object):
         self.energy_K, \
         self.X_train_, \
         self.L_, \
-        self.n_train = np.load(filename)
+        self.n_train = np.load(filename, allow_pickle = True)
 
         self.kernel_ = self.kernel
 

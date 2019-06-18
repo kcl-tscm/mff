@@ -373,7 +373,7 @@ class ThreeBodySingleSpeciesModel(Model):
 
         gp_filename = params['gp']['filename']
         try:
-            model.gp.load(directory / gp_filename, allow_pickle = True)
+            model.gp.load(directory / gp_filename)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass
@@ -808,7 +808,7 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         gp_filename = params['gp']['filename']
         try:
-            model.gp.load(directory / gp_filename, allow_pickle = True)
+            model.gp.load(directory / gp_filename)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass

@@ -408,12 +408,12 @@ class CombinedSingleSpeciesModel(Model):
         gp_filename_3b = params['gp_3b']['filename']
 
         try:
-            model.gp_2b.load(directory / gp_filename_2b)
+            model.gp_2b.load(directory / gp_filename_2b, allow_pickle = True)
         except:
             warnings.warn("The 2-body GP file is missing")
             pass
         try:
-            model.gp_3b.load(directory / gp_filename_3b)
+            model.gp_3b.load(directory / gp_filename_3b, allow_pickle = True)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass
@@ -932,12 +932,12 @@ class CombinedTwoSpeciesModel(Model):
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
         try:
-            model.gp_2b.load(directory / gp_filename_2b)
+            model.gp_2b.load(directory / gp_filename_2b, allow_pickle = True)
         except:
             warnings.warn("The 2-body GP file is missing")
             pass
         try:
-            model.gp_3b.load(directory / gp_filename_3b)
+            model.gp_3b.load(directory / gp_filename_3b, allow_pickle = True)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass

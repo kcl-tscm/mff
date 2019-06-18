@@ -290,7 +290,7 @@ class ManyBodySingleSpeciesModel(Model):
                     params['gp']['noise'])
 
         gp_filename = params['gp']['filename']
-        model.gp.load(directory / gp_filename)
+        model.gp.load(directory / gp_filename, allow_pickle = True)
 
         if params['grid']:
             grid_filename = params['grid']['filename']
@@ -598,7 +598,7 @@ class ManyBodyTwoSpeciesModel(Model):
 
         gp_filename = params['gp']['filename']
         try:
-            model.gp.load(directory / gp_filename)
+            model.gp.load(directory / gp_filename, allow_pickle = True)
         except:
             warnings.warn("The 2-body GP file is missing")
             pass

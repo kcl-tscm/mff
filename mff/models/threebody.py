@@ -345,6 +345,49 @@ class ThreeBodySingleSpeciesModel(Model):
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)
 
+    @classmethod
+    def from_json(cls, path):
+        """ Load the model.
+        Loads the model, the associated GP and the mapped potential, if available.
+        
+        Args:
+            path (str): path to the .json model file 
+        
+        Return:
+            model (obj): the model object
+
+        """
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+        model = cls(params['elements'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'],
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        try:
+            model.gp.load(directory / gp_filename, allow_pickle = True)
+        except:
+            warnings.warn("The 3-body GP file is missing")
+            pass
+
+        if params['grid']:
+            for key, grid_filename in params['grid']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+                model.grid[k] = interpolation.Spline3D.load(directory / grid_filename)
+
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+        return model
+
 
 class ThreeBodyTwoSpeciesModel(Model):
     """ 3-body two species model class
@@ -765,7 +808,7 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         gp_filename = params['gp']['filename']
         try:
-            model.gp.load(directory / gp_filename)
+            model.gp.load(directory / gp_filename, allow_pickle = True)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass

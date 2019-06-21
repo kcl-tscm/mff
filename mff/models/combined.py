@@ -68,7 +68,7 @@ class CombinedSingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit(confs, forces, nnodes)
+        self.gp_2b.fit(confs, forces, nnodes = 1)
 
         ntr = len(confs)
         two_body_forces = self.gp_2b.predict(confs)

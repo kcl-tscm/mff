@@ -90,7 +90,7 @@ class CombinedSingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_energy(confs, energies, nnodes)
+        self.gp_2b.fit_energy(confs, energies, nnodes = 1)
 
         ntr = len(confs)
         two_body_energies = self.gp_2b.predict_energy(confs)
@@ -114,7 +114,7 @@ class CombinedSingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
+        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes = 1)
 
         ntr = len(confs)
         two_body_forces = self.gp_2b.predict(confs)
@@ -137,7 +137,7 @@ class CombinedSingleSpeciesModel(Model):
             
         """
         
-        self.gp_2b.fit_update(confs, forces, nnodes)
+        self.gp_2b.fit_update(confs, forces, nnodes = 1)
 
         if len(np.shape(confs)) == 2:
             two_body_forces = self.gp_2b.predict_single(confs)
@@ -161,7 +161,7 @@ class CombinedSingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
             
         """
-        self.gp_2b.fit_update_energy(confs, energies, nnodes)
+        self.gp_2b.fit_update_energy(confs, energies, nnodes = 1)
 
         if len(np.shape(confs)) == 2:
             two_body_energies = self.gp_2b.predict_energy_single(confs)

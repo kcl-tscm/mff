@@ -136,10 +136,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Used for multiprocessing
-                #from pathos.multiprocessing import ProcessPool  # Import multiprocessing package
                 from pathos.pools import ProcessPool
-                import multiprocessing as mp
-                print('AAAABBB')
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed

@@ -136,7 +136,10 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Used for multiprocessing
-                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+                #from pathos.multiprocessing import ProcessPool  # Import multiprocessing package
+                from pathos.pools import ProcessPool
+                import multiprocessing as mp
+                print('AAAABBB')
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed
@@ -148,7 +151,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)  # Use pool multiprocessing
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
@@ -159,11 +161,21 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
 
+                pool = ProcessPool(nodes = nnodes)  # Use pool multiprocessing
+
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ff, clist))
                 result = np.concatenate(result).reshape((n, 3, 3))
                 pool.close()
                 pool.join()
+                pool.clear()
+
+
+                # pool = mp.Pool(nnodes)
+                # result = pool.map(self.dummy_calc_ff, clist)
+                # result = np.arra(result)
+                # pool.close()
+
 
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))

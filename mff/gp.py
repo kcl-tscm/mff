@@ -30,14 +30,13 @@ class GaussianProcess(object):
     # optimizers "fmin_l_bfgs_b"
 
     def __init__(self, kernel=None, noise=1e-10,
-                 optimizer=None, n_restarts_optimizer=0, nnodes = 1):
+                 optimizer=None, n_restarts_optimizer=0):
 
         self.kernel = kernel
         self.noise = noise
         self.optimizer = optimizer
         self.n_restarts_optimizer = n_restarts_optimizer
         self.fitted = [None, None]
-        self.nnodes = 1
 
     def calc_gram_ff(self, X):
         """Calculate the force-force kernel gram matrix

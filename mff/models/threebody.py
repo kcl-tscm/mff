@@ -327,7 +327,8 @@ class ThreeBodySingleSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num, 
+                'filename':{}
             } if self.grid else {}
         }
 
@@ -379,13 +380,12 @@ class ThreeBodySingleSpeciesModel(Model):
             pass
 
         if params['grid']:
-            for key, grid_filename in params['grid']['filename'].items():
-                k = tuple(int(ind) for ind in key.split('_'))
-                model.grid[k] = interpolation.Spline3D.load(directory / grid_filename)
+            grid_filename = params['grid']['filename']
+            model.grid = interpolation.Spline3D.load(directory / grid_filename)
 
             model.grid_start = params['grid']['r_min']
             model.grid_num = params['grid']['r_num']
-
+            
         return model
 
 

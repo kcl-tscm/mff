@@ -306,7 +306,7 @@ class CombinedSingleSpeciesModel(Model):
         self.grid_num_3b = num_3b
         self.grid_start = start
 
-    def save_combined(self, path):
+    def save(self, path):
         """ Save the model.
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
@@ -342,12 +342,14 @@ class CombinedSingleSpeciesModel(Model):
             },
             'grid_2b': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num_2b
+                'r_num': self.grid_num_2b,
+                'filename' : {}
             } if self.grid_2b else {}
             ,
             'grid_3b': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num_3b
+                'r_num': self.grid_num_3b, 
+                'filename' : {}
             } if self.grid_3b else {}
         }
 
@@ -408,12 +410,12 @@ class CombinedSingleSpeciesModel(Model):
         gp_filename_3b = params['gp_3b']['filename']
 
         try:
-            model.gp_2b.load(directory / gp_filename_2b, allow_pickle = True)
+            model.gp_2b.load(directory / gp_filename_2b)
         except:
             warnings.warn("The 2-body GP file is missing")
             pass
         try:
-            model.gp_3b.load(directory / gp_filename_3b, allow_pickle = True)
+            model.gp_3b.load(directory / gp_filename_3b)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass
@@ -822,7 +824,7 @@ class CombinedTwoSpeciesModel(Model):
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
-    def save_combined(self, path):
+    def save(self, path):
         """ Save the model.
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
@@ -858,12 +860,14 @@ class CombinedTwoSpeciesModel(Model):
             },
             'grid_2b': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num_2b
+                'r_num': self.grid_num_2b,
+                'filename' : {}
             } if self.grid_2b else {}
             ,
             'grid_3b': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num_3b
+                'r_num': self.grid_num_3b,
+                'filename' : {}
             } if self.grid_3b else {}
         }
 
@@ -872,8 +876,6 @@ class CombinedTwoSpeciesModel(Model):
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(directory / gp_filename_2b)
         
-#         if self.grid_2b:
-#             params['grid_2b']['filename'] = {}
             
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
@@ -885,13 +887,9 @@ class CombinedTwoSpeciesModel(Model):
         ### SAVE THE 3B MODEL ###
         gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
 
-
         params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(directory / gp_filename_3b)
 
-#         if self.grid_3b:
-#             params['grid_3b']['filename'] = {}
-            
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
@@ -931,13 +929,14 @@ class CombinedTwoSpeciesModel(Model):
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
+
         try:
-            model.gp_2b.load(directory / gp_filename_2b, allow_pickle = True)
+            model.gp_2b.load(directory / gp_filename_2b)
         except:
             warnings.warn("The 2-body GP file is missing")
             pass
         try:
-            model.gp_3b.load(directory / gp_filename_3b, allow_pickle = True)
+            model.gp_3b.load(directory / gp_filename_3b)
         except:
             warnings.warn("The 3-body GP file is missing")
             pass

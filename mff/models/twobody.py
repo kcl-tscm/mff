@@ -548,7 +548,8 @@ class TwoBodyTwoSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num, 
+                'filename':{}
             } if self.grid else {}
         }
 
@@ -563,7 +564,7 @@ class TwoBodyTwoSpeciesModel(Model):
             grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
 
             params['grid']['filename'][key] = grid_filename
-            grid[k].save(directory / grid_filename)
+            grid.save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4)

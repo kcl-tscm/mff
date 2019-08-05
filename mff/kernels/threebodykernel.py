@@ -846,8 +846,6 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
         delta_alphas_jmkn = delta_alphasjm[:, None, :, None] * delta_alphasjm[None, :, None, :]
         
-        delta_alphas_jklmno = delta_alphasjm[:, None, None, :, None, None] * delta_alphasjm[None, :, None, :]
-
         delta_perm1 = delta_alphas12 * delta_alphas_jmkn
 
         # permutation 3
@@ -934,7 +932,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         # Calculate the global energy kernel
         # Only remove diagonal elements since the kernel is NOT permutational invariant due to 
         # the possible combination of chemical species: this is why there are two mask_mn here:
-        se_jkmn = se_jkmn* mask_mn[:,:,None,None] * mask_mn[None,None,:,:]
+        se_jkmn = se_jkmn* mask_jk[:,:,None,None] * mask_mn[None,None,:,:]
         se_jkmn = se_jkmn * delta_alphas_jmkn
         
         k4n = se_jkmn[:,:,None,:,:,None] * se_jkmn[:,None,:,:,None,:] * se_jkmn[None,:,:,None,:,:]

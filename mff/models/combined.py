@@ -75,7 +75,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body single species energy-energy kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -83,21 +83,20 @@ class CombinedSingleSpeciesModel(Model):
         training configurations.
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_energy(confs, energies, nnodes = 1)
+        self.gp_2b.fit_energy(glob_confs, energies, nnodes = 1)
 
-        ntr = len(confs)
-        two_body_energies = self.gp_2b.predict_energy(confs)
+        ntr = len(glob_confs)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs)
 
-        self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
+        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body single species force-force, energy-energy, and energy-forces kernel 
         functions. The 2-body Gaussian process is first fitted, then the 3-body GP 
@@ -109,17 +108,17 @@ class CombinedSingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes = 1)
+        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes = 1)
 
-        ntr = len(confs)
         two_body_forces = self.gp_2b.predict(confs)
-        two_body_energies = self.gp_2b.predict_energy(confs)
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, nnodes)
 
     def update_force(self, confs, forces, nnodes=1):
         """ Update a fitted GP with a set of training energies using a 2- and
@@ -146,7 +145,7 @@ class CombinedSingleSpeciesModel(Model):
 
         self.gp_3b.fit_update(confs, forces - two_body_forces, nnodes)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, nnodes=1):
         """ Update a fitted GP with a set of training energies using a 2- and
         3-body single species force-force kernel functions. The 2-body Gaussian
         process is first updated, then the 3-body GP is fitted to the difference
@@ -154,21 +153,20 @@ class CombinedSingleSpeciesModel(Model):
         training configurations.
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
             
         """
-        self.gp_2b.fit_update_energy(confs, energies, nnodes = 1)
+        self.gp_2b.fit_update_energy(glob_confs, energies, nnodes = 1)
 
-        if len(np.shape(confs)) == 2:
-            two_body_energies = self.gp_2b.predict_energy_single(confs)
+        if len(np.shape(glob_confs)) == 2:
+            two_body_energies = self.gp_2b.predict_energy_single(glob_confs)
         else:
-            two_body_energies = self.gp_2b.predict_energy(confs)
+            two_body_energies = self.gp_2b.predict_energy(glob_confs)
 
-        self.gp_3b.fit_update_energy(confs, energies - two_body_energies, nnodes)
+        self.gp_3b.fit_update_energy(glob_confs, energies - two_body_energies, nnodes)
         
         
     def predict(self, confs, return_std=False):
@@ -195,29 +193,29 @@ class CombinedSingleSpeciesModel(Model):
             return self.gp_2b.predict(confs, return_std) + \
                    self.gp_3b.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the local energies of the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
             
         Returns:
-            energies (array): array of force vectors predicted by the GPs
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
         """
 
         if return_std:
-            energy_2b, std_2b = self.gp_2b.predict_energy(confs, return_std)
-            energy_3b, std_3b = self.gp_2b.predict_energy(confs, return_std)
+            energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std)
+            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std)
             return energy_2b + energy_3b, std_2b + std_3b
         else:
-            return self.gp_2b.predict_energy(confs, return_std) + \
-                   self.gp_3b.predict_energy(confs, return_std)
+            return self.gp_2b.predict_energy(glob_confs, return_std) + \
+                   self.gp_3b.predict_energy(glob_confs, return_std)
 
     def build_grid(self, start, num_2b, num_3b, nnodes=1):
         """ Build the mapped 2- and 3-body potentials. 
@@ -250,7 +248,7 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 0, 0] = dists_2b
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
 
-        grid_data = self.gp_2b.predict_energy(confs)
+        grid_data = self.gp_2b.predict_energy_map(confs)
         grid_2b = interpolation.Spline1D(dists_2b, grid_data)
 
         # Mapping 3 body part
@@ -282,12 +280,12 @@ class CombinedSingleSpeciesModel(Model):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
-            result = np.array(pool.map(self.gp_3b.predict_energy, clist))
+            result = np.array(pool.map(self.gp_3b.predict_energy_map, clist))
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
+            grid_3b[inds] = self.gp_3b.predict_energy_map(confs).flatten()
 
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
@@ -552,15 +550,10 @@ class CombinedTwoSpeciesModel(Model):
         """
 
         self.gp_2b.fit(confs, forces, nnodes)
-
-        ntr = len(confs)
-        two_body_forces = np.zeros((ntr, 3))
-        for i in np.arange(ntr):
-            two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
-
+        two_body_forces = self.gp_2b.predict(confs)
         self.gp_3b.fit(confs, forces - two_body_forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body two species energy-energy kernel functions. The 2-body Gaussian
         process is first fitted, then the 3-body GP is fitted to the difference
@@ -575,16 +568,11 @@ class CombinedTwoSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_energy(confs, energies, nnodes)
+        self.gp_2b.fit_energy(glob_confs, energies, nnodes)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs)
+        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, nnodes)
 
-        ntr = len(confs)
-        two_body_energies = np.zeros(ntr)
-        for i in np.arange(ntr):
-            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
-
-        self.gp_3b.fit_energy(confs, energies - two_body_energies, nnodes)
-
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body two species force-force, energy-energy, and energy-forces kernel 
         functions. The 2-body Gaussian process is first fitted, then the 3-body GP 
@@ -601,16 +589,10 @@ class CombinedTwoSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp_2b.fit_force_and_energy(confs, forces, energies, nnodes)
-
-        ntr = len(confs)
-        two_body_energies = np.zeros(ntr)
-        two_body_forces = np.zeros((ntr, 3))
-
-        for i in np.arange(ntr):
-            two_body_energies[i] = self.gp_2b.predict_energy(np.reshape(confs[i], (1, len(confs[i]), 5)))
-            two_body_forces[i] = self.gp_2b.predict(np.reshape(confs[i], (1, len(confs[i]), 5)))
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, energies - two_body_energies, nnodes)
+        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs)
+        two_body_forces = self.gp_2b.predict(confs)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, nnodes)
 
     def update_force(self, confs, forces, nnodes=1):
         """ Update a fitted GP with a set of training energies using a 2- and
@@ -734,13 +716,13 @@ class CombinedTwoSpeciesModel(Model):
         confs[:, 0, 0] = dists
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[0]
-        grid_0_0_data = self.gp_2b.predict_energy(confs)
+        grid_0_0_data = self.gp_2b.predict_energy_map(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[1]
-        grid_0_1_data = self.gp_2b.predict_energy(confs)
+        grid_0_1_data = self.gp_2b.predict_energy_map(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[1], self.elements[1]
-        grid_1_1_data = self.gp_2b.predict_energy(confs)
+        grid_1_1_data = self.gp_2b.predict_energy_map(confs)
 
         self.grid_2b[(0, 0)] = interpolation.Spline1D(dists, grid_0_0_data)
         self.grid_2b[(0, 1)] = interpolation.Spline1D(dists, grid_0_1_data)
@@ -815,12 +797,12 @@ class CombinedTwoSpeciesModel(Model):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
-            result = np.array(pool.map(self.gp_3b.predict_energy, clist))
+            result = np.array(pool.map(self.gp_3b.predict_energy_map, clist))
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
+            grid_3b[inds] = self.gp_3b.predict_energy_map(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 

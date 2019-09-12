@@ -54,7 +54,7 @@ class ThreeBodySingleSpeciesModel(Model):
 
         self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 
         3-body single species energy-energy kernel function
 
@@ -66,9 +66,9 @@ class ThreeBodySingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(confs, energies, nnodes)
+        self.gp.fit_energy(glob_confs, energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training forces and energies using 
         3-body single species force-force, energy-force and energy-energy kernels
 
@@ -82,7 +82,7 @@ class ThreeBodySingleSpeciesModel(Model):
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes)
         
     def update_force(self, confs, forces, nnodes=1):
         """ Update a fitted GP with a set of forces and using 

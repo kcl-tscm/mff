@@ -193,7 +193,7 @@ class TwoBodySingleSpecies(MappedPotential):
             fs_scalars = self.grid_2b(dist, nu=1)
 
             # The energy and force from the repulsion potential governed by rep_alpha are added here
-            potential_energies[i] = (+ 0.5 * np.sum(energy_local, axis=0) +
+            potential_energies[i] = (np.sum(energy_local, axis=0) +
                                      0.5 * np.sum((rep_alpha / dist) ** 12))
             forces[i] = (+ np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) -
                          12 * rep_alpha ** 12 * np.einsum('i, in -> n', (1 / dist) ** 13, norm))
@@ -242,7 +242,7 @@ class ThreeBodySingleSpecies(MappedPotential):
             forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk  # F = - dE/dx
 
             potential_energies[
-                [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
+                [i, j, k]] += energy   # Energy of an atom is the sum of 1/3 of every triplet it is in
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces
 
@@ -381,7 +381,6 @@ class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
         potential_energies = np.zeros((len(self.atoms), 1))
 
         rep_alpha = self.rep_alpha
-
         for i, atom in enumerate(self.atoms):
             inds, pos, dists2 = self.nl.get_neighbors(i)
 
@@ -403,7 +402,7 @@ class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
                     energy_local[local_inds] = local_grid(dist[local_inds], nu=0)
                     fs_scalars[local_inds] = local_grid(dist[local_inds], nu=1)
 
-            potential_energies[i] = + 0.5 * np.sum(energy_local, axis=0) + 0.5 * np.sum((rep_alpha / dist) ** 12)
+            potential_energies[i] = + np.sum(energy_local, axis=0) + 0.5 * np.sum((rep_alpha / dist) ** 12)
             forces[i] = + np.sum(norm * fs_scalars.reshape(-1, 1), axis=0) - 12 * rep_alpha ** 12 * np.einsum(
                 'i, in -> n', (1 / dist) ** 13, norm)
 
@@ -450,7 +449,7 @@ class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
         potential_energies = np.zeros((len(self.atoms), 1))
 
         indices, distances, positions = self.find_triplets(atoms)
-
+        
         el_indices = indices.copy()
         element_list = atoms.get_atomic_numbers()
         # Find the index of the last element0 atom
@@ -459,7 +458,9 @@ class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
         # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
         el_indices[el_indices < n_first_element] = 0
         el_indices[el_indices > 0] = 1
-
+        # print(el_indices)
+        # print("------------------")
+        # print(el_indices == [0, 0, 0])
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
         list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis=1)).astype(bool)).astype(bool)
         list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis=1)).astype(bool)).astype(bool)
@@ -477,7 +478,7 @@ class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
                 forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij  # F = - dE/dx
                 forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk  # F = - dE/dx
                 potential_energies[
-                    [i, j, k]] += energy / 3.0  # Energy of an atom is the sum of 1/3 of every triplet it is in
+                    [i, j, k]] += energy   # Energy of an atom is the sum of 1/3 of every triplet it is in
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces
 

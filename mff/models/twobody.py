@@ -56,21 +56,20 @@ class TwoBodySingleSpeciesModel(Model):
 
         self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training energies using a 
         2-body single species energy-energy kernel
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(confs, energies, nnodes)
+        self.gp.fit_energy(glob_confs, energies, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
         """ Fit the GP to a set of training forces and energies using 
         2-body single species force-force, energy-force and energy-energy kernels
 
@@ -79,13 +78,14 @@ class TwoBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes)
         
     def update_force(self, confs, forces, nnodes=1):
         """ Update a fitted GP with a set of forces and using 
@@ -102,20 +102,19 @@ class TwoBodySingleSpeciesModel(Model):
 
         self.gp.fit_update(confs, forces, nnodes)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, nnodes=1):
         """ Update a fitted GP with a set of energies and using 
         2-body single species energy-energy kernels
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(glob_confs, energies, nnodes)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP
@@ -135,41 +134,41 @@ class TwoBodySingleSpeciesModel(Model):
 
         return self.gp.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
 
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
 
-        return self.gp.predict_energy(confs, return_std)
+        return self.gp.predict_energy(glob_confs, return_std)
 
-    def predict_energy_map(self, confs, return_std=False):
+    def predict_energy_map(self, glob_confs, return_std=False):
         """ Predict the local energies of the central atoms of confs using a GP
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
 
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
 
-        return self.gp.predict_energy_map(confs)
+        return self.gp.predict_energy_map(glob_confs)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -347,22 +346,21 @@ class TwoBodyTwoSpeciesModel(Model):
 
         self.gp.fit(confs, forces, nnodes)
 
-    def fit_energy(self, confs, energy, nnodes=1):
+    def fit_energy(self, glob_confs, energy, nnodes=1):
         """ Fit the GP to a set of training energies using a two 
         body two species energy-energy kernel
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_energy(confs, energy, nnodes)
+        self.gp.fit_energy(glob_confs, energy, nnodes)
 
-    def fit_force_and_energy(self, confs, forces, energy, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energy, nnodes=1):
         """ Fit the GP to a set of training forces and energies using two 
         body two species force-force, energy-force and energy-energy kernels
 
@@ -371,13 +369,14 @@ class TwoBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energy, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, nnodes)
 
     def update_force(self, confs, forces, nnodes=1):
         """ Update a fitted GP with a set of forces and using 
@@ -394,20 +393,19 @@ class TwoBodyTwoSpeciesModel(Model):
 
         self.gp.fit_update(confs, forces, nnodes)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, nnodes=1):
         """ Update a fitted GP with a set of energies and using 
         2-body two species energy-energy kernels
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             nnodes (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(glob_confs, energies, nnodes)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
@@ -427,27 +425,27 @@ class TwoBodyTwoSpeciesModel(Model):
 
         return self.gp.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
             
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
 
-        return self.gp.predict_energy(confs, return_std)
+        return self.gp.predict_energy(glob_confs, return_std)
 
     
     def predict_energy_map(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
+        """ Predict the energies of the central atoms of confs using a GP, used for the map algorithm
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -456,7 +454,7 @@ class TwoBodyTwoSpeciesModel(Model):
                 associated to predictions according to the GP framework
             
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 

@@ -233,8 +233,10 @@ def unpack(data):
         forces.append(i['forces'])
         energies.append(i['energy'])
 
-    forces = [item for sublist in forces for item in sublist]
-    confs = [item for sublist in global_confs for item in sublist]
+    forces = np.array([item for sublist in forces for item in sublist])
+    confs = np.array([item for sublist in global_confs for item in sublist])
+    energies = np.array(energies)
+    global_confs = np.array(global_confs)
 
     return elements, confs, forces, energies, global_confs
 

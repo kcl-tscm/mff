@@ -180,7 +180,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Used for multiprocessing
-                from pathos.pools import ProcessPool
+                from multiprocessing import Pool
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed
@@ -189,8 +189,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
-                import sys
-                sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -202,7 +200,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
 
-                pool = ProcessPool(nodes = nnodes)  # Use pool multiprocessing
+                pool = Pool(nnodes)  # Use pool multiprocessing
 
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ff, clist))

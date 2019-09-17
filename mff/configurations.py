@@ -104,8 +104,9 @@ def generate(traj, r_cut, forces_label=None, energy_label=None):
     # Get the atomic number of each atom in the trajectory file
     atom_number_list = [atoms.get_atomic_numbers() for atoms in traj]
     flat_atom_number = np.concatenate(atom_number_list)
-    elements, elements_count = np.unique(flat_atom_number, return_counts=True)
+    elements = np.unique(flat_atom_number, return_counts=False)
 
+    elements = elements.to_list()
     data = {}
     data['elements'] = elements
     data['r_cut'] = r_cut

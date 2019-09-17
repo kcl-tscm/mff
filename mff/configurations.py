@@ -106,7 +106,7 @@ def generate(traj, r_cut, forces_label=None, energy_label=None):
     flat_atom_number = np.concatenate(atom_number_list)
     elements = np.unique(flat_atom_number, return_counts=False)
 
-    elements = elements.to_list()
+    elements = list(elements)
     data = {}
     data['elements'] = elements
     data['r_cut'] = r_cut

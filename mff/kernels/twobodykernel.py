@@ -190,7 +190,9 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     for j in np.arange(i + 1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
-                n = len(confs)
+                n = len(confs)                
+                import sys
+                sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -254,7 +256,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Used for multiprocessing
-                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed       
@@ -266,7 +267,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
@@ -277,12 +277,11 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
 
+                ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(pool.map(self.dummy_calc_ee, clist))
+                result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(nnodes)]))
+                ray.shutdown()
                 result = np.concatenate(result).flatten()
-                pool.close()
-                pool.join()
-                pool.clear()
 
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
@@ -309,6 +308,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             return gram
 
     # Used to simplify multiprocessing call
+    @ray.remote
     def dummy_calc_ee(self, array):
 
         result = np.zeros(len(array))
@@ -340,7 +340,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Multiprocessing
-                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X)):
                     for j in np.arange(len(X)):
@@ -350,7 +349,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
@@ -360,13 +358,11 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-
+                ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(pool.map(self.dummy_calc_ef, clist))
+                result = np.array(ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(nnodes)]))
+                ray.shutdown()                
                 result = np.concatenate(result).reshape((n, 1, 3))
-                pool.close()
-                pool.join()
-                pool.clear()
 
                 for i in np.arange(X.shape[0]):
                     for j in np.arange(X.shape[0]):
@@ -383,6 +379,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             return gram
 
     # Used to simplify multiprocessing
+    @ray.remote
     def dummy_calc_ef(self, array):
 
         result = np.zeros((len(array), 3))
@@ -414,7 +411,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Multiprocessing
-                from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X_glob)):
                     for j in np.arange(len(X)):
@@ -425,7 +421,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(nnodes + 1)
@@ -436,12 +431,12 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
 
+                ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(pool.map(self.dummy_calc_ef_mixed, clist))
+                result = np.array(ray.get([self.dummy_calc_ef_mixed.remote(self, clist[i]) for i in range(nnodes)]))
+                ray.shutdown()     
                 result = np.concatenate(result).reshape((n, 1, 3))
-                pool.close()
-                pool.join()
-                pool.clear()
+ 
 
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
@@ -458,8 +453,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             return gram
 
     # Used to simplify multiprocessing
+    @ray.remote
     def dummy_calc_ef_mixed(self, array):
-
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:

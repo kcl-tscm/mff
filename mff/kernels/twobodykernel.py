@@ -9,6 +9,9 @@ from mff.kernels.base import Kernel
 from theano import function, scan
 
 from scipy.spatial.distance import cdist
+import ray
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +183,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if nnodes > 1:  # Used for multiprocessing
-                from multiprocessing import Pool
                 confs = []
-
+                
                 # Build a list of all input pairs which matrix needs to be computed
                 for i in np.arange(len(X)):
                     for j in np.arange(i + 1):
@@ -200,14 +202,11 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
 
-                pool = Pool(nnodes)  # Use pool multiprocessing
-
+                ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(pool.map(self.dummy_calc_ff, clist))
+                result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(nnodes)]))
+                ray.shutdown()
                 result = np.concatenate(result).reshape((n, 3, 3))
-                pool.close()
-                pool.join()
-                pool.clear()
 
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
@@ -230,8 +229,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             return gram
 
     # Used to simplify multiprocessing call
+    @ray.remote
     def dummy_calc_ff(self, array):
-
         result = np.zeros((len(array), 3, 3))
         for i in np.arange(len(array)):
             result[i] = self.k2_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])

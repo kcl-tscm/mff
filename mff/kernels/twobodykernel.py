@@ -276,7 +276,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-
                 ray.init()
                 # Using the dummy function that has a single argument
                 result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(nnodes)]))
@@ -310,7 +309,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing call
     @ray.remote
     def dummy_calc_ee(self, array):
-
         result = np.zeros(len(array))
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:
@@ -333,7 +331,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N*3 gram matrix of the vector-valued kernels 
        
-       """
+        """
         gram = np.zeros((X.shape[0], X.shape[0] * 3))
 
         if eval_gradient:
@@ -345,6 +343,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     for j in np.arange(len(X)):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
+                        
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(10000)
@@ -358,6 +357,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
                          np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+
                 ray.init()
                 # Using the dummy function that has a single argument
                 result = np.array(ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(nnodes)]))
@@ -414,9 +414,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 confs = []
                 for i in np.arange(len(X_glob)):
                     for j in np.arange(len(X)):
-                        # for k in X_glob[i]:
-                            thislist = np.asarray([X_glob[i], X[j]])
-                            confs.append(thislist)
+                        thislist = np.asarray([X_glob[i], X[j]])
+                        confs.append(thislist)
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(10000)

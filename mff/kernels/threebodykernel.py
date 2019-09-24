@@ -38,7 +38,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         super().__init__(kernel_name)
         self.theta = theta
         self.bounds = bounds
-
         self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
 
     def calc(self, X1, X2):
@@ -414,7 +413,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 confs = []
                 for i in np.arange(len(X_glob)):
                     for j in np.arange(len(X)):
-                        thislist = np.asarray([X[i], X[j]])
+                        thislist = np.asarray([X_glob[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
                 import sys
@@ -454,7 +453,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing
     @ray.remote
     def dummy_calc_ef_mixed(self, array):
-
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:

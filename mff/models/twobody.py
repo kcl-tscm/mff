@@ -52,7 +52,7 @@ class TwoBodySingleSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = None, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
         2-body single species force-force kernel
 
@@ -61,12 +61,12 @@ class TwoBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, glob_confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
         2-body single species energy-energy kernel
 
@@ -74,12 +74,12 @@ class TwoBodySingleSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, nnodes)
+        self.gp.fit_energy(glob_confs, energies, ncores)
 
-    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
         2-body single species force-force, energy-force and energy-energy kernels
 
@@ -91,13 +91,13 @@ class TwoBodySingleSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
         
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         2-body single species force-force kernels
 
@@ -106,13 +106,13 @@ class TwoBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, glob_confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         2-body single species energy-energy kernels
 
@@ -120,11 +120,11 @@ class TwoBodySingleSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(glob_confs, energies, nnodes)
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP
@@ -341,7 +341,7 @@ class TwoBodyTwoSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a two 
         body two species force-force kernel
 
@@ -350,13 +350,13 @@ class TwoBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, glob_confs, energy, nnodes=1):
+    def fit_energy(self, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training energies using a two 
         body two species energy-energy kernel
 
@@ -364,13 +364,13 @@ class TwoBodyTwoSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_energy(glob_confs, energy, nnodes)
+        self.gp.fit_energy(glob_confs, energy, ncores)
 
-    def fit_force_and_energy(self, confs, forces, glob_confs, energy, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training forces and energies using two 
         body two species force-force, energy-force and energy-energy kernels
 
@@ -382,13 +382,13 @@ class TwoBodyTwoSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
 
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         2-body two species force-force kernels
 
@@ -397,13 +397,13 @@ class TwoBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, glob_confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         2-body two species energy-energy kernels
 
@@ -411,11 +411,11 @@ class TwoBodyTwoSpeciesModel(Model):
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(glob_confs, energies, nnodes)
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 

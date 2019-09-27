@@ -42,7 +42,7 @@ class ManyBodySingleSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = None, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
         2-body single species force-force kernel
 
@@ -51,12 +51,12 @@ class ManyBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, confs, energies, nnodes=1):
+    def fit_energy(self, confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
         2-body single species energy-energy kernel
 
@@ -65,12 +65,12 @@ class ManyBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(confs, energies, nnodes)
+        self.gp.fit_energy(confs, energies, ncores)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
         2-body single species force-force, energy-force and energy-energy kernels
 
@@ -81,13 +81,13 @@ class ManyBodySingleSpeciesModel(Model):
                 the central atoms of the training configurations
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, energies, ncores)
         
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         2-body single species force-force kernels
 
@@ -96,13 +96,13 @@ class ManyBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         2-body single species energy-energy kernels
 
@@ -111,11 +111,11 @@ class ManyBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP
@@ -333,7 +333,7 @@ class ManyBodyTwoSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a two 
         body two species force-force kernel
 
@@ -342,13 +342,13 @@ class ManyBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, confs, energy, nnodes=1):
+    def fit_energy(self, confs, energy, ncores=1):
         """ Fit the GP to a set of training energies using a two 
         body two species energy-energy kernel
 
@@ -357,13 +357,13 @@ class ManyBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_energy(confs, energy, nnodes)
+        self.gp.fit_energy(confs, energy, ncores)
 
-    def fit_force_and_energy(self, confs, forces, energy, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, energy, ncores=1):
         """ Fit the GP to a set of training forces and energies using two 
         body two species force-force, energy-force and energy-energy kernels
 
@@ -374,13 +374,13 @@ class ManyBodyTwoSpeciesModel(Model):
                 the central atoms of the training configurations
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energy, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, energy, ncores)
 
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         2-body two species force-force kernels
 
@@ -389,13 +389,13 @@ class ManyBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         2-body two species energy-energy kernels
 
@@ -404,11 +404,11 @@ class ManyBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 

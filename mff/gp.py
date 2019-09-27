@@ -50,7 +50,7 @@ class GaussianProcess(object):
 
         self.kernel_ = self.kernel
         self.X_train_ = X
-        K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
+        K = self.kernel_.calc_gram(self.X_train_, self.ncores)
         return K
 
     def calc_gram_ee(self, X):
@@ -65,16 +65,16 @@ class GaussianProcess(object):
 
         self.kernel_ = self.kernel
         self.X_train_ = X
-        K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
+        K = self.kernel_.calc_gram_e(self.X_train_, self.ncores)
         return K
 
-    def fit(self, X, y, nnodes=1):
+    def fit(self, X, y, ncores=1):
         """Fit a Gaussian process regression model on training forces
 
         Args:
             X (list): training configurations
             y (np.ndarray): training forces
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         self.kernel_ = self.kernel
@@ -122,7 +122,7 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        K = self.kernel_.calc_gram(self.X_train_, nnodes)
+        K = self.kernel_.calc_gram(self.X_train_, ncores)
         K[np.diag_indices_from(K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
@@ -145,7 +145,7 @@ class GaussianProcess(object):
 
         return self
     
-    def fit_update_single(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_single(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing force-force gram matrix with a single new datapoint 
         
@@ -160,7 +160,7 @@ class GaussianProcess(object):
         up_d = 3
         new_d = past_d + up_d
 
-        gram_up_up = self.kernel_.calc_gram(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up = self.kernel_.calc_gram(X2_up, ncores)  # Kernel with the new entries only
         gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
 
         Kvecs_up_past = self.kernel_.calc(X2_up, self.X_train_)  # Kernel between old and new entries
@@ -180,23 +180,23 @@ class GaussianProcess(object):
         self.L_ = cholesky(self.K, lower=True)
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)
 
-    def fit_update(self, X2_up, y2_up, nnodes = 1):  
+    def fit_update(self, X2_up, y2_up, ncores = 1):  
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
         Args:
             X2_up (list): training configurations
             y2_up (np.ndarray): training forces
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         try:
             for i in np.arange(len(X2_up)):
-                self.fit_update_single(X2_up[i], y2_up[i], nnodes)
+                self.fit_update_single(X2_up[i], y2_up[i], ncores)
         except:
-            self.fit_update_single(X2_up, y2_up, nnodes)
+            self.fit_update_single(X2_up, y2_up, ncores)
 
-    def fit_force_and_energy(self, X, y_force, X_glob, y_energy, nnodes=1):
+    def fit_force_and_energy(self, X, y_force, X_glob, y_energy, ncores=1):
         """Fit a Gaussian process regression model using forces and energies
 
         Args:
@@ -204,7 +204,7 @@ class GaussianProcess(object):
             y_force (np.ndarray): training forces
             X_glob (list of lists of arrays): list of grouped training configurations
             y_energy (np.ndarray): training total energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         self.kernel_ = self.kernel
@@ -261,13 +261,13 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        K_ff = self.kernel_.calc_gram(self.X_train_, nnodes)
+        K_ff = self.kernel_.calc_gram(self.X_train_, ncores)
         K_ff[np.diag_indices_from(K_ff)] += self.noise
 
-        K_ee = self.kernel_.calc_gram_e(self.X_glob_train_, nnodes)
+        K_ee = self.kernel_.calc_gram_e(self.X_glob_train_, ncores)
         K_ee[np.diag_indices_from(K_ee)] += self.noise
 
-        K_ef = self.kernel_.calc_gram_ef_mixed(self.X_train_, self.X_glob_train_, nnodes)
+        K_ef = self.kernel_.calc_gram_ef(self.X_train_, self.X_glob_train_, ncores)
 
         K = np.zeros((y_force.shape[0] * 3 + y_energy.shape[0], y_force.shape[0] * 3 + y_energy.shape[0]))
         K[:y_energy.shape[0], :y_energy.shape[0]] = K_ee
@@ -297,13 +297,13 @@ class GaussianProcess(object):
 
         return self
 
-    def fit_energy(self, X_glob, y, nnodes=1):  # Untested, log_marginal_linkelihood not working as for now
+    def fit_energy(self, X_glob, y, ncores=1):  # Untested, log_marginal_linkelihood not working as for now
         """Fit a Gaussian process regression model using local energies.
 
         Args:
             X_glob (list of lists of arrays): list of grouped training configurations
             y (np.ndarray): training total energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
             
         """
         self.kernel_ = self.kernel
@@ -357,7 +357,7 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        self.energy_K = self.kernel_.calc_gram_e(self.X_glob_train_, nnodes)
+        self.energy_K = self.kernel_.calc_gram_e(self.X_glob_train_, ncores)
         self.energy_K[np.diag_indices_from(self.energy_K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
@@ -379,7 +379,7 @@ class GaussianProcess(object):
 
         return self
 
-    def fit_update_single_energy(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_single_energy(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing energy-energy gram matrix with a single new datapoint 
         
@@ -394,7 +394,7 @@ class GaussianProcess(object):
         up_d = 1
         new_d = past_d + up_d
 
-        gram_up_up = self.kernel_.calc_gram_e(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up = self.kernel_.calc_gram_e(X2_up, ncores)  # Kernel with the new entries only
         gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
 
         Kvecs_up_past = self.kernel_.calc_ee(X2_up, self.X_glob_train_)  # Kernel between old and new entries
@@ -415,21 +415,21 @@ class GaussianProcess(object):
         self.L_ = cholesky(self.energy_K, lower=True)
         self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)
 
-    def fit_update_energy(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_energy(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
         Args:
             X2_up (list): training configurations
             y2_up (np.ndarray): training energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         try:
             for i in np.arange(len(X2_up)):
-                self.fit_update_single_energy(X2_up[i], y2_up[i], nnodes)
+                self.fit_update_single_energy(X2_up[i], y2_up[i], ncores)
         except:
-            self.fit_update_single_energy(X2_up, y2_up, nnodes)
+            self.fit_update_single_energy(X2_up, y2_up, ncores)
             
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model

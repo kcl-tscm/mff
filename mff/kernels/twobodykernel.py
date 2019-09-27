@@ -166,13 +166,13 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         return K
 
 
-    def calc_gram(self, X, nnodes=1, eval_gradient=False):
+    def calc_gram(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the force-force gram matrix for a set of configurations X.
         
         Args:
             X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -182,7 +182,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Used for multiprocessing
+            if ncores > 1:  # Used for multiprocessing
                 confs = []
                 
                 # Build a list of all input pairs which matrix needs to be computed
@@ -193,20 +193,20 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 n = len(confs)                
                 import sys
                 sys.setrecursionlimit(10000)
-                logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
+                logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(nnodes)]))
+                result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(ncores)]))
                 ray.shutdown()
                 result = np.concatenate(result).reshape((n, 3, 3))
 
@@ -239,13 +239,13 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
         return result
 
-    def calc_gram_e(self, X, nnodes=1, eval_gradient=False):
+    def calc_gram_e(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the energy-energy gram matrix for a set of configurations X.
         
         Args:
             X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -255,30 +255,30 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Used for multiprocessing
+            if ncores > 1:  # Used for multiprocessing
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed       
                 for i in np.arange(len(X)):
                     for j in np.arange(i + 1):
-                        thislist = np.asarray([X[i], X[j]])
+                        thislist = np.array([list(X[i]), list(X[j])])
                         confs.append(thislist)
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(10000)
-                logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (nnodes))
+                logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
                 ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(nnodes)]))
+                result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(ncores)]))
                 ray.shutdown()
                 result = np.concatenate(result).flatten()
 
@@ -317,79 +317,8 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
         return result
 
-    def calc_gram_ef(self, X, nnodes=1, eval_gradient=False):
-        """
-        Calculate the energy-force gram matrix for a set of configurations X.
-        This returns a non-symmetric matrix which is equal to the transpose of 
-        the force-energy gram matrix.
-        
-        Args:
-            X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
-            eval_gradient (bool): if True, evaluate the gradient of the gram matrix
-            
-        Returns:
-            gram (matrix): N x N*3 gram matrix of the vector-valued kernels 
-       
-        """
-        gram = np.zeros((X.shape[0], X.shape[0] * 3))
 
-        if eval_gradient:
-            raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
-        else:
-            if nnodes > 1:  # Multiprocessing
-                confs = []
-                for i in np.arange(len(X)):
-                    for j in np.arange(len(X)):
-                        thislist = np.asarray([X[i], X[j]])
-                        confs.append(thislist)
-                        
-                n = len(confs)
-                import sys
-                sys.setrecursionlimit(10000)
-                logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
-
-                # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
-                splitind[-1] = n
-                splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
-
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(nnodes)]))
-                ray.shutdown()                
-                result = np.concatenate(result).reshape((n, 1, 3))
-
-                for i in np.arange(X.shape[0]):
-                    for j in np.arange(X.shape[0]):
-                        gram[i, 3 * j:3 * j + 3] = result[j + i * X.shape[0]]
-
-            else:
-                for i in np.arange(X.shape[0]):
-                    for j in np.arange(X.shape[0]):
-                        for conf1 in X[i]:
-                            gram[i, 3 * j:3 * j + 3] += self.k2_ef(conf1, X[j], self.theta[0], self.theta[1], self.theta[2])
-
-            self.gram_ef = gram
-
-            return gram
-
-    # Used to simplify multiprocessing
-    @ray.remote
-    def dummy_calc_ef(self, array):
-
-        result = np.zeros((len(array), 3))
-        for i in np.arange(len(array)):
-            for conf1 in array[i][0]:
-                result[i] += self.k2_ef(conf1, array[i][1], self.theta[0], self.theta[1], self.theta[2])
-
-        return result
-
-    def calc_gram_ef_mixed(self, X, X_glob, nnodes=1, eval_gradient=False):
+    def calc_gram_ef(self, X, X_glob, ncores=1, eval_gradient=False):
         """
         Calculate the energy-force gram matrix for a set of configurations X.
         This returns a non-symmetric matrix which is equal to the transpose of 
@@ -398,7 +327,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         Args:
             X (list): list of N1 M1x5 arrays containing xyz coordinates and atomic species
             X_glob (list): list of N2 M2x5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -410,7 +339,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Multiprocessing
+            if ncores > 1:  # Multiprocessing
                 confs = []
                 for i in np.arange(len(X_glob)):
                     for j in np.arange(len(X)):
@@ -419,27 +348,27 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(10000)
-                logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
+                logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ef_mixed.remote(self, clist[i]) for i in range(nnodes)]))
+                result = ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(ncores)])
                 ray.shutdown()     
-                result = np.concatenate(result).reshape((n, 1, 3))
- 
+
+                result = np.array(result).flatten()
 
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
-                        gram[i, 3 * j:3 * j + 3] = result[j + i * X_glob.shape[0]]
+                        gram[i, 3 * j:3 * j + 3] = result[3*(j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]
 
             else:
                 for i in np.arange(X_glob.shape[0]):
@@ -453,11 +382,13 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
     # Used to simplify multiprocessing
     @ray.remote
-    def dummy_calc_ef_mixed(self, array):
+    def dummy_calc_ef(self, array):
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
+            conf2 = np.array(array[i][1], dtype = 'float')
             for conf1 in array[i][0]:
-                result[i] += self.k2_ef(conf1, array[i][1], self.theta[0], self.theta[1], self.theta[2])
+                conf1 = np.array(conf1, dtype = 'float')
+                result[i] += self.k2_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return result
     
@@ -699,24 +630,7 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         
         # Apply cutoffs and chemical species masks
         se_jm = se_jm*cut_jm* (delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2)
-        # se_jkmn = se_jkmn*cut_jkmn * (
-        #     delta_alphasjm[:,None,:,None] * delta_alphasjm[None,:,None,:] + delta_alphasjm[:,None,None,:] * delta_alphasjm[None,:,:,None])
-        # se_jk2m = se_jk2m*cut_jkm*(
-        #     delta_alphasj2[:,None,:] * delta_alphasjm[None,:,:] + delta_alphasj2[None,:,:] * delta_alphasjm[:,None,:])
-        # se_1jmn = se_1jmn*cut_jmn*(
-        #     delta_alphas1m[:,:,None] * delta_alphasjm[:,None,:] + delta_alphas1m[:,None,:] * delta_alphasjm[:,:,None])
 
-        # # Add mask of zeros to avoid double counting bonds
-        # mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
-        # mask_mn = T.triu(T.ones_like(rmn)) - T.identity_like(rmn)
-        
-        # # Apply masks
-        # se_jkmn = se_jkmn*mask_jk[:,:,None, None]*mask_mn[None, None,:,:]
-        # se_jk2m = se_jk2m*mask_jk[:,:,None]
-        # se_1jmn = se_1jmn*mask_mn[None,:,:]
-        
-        # Calculate global kernel k and local kernel kloc
-        # k = T.sum(se_jkmn) + T.sum(se_jk2m) + T.sum(se_1jmn) + T.sum(se_jm)
         ker = T.sum(se_jm)
 
         # --------------------------------------------------
@@ -731,11 +645,6 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
         k_ef = T.grad(ker, r2)
         k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
                             allow_input_downcast=False, on_unused_input='warn')
-
-        # # local energy force kernel - used only in mapping
-        # k_ef_loc = T.grad(kloc, r2)
-        # k_ef_loc_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_loc,
-        #                     allow_input_downcast=False, on_unused_input='warn')
         
         # force force kernel - it uses only local atom pairs to avoid useless computation
         k_ff = T.grad(ker, r1)

@@ -319,13 +319,13 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
 
         return K
 
-    def calc_gram(self, X, nnodes=1, eval_gradient=False):
+    def calc_gram(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the force-force gram matrix for a set of configurations X.
         
         Args:
             X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -335,7 +335,7 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Used for multiprocessing
+            if ncores > 1:  # Used for multiprocessing
                 from pathos.pools import ProcessPool  # Import multiprocessing package
                 confs = []
 
@@ -348,20 +348,20 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info(
-                    'Using %i cores for the 2-body force-force gram matrix calculation' % (nnodes))
+                    'Using %i cores for the 2-body force-force gram matrix calculation' % (ncores))
 
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
 
-                pool = ProcessPool(nodes=nnodes)  # Use pool multiprocessing
+                pool = ProcessPool(nodes=ncores)  # Use pool multiprocessing
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ff, clist))
                 result = np.concatenate(result).reshape((n, 3, 3))
@@ -399,13 +399,13 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
 
         return result
 
-    def calc_gram_e(self, X, nnodes=1, eval_gradient=False):
+    def calc_gram_e(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the energy-energy gram matrix for a set of configurations X.
         
         Args:
             X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -415,7 +415,7 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Used for multiprocessing
+            if ncores > 1:  # Used for multiprocessing
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
 
@@ -428,17 +428,17 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info(
-                    'Using %i cores for the 2-body energy-energy gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
+                    'Using %i cores for the 2-body energy-energy gram matrix calculation' % (ncores))
+                pool = ProcessingPool(nodes=ncores)
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ee, clist))
@@ -476,7 +476,7 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
 
         return result
 
-    def calc_gram_ef(self, X, nnodes=1, eval_gradient=False):
+    def calc_gram_ef(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the energy-force gram matrix for a set of configurations X.
         This returns a non-symmetric matrix which is equal to the transpose of 
@@ -484,7 +484,7 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
         
         Args:
             X (list): list of N Mx5 arrays containing xyz coordinates and atomic species
-            nnodes (int): Number of CPU nodes to use for multiprocessing (default is 1)
+            ncores (int): Number of CPU nodes to use for multiprocessing (default is 1)
             eval_gradient (bool): if True, evaluate the gradient of the gram matrix
             
         Returns:
@@ -496,7 +496,7 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if nnodes > 1:  # Multiprocessing
+            if ncores > 1:  # Multiprocessing
                 from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
                 confs = []
                 for i in np.arange(len(X)):
@@ -507,17 +507,17 @@ class BaseManyBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(10000)
                 logger.info(
-                    'Using %i cores for the 2-body energy-force gram matrix calculation' % (nnodes))
-                pool = ProcessingPool(nodes=nnodes)
+                    'Using %i cores for the 2-body energy-force gram matrix calculation' % (ncores))
+                pool = ProcessingPool(nodes=ncores)
 
                 # Way to split the kernels functions to compute evenly across the nodes
-                splitind = np.zeros(nnodes + 1)
-                factor = (n + (nnodes - 1)) / nnodes
-                splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+                splitind = np.zeros(ncores + 1)
+                factor = (n + (ncores - 1)) / ncores
+                splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(nnodes)]  # Shape is nnodes * (ntrain*(ntrain+1)/2)/nnodes
+                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 # Using the dummy function that has a single argument
                 result = np.array(pool.map(self.dummy_calc_ef, clist))

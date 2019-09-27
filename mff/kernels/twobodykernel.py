@@ -263,6 +263,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     for j in np.arange(i + 1):
                         thislist = np.array([list(X[i]), list(X[j])])
                         confs.append(thislist)
+                        
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(10000)
@@ -280,7 +281,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 # Using the dummy function that has a single argument
                 result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(ncores)]))
                 ray.shutdown()
-                result = np.concatenate(result).flatten()
+                result = np.concatenate(result).ravel()
 
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
@@ -364,7 +365,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 result = ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(ncores)])
                 ray.shutdown()     
 
-                result = np.array(result).flatten()
+                result = np.concatenate(result).ravel()
 
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):

@@ -261,7 +261,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 # Build a list of all input pairs which matrix needs to be computed       
                 for i in np.arange(len(X)):
                     for j in np.arange(i + 1):
-                        thislist = np.asarray([X[i], X[j]])
+                        thislist = np.array([list(X[i]), list(X[j])])
                         confs.append(thislist)
                         
                 n = len(confs)
@@ -282,7 +282,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 # Using the dummy function that has a single argument
                 result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(ncores)]))
                 ray.shutdown()
-                result = np.concatenate(result).flatten()
+                result = np.concatenate(result).ravel()
 
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
@@ -365,7 +365,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 result = ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(ncores)])
                 ray.shutdown()
 
-                result = np.array(result).flatten()
+                result = np.concatenate(result).ravel()
 
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):

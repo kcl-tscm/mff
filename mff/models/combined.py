@@ -17,6 +17,18 @@ import warnings
 logger = logging.getLogger(__name__)
 
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
+
+
 class CombinedSingleSpeciesModel(Model):
     """ 2- and 3-body single species model class
     Class managing the Gaussian processes and their mapped counterparts
@@ -375,7 +387,7 @@ class CombinedSingleSpeciesModel(Model):
             self.grid_3b.save(directory / grid_filename_3b)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):
@@ -880,7 +892,7 @@ class CombinedTwoSpeciesModel(Model):
             self.grid_3b[k].save(directory / grid_filename_3b)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):

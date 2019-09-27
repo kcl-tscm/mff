@@ -11,6 +11,18 @@ from pathlib import Path
 from mff.models.base import Model
 
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
+
+
 class ThreeBodySingleSpeciesModel(Model):
     """ 3-body single species model class
     Class managing the Gaussian process and its mapped counterpart
@@ -344,7 +356,7 @@ class ThreeBodySingleSpeciesModel(Model):
             self.grid.save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):
@@ -779,7 +791,7 @@ class ThreeBodyTwoSpeciesModel(Model):
             self.grid[k].save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):

@@ -141,7 +141,7 @@ class GaussianProcess(object):
         self.energy_alpha_ = None
         self.energy_K = None
         self.fitted[0] = 'force'
-        self.n_train = len(self.y_train_) / 3
+        self.n_train = len(self.y_train_) // 3
 
         return self
     
@@ -293,7 +293,7 @@ class GaussianProcess(object):
         self.K = K
         self.energy_K = None  # Used to distinguish pure energy fitting
         self.fitted = ['force', 'energy']
-        self.n_train = len(self.self.X_train_)//3 + len(self.X_glob_train_)
+        self.n_train = len(self.X_train_)//3 + len(self.X_glob_train_)
 
         return self
 

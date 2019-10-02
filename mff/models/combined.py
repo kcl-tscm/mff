@@ -14,6 +14,7 @@ from .base import Model
 import logging
 import warnings
 
+import ray
 logger = logging.getLogger(__name__)
 
 
@@ -229,6 +230,20 @@ class CombinedSingleSpeciesModel(Model):
             return self.gp_2b.predict_energy(glob_confs, return_std) + \
                    self.gp_3b.predict_energy(glob_confs, return_std)
 
+    @ray.remote
+    def predict_energy_3b_ray(self, glob_confs):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+        """
+
+        return self.gp_3b.predict_energy(glob_confs)
+
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """ Build the mapped 2- and 3-body potentials. 
         Calculates the energy predicted by the GP for two and three atoms at all possible combination 
@@ -260,7 +275,7 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 0, 0] = dists_2b
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
 
-        grid_data = self.gp_2b.predict_energy_map(confs)
+        grid_data = self.gp_2b.predict_energy(confs)
         grid_2b = interpolation.Spline1D(dists_2b, grid_data)
 
         # Mapping 3 body part
@@ -280,24 +295,25 @@ class CombinedSingleSpeciesModel(Model):
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
 
         if ncores > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
-            logger.info('Using %i cores for the mapping' % (ncores))
-            pool = ProcessingPool(nodes=ncores)
+            sys.setrecursionlimit(100000)
+            print('Using %i cores for the mapping' % (ncores))
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            result = np.array(pool.map(self.gp_3b.predict_energy_map, clist))
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_3b_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp_3b.predict_energy_map(confs).flatten()
+            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
@@ -703,6 +719,20 @@ class CombinedTwoSpeciesModel(Model):
             return self.gp_2b.predict_energy(confs, return_std) + \
                    self.gp_3b.predict_energy(confs, return_std)
 
+    @ray.remote
+    def predict_energy_3b_ray(self, glob_confs):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+        """
+
+        return self.gp_3b.predict_energy(glob_confs)
+
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """Function used to create the three different 2-body energy grids for 
         atoms of elements 0-0, 0-1, and 1-1, and the four different 3-body energy grids for 
@@ -728,13 +758,13 @@ class CombinedTwoSpeciesModel(Model):
         confs[:, 0, 0] = dists
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[0]
-        grid_0_0_data = self.gp_2b.predict_energy_map(confs)
+        grid_0_0_data = self.gp_2b.predict_energy(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[1]
-        grid_0_1_data = self.gp_2b.predict_energy_map(confs)
+        grid_0_1_data = self.gp_2b.predict_energy(confs)
 
         confs[:, 0, 3], confs[:, 0, 4] = self.elements[1], self.elements[1]
-        grid_1_1_data = self.gp_2b.predict_energy_map(confs)
+        grid_1_1_data = self.gp_2b.predict_energy(confs)
 
         self.grid_2b[(0, 0)] = interpolation.Spline1D(dists, grid_0_0_data)
         self.grid_2b[(0, 1)] = interpolation.Spline1D(dists, grid_0_1_data)
@@ -797,24 +827,25 @@ class CombinedTwoSpeciesModel(Model):
         grid_3b = np.zeros((num, num, num))
 
         if ncores > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
-            logger.info('Using %i cores for the mapping' % (ncores))
-            pool = ProcessingPool(nodes=ncores)
+            sys.setrecursionlimit(100000)
+            print('Using %i cores for the mapping' % (ncores))
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            result = np.array(pool.map(self.gp_3b.predict_energy_map, clist))
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_3b_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp_3b.predict_energy_map(confs).flatten()
+            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 

@@ -9,6 +9,7 @@ from mff import kernels
 from mff import interpolation
 from pathlib import Path
 from mff.models.base import Model
+import ray
 
 
 class NpEncoder(json.JSONEncoder):
@@ -160,22 +161,19 @@ class ThreeBodySingleSpeciesModel(Model):
 
         return self.gp.predict_energy(confs, return_std)
 
-    def predict_energy_map(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
+    @ray.remote
+    def predict_energy_ray(self, confs):
+        """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
             
         Returns:
             energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
         """
 
-        return self.gp.predict_energy_map(confs)
+        return self.gp.predict_energy(confs)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -233,24 +231,25 @@ class ThreeBodySingleSpeciesModel(Model):
         grid_data = np.zeros((num, num, num))
 
         if ncores > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
+            sys.setrecursionlimit(100000)
             print('Using %i cores for the mapping' % (ncores))
-            pool = ProcessingPool(nodes=ncores)
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            result = np.array(pool.map(self.gp.predict_energy_map, clist))
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_data[inds] = result
 
         else:
-            grid_data[inds] = self.predict_energy_map(confs).flatten()
+            grid_data[inds] = self.predict_energy(confs).flatten()
 
         for ind_i in range(num):
             for ind_j in range(ind_i + 1):
@@ -539,23 +538,20 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         return self.gp.predict_energy(glob_confs, return_std)
 
-    def predict_energy_map(self, confs, return_std=False):
+    @ray.remote
+    def predict_energy_ray(self, glob_confs):
         """ Predict the local energies of the central atoms of confs using a GP 
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
             
         Returns:
             energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
         """
 
-        return self.gp.predict_energy_map(confs)
-    
+        return self.gp.predict_energy(glob_confs)
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -634,24 +630,25 @@ class ThreeBodyTwoSpeciesModel(Model):
         grid_3b = np.zeros((num, num, num))
 
         if ncores > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
+            sys.setrecursionlimit(100000)
             print('Using %i cores for the mapping' % (ncores))
-            pool = ProcessingPool(nodes=ncores)
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            result = np.array(pool.map(self.gp.predict_energy_map, clist))
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp.predict_energy_map(confs).flatten()
+            grid_3b[inds] = self.gp.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 

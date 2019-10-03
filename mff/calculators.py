@@ -81,7 +81,7 @@ class MappedPotential(Calculator, metaclass=ABCMeta):
             self.reset()
 
 
-class TwoSpeciesMappedPotential(Calculator, metaclass=ABCMeta):
+class ManySpeciesMappedPotential(Calculator, metaclass=ABCMeta):
     # 'Properties calculator can handle (energy, forces, ...)'
     implemented_properties = ['energy', 'forces']
 
@@ -89,10 +89,9 @@ class TwoSpeciesMappedPotential(Calculator, metaclass=ABCMeta):
     default_parameters = {}
 
     @abstractmethod
-    def __init__(self, r_cut, element0, element1, **kwargs):
+    def __init__(self, r_cut, elements, **kwargs):
         super().__init__(**kwargs)
-        self.element0 = element0
-        self.element1 = element1
+        self.elements = elements
         self.r_cut = r_cut
         self.nl = None
 
@@ -293,50 +292,13 @@ class ThreeBodySingleSpecies(MappedPotential):
 
         return np.array(indices), np.array(distances), positions
 
-    # TODO: need to be checked
-    # def find_triplets2(self):
-    #     atoms, nl = self.atoms, self.nl
-    #     indices, distances, positions = [], [], dict()
-    #
-    #     # caching
-    #     arr = [nl.get_neighbors(i) for i in range(len(atoms))]
-    #
-    #     for i, (inds, pos, dists2) in enumerate(arr):
-    #         # assert len(inds) is len(np.unique(inds)), "There are repetitive indices!\n{}".format(inds)
-    #
-    #         # ingnore already visited nodes
-    #         inds, pos, dists2 = inds[inds > i], pos[inds > i, :], dists2[inds > i]
-    #
-    #         dists = np.sqrt(dists2)
-    #         pos = pos / dists.reshape(-1, 1)
-    #
-    #         for (j_ind, j), (k_ind, k) in combinations(enumerate(inds), 2):
-    #
-    #             jk_ind, = np.where(arr[j][0] == k)
-    #
-    #             if not jk_ind.size:
-    #                 continue  # no valid triplet
-    #
-    #             indices.append([i, j, k])
-    #
-    #             # Caching local position vectors
-    #             dist_jk = np.sqrt(arr[j][2][jk_ind[0]])
-    #             positions[(i, j)], positions[(j, i)] = pos[j_ind], -pos[j_ind]
-    #             positions[(i, k)], positions[(k, i)] = pos[k_ind], -pos[k_ind]
-    #             positions[(j, k)], positions[(k, j)] = \
-    #                 arr[j][1][jk_ind[0], :] / dist_jk, -arr[j][1][jk_ind[0], :] / dist_jk
-    #
-    #             distances.append([dists[j_ind], dist_jk, dists[k_ind]])
-    #
-    #     return np.array(indices), np.array(distances), positions
-
 
 class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
     def __init__(self, r_cut, grid_2b, grid_3b, rep_alpha=0.0, **kwargs):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
 
 
-class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
+class TwoBodyManySpecies(ManySpeciesMappedPotential):
     """A mapped 2-body 2-species calculator for ase
    
     Attributes:
@@ -350,12 +312,11 @@ class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
     
     """
 
-    def __init__(self, r_cut, element0, element1, grids_2b, rep_alpha=0.0, **kwargs):
+    def __init__(self, r_cut, elements, grids_2b, rep_alpha=0.0, **kwargs):
         """
         Args:
             r_cut (float): cutoff radius
-            element0 (int): atomic number of the first element in ascending order
-            element1 (int): atomic number of the second element in ascending order
+            elements (list): List of ordered atomic numbers of the mapped two species system.
             grids_3b (list): contains the four 3D Spline interpolators relative to the 3-body 
                 mapped grids for element0-element0-element0, element0-element0-element1, 
                 element0-element1-element1 and element1-element1-element1 interactions.
@@ -364,8 +325,7 @@ class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
             The parameter governs a repulsion force added to the computed one.
         
         """
-        super().__init__(r_cut, element0, element1, **kwargs)
-        elements = [element0, element1]
+        super().__init__(r_cut, elements, **kwargs)
         self.elements = elements
         self.element_map = {element: index for index, element in enumerate(elements)}
         self.grids_2b = grids_2b
@@ -410,7 +370,7 @@ class TwoBodyTwoSpecies(TwoSpeciesMappedPotential):
         self.results['forces'] += forces
 
 
-class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
+class ThreeBodyManySpecies(ManySpeciesMappedPotential):
     """A mapped 3-body 2-species calculator for ase
    
     Attributes:
@@ -422,12 +382,11 @@ class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
     
     """
 
-    def __init__(self, r_cut, element0, element1, grids_3b, **kwargs):
+    def __init__(self, r_cut, elements, grids_3b, **kwargs):
         """
         Args:
             r_cut (float): cutoff radius
-            element0 (int): atomic number of the first element in ascending order
-            element1 (int): atomic number of the second element in ascending order
+            elements (list): List of ordered atomic numbers of the mapped two species system.
             grids_3b (list): contains the four 3D Spline interpolators relative to the 3-body 
                 mapped grids for element0-element0-element0, element0-element0-element1, 
                 element0-element1-element1 and element1-element1-element1 interactions.
@@ -529,9 +488,9 @@ class ThreeBodyTwoSpecies(TwoSpeciesMappedPotential):
         return np.array(indices), np.array(distances), positions
 
 
-class CombinedTwoSpecies(TwoBodyTwoSpecies, ThreeBodyTwoSpecies):
-    def __init__(self, r_cut, element0, element1, grids_2b, grids_3b, rep_alpha=0.0, **kwargs):
-        super().__init__(r_cut, element0, element1, grids_2b=grids_2b, grids_3b=grids_3b, rep_alpha=rep_alpha, **kwargs)
+class CombinedManySpecies(TwoBodyManySpecies, ThreeBodyManySpecies):
+    def __init__(self, r_cut, elements, grids_2b, grids_3b, rep_alpha=0.0, **kwargs):
+        super().__init__(r_cut, elements, grids_2b=grids_2b, grids_3b=grids_3b, rep_alpha=rep_alpha, **kwargs)
 
 
 if __name__ == '__main__':

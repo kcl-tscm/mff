@@ -11,9 +11,19 @@ from mff import kernels
 from mff import interpolation
 from mff.models.base import Model
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 class ManyBodySingleSpeciesModel(Model):
-    """ Many-body single species model class
+    """ many-body single species model class
     Class managing the Gaussian process and its mapped counterpart
 
     Args:
@@ -24,10 +34,10 @@ class ManyBodySingleSpeciesModel(Model):
         noise (float): noise value associated with the training output data
 
     Attributes:
-        gp (method): The 2-body single species Gaussian Process
-        grid (method): The 2-body single species tabulated potential
+        gp (method): The many-body single species Gaussian Process
+        grid (method): The many-body single species tabulated potential
         grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0.0)
-        grid_num (int): number of points used to create the 2-body grid
+        grid_num (int): number of points used to create the many-body grid
 
     """
 
@@ -44,7 +54,7 @@ class ManyBodySingleSpeciesModel(Model):
 
     def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
-        2-body single species force-force kernel
+        many-body single species force-force kernel
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -56,40 +66,40 @@ class ManyBodySingleSpeciesModel(Model):
 
         self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, confs, energies, ncores=1):
+    def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
-        2-body single species energy-energy kernel
+        many-body single species energy-energy kernel
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores)
 
-    def fit_force_and_energy(self, confs, forces, energies, ncores=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
-        2-body single species force-force, energy-force and energy-energy kernels
+        many-body single species force-force, energy-force and energy-energy kernels
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
         
     def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
-        2-body single species force-force kernels
+        many-body single species force-force kernels
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -102,20 +112,19 @@ class ManyBodySingleSpeciesModel(Model):
 
         self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, ncores=1):
+    def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
-        2-body single species energy-energy kernels
+        many-body single species energy-energy kernels
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, ncores)
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP
@@ -135,41 +144,23 @@ class ManyBodySingleSpeciesModel(Model):
 
         return self.gp.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
 
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
 
-        return self.gp.predict_energy(confs, return_std)
-
-    def predict_energy_map(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
-
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
-
-        """
-
-        return self.gp.predict_energy_map(confs)
+        return self.gp.predict_energy(glob_confs, return_std)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -184,36 +175,6 @@ class ManyBodySingleSpeciesModel(Model):
 
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
-
-    def build_grid(self, start, num):
-        """ Build the mapped 2-body potential. 
-        Calculates the energy predicted by the GP for two atoms at distances that range from
-        start to r_cut, for a total of num points. These energies are stored and a 1D spline
-        interpolation is created, which can be used to predict the energy and, through its
-        analytic derivative, the force associated to any couple of atoms.
-        The total force or local energy can then be calculated for any atom by summing the 
-        pairwise contributions of every other atom within a cutoff distance r_cut.
-        The prediction is done by the ``calculator`` module which is built to work within 
-        the ase python package.
-        
-        Args:
-            start (float): smallest interatomic distance for which the energy is predicted
-                by the GP and stored inn the 2-body mapped potential
-            num (int): number of points to use in the grid of the mapped potential   
-
-        """
-
-        self.grid_start = start
-        self.grid_num = num
-
-        dists = np.linspace(start, self.r_cut, num)
-
-        confs = np.zeros((num, 1, 5))
-        confs[:, 0, 0] = dists
-        confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
-
-        grid_data = self.gp.predict_energy_map(confs)
-        self.grid = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
         """ Save the model.
@@ -248,7 +209,7 @@ class ManyBodySingleSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
@@ -260,7 +221,7 @@ class ManyBodySingleSpeciesModel(Model):
             self.grid.save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):
@@ -279,7 +240,6 @@ class ManyBodySingleSpeciesModel(Model):
             path = Path(path)
 
         directory, prefix = path.parent, path.stem
-
         with open(path) as fp:
             params = json.load(fp)
 
@@ -303,7 +263,7 @@ class ManyBodySingleSpeciesModel(Model):
 
 
 class ManyBodyTwoSpeciesModel(Model):
-    """ 2-body two species model class
+    """ many-body two species model class
     Class managing the Gaussian process and its mapped counterpart
 
     Args:
@@ -314,11 +274,11 @@ class ManyBodyTwoSpeciesModel(Model):
         noise (float): noise value associated with the training output data
 
     Attributes:
-        gp (class): The 2-body two species Gaussian Process
-        grid (list): Contains the three 2-body two species tabulated potentials, accounting for
+        gp (class): The many-body two species Gaussian Process
+        grid (list): Contains the three many-body two species tabulated potentials, accounting for
             interactions between two atoms of types 0-0, 0-1, and 1-1.
         grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0)
-        grid_num (int): number of points used to create the 2-body grids
+        grid_num (int): number of points used to create the many-body grids
 
     """
 
@@ -328,7 +288,7 @@ class ManyBodyTwoSpeciesModel(Model):
         self.elements = elements
         self.r_cut = r_cut
 
-        kernel = kernels.ManyBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ManyBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
@@ -348,22 +308,21 @@ class ManyBodyTwoSpeciesModel(Model):
 
         self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, confs, energy, ncores=1):
+    def fit_energy(self, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training energies using a two 
         body two species energy-energy kernel
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_energy(confs, energy, ncores)
+        self.gp.fit_energy(glob_confs, energy, ncores)
 
-    def fit_force_and_energy(self, confs, forces, energy, ncores=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training forces and energies using two 
         body two species force-force, energy-force and energy-energy kernels
 
@@ -372,17 +331,18 @@ class ManyBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energy, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
 
     def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
-        2-body two species force-force kernels
+        many-body two species force-force kernels
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -395,20 +355,19 @@ class ManyBodyTwoSpeciesModel(Model):
 
         self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, ncores=1):
+    def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
-        2-body two species energy-energy kernels
+        many-body two species energy-energy kernels
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
+            energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, ncores)
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
@@ -428,42 +387,23 @@ class ManyBodyTwoSpeciesModel(Model):
 
         return self.gp.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
+            glob_confs (list of lists): List of configurations arranged so that
+                grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
             
         Returns:
-            energies (array): array of force vectors predicted by the GP
+            energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
 
-        return self.gp.predict_energy(confs, return_std)
-
-    
-    def predict_energy_map(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
-            
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
-
-        """
-
-        return self.gp.predict_energy_map(confs)
+        return self.gp.predict_energy(glob_confs, return_std)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -478,47 +418,6 @@ class ManyBodyTwoSpeciesModel(Model):
 
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
-
-    def build_grid(self, start, num):
-        """ Build the mapped 2-body potential. 
-        Calculates the energy predicted by the GP for two atoms at distances that range from
-        start to r_cut, for a total of num points. These energies are stored and a 1D spline
-        interpolation is created, which can be used to predict the energy and, through its
-        analytic derivative, the force associated to any couple of atoms.
-        The total force or local energy can then be calculated for any atom by summing the 
-        pairwise contributions of every other atom within a cutoff distance r_cut.
-        Three distinct potentials are built for interactions between atoms of type 0 and 0, 
-        type 0 and 1, and type 1 and 1.
-        The prediction is done by the ``calculator`` module which is built to work within 
-        the ase python package.
-        
-        Args:
-            start (float): smallest interatomic distance for which the energy is predicted
-                by the GP and stored inn the 2-body mapped potential
-            num (int): number of points to use in the grid of the mapped potential   
-
-        """
-
-        self.grid_start = start
-        self.grid_num = num
-
-        dists = np.linspace(start, self.r_cut, num)
-
-        confs = np.zeros((num, 1, 5))
-        confs[:, 0, 0] = dists
-
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[0]
-        grid_0_0_data = self.gp.predict_energy_map(confs)
-
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements[0], self.elements[1]
-        grid_0_1_data = self.gp.predict_energy_map(confs)
-
-        confs[:, 0, 3], confs[:, 0, 4] = self.elements[1], self.elements[1]
-        grid_1_1_data = self.gp.predict_energy_map(confs)
-
-        self.grid[(0, 0)] = interpolation.Spline1D(dists, grid_0_0_data)
-        self.grid[(0, 1)] = interpolation.Spline1D(dists, grid_0_1_data)
-        self.grid[(1, 1)] = interpolation.Spline1D(dists, grid_1_1_data)
 
     def save(self, path):
         """ Save the model.
@@ -549,11 +448,12 @@ class ManyBodyTwoSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num, 
+                'filename':{}
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
@@ -564,10 +464,10 @@ class ManyBodyTwoSpeciesModel(Model):
             grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
 
             params['grid']['filename'][key] = grid_filename
-            grid[k].save(directory / grid_filename)
+            grid.save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):
@@ -600,7 +500,7 @@ class ManyBodyTwoSpeciesModel(Model):
         try:
             model.gp.load(directory / gp_filename)
         except:
-            warnings.warn("The 2-body GP file is missing")
+            warnings.warn("The many-body GP file is missing")
             pass
 
         if params['grid']:
@@ -613,67 +513,3 @@ class ManyBodyTwoSpeciesModel(Model):
                 model.grid[k] = interpolation.Spline1D.load(directory / grid_filename)
 
         return model
-
-
-if __name__ == '__main__':
-    def test_two_body_single_species_model():
-        confs = np.array([
-            np.hstack([np.random.randn(4, 3), 26 * np.ones((4, 2))]),
-            np.hstack([np.random.randn(5, 3), 26 * np.ones((5, 2))])
-        ])
-
-        forces = np.random.randn(2, 3)
-
-        element, r_cut, sigma, theta, noise = 26, 2., 3., 4., 5.
-
-        filename = Path('test_model.json')
-
-        m = TwoBodySingleSpeciesModel(element, r_cut, sigma, theta, noise)
-
-        print(m)
-        print(m.parameters)
-
-        m.fit(confs, forces)
-
-        print(m)
-        print(m.parameters)
-
-        m.build_grid(1., 10)
-
-        print(m)
-        print(m.parameters)
-
-        m.save(filename)
-
-        m2 = TwoBodySingleSpeciesModel.from_json(filename)
-
-
-    def test_two_body_two_species_model():
-        elements = [2, 4]
-        confs = np.array([
-            np.hstack([np.random.randn(4, 3), np.random.choice(elements, size=(4, 2))]),
-            np.hstack([np.random.randn(5, 3), np.random.choice(elements, size=(5, 2))])
-        ])
-
-        forces = np.random.randn(2, 3)
-        r_cut, sigma, theta, noise = 2., 3., 4., 5.
-
-        filename = Path('test_model.json')
-
-        m = TwoBodyTwoSpeciesModel(elements, r_cut, sigma, theta, noise)
-        print(m)
-
-        m.fit(confs, forces)
-        print(m)
-
-        m.build_grid(1., 10)
-        print(m)
-
-        m.save(filename)
-
-        m2 = TwoBodyTwoSpeciesModel.from_json(filename)
-
-
-    # test_two_body_single_species_model()
-
-    test_two_body_two_species_model()

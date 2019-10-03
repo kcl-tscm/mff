@@ -1024,7 +1024,7 @@ class ThreeBodyManySpeciesModel(Model):
             ind2 = trip[1]
             ind3 = trip[2]
 
-            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], nnodes)
+            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
 
 
     def build_grid_3b(self, dists, element_i, element_j, element_k, ncores):

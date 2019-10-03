@@ -8,6 +8,7 @@ from pathlib import Path
 from itertools import islice
 from ase.calculators.calculator import Calculator, all_changes
 from asap3 import FullNeighborList
+from itertools import combinations_with_replacement
 
 logger = logging.getLogger(__name__)
 
@@ -392,8 +393,7 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
                 element0-element1-element1 and element1-element1-element1 interactions.
         
         """
-        super().__init__(r_cut, element0, element1, **kwargs)
-        elements = [element0, element1]
+        super().__init__(r_cut, elements, **kwargs)
 
         self.elements = elements
         self.element_map = {element: index for index, element in enumerate(elements)}
@@ -409,26 +409,27 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
 
         indices, distances, positions = self.find_triplets(atoms)
         
-        el_indices = indices.copy()
-        element_list = atoms.get_atomic_numbers()
-        # Find the index of the last element0 atom
-        n_first_element = (element_list == self.elements[0]).sum()
 
-        # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
-        el_indices[el_indices < n_first_element] = 0
-        el_indices[el_indices > 0] = 1
-        # print(el_indices)
-        # print("------------------")
-        # print(el_indices == [0, 0, 0])
+        # Get an array which is a copy of the indices of atoms participating in each triplet
+        mapping = np.zeros(max(self.elements)+1)
+        for i, e in enumerate(self.elements):
+            mapping[e] = i
+        el_mapping = mapping[atoms.get_atomic_numbers()]
+        el_indices = el_mapping[indices]
+        el_indices = np.sort(el_indices, axis = 1)
+
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
-        list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis=1)).astype(bool)).astype(bool)
-        list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis=1)).astype(bool)).astype(bool)
-        list_011 = (1 - (np.sum(1 - el_indices == [0, 1, 1], axis=1)).astype(bool)).astype(bool)
-        list_111 = (1 - (np.sum(1 - el_indices == [1, 1, 1], axis=1)).astype(bool)).astype(bool)
-        list_triplets = [list_000, list_001, list_011, list_111]
-        list_grids = [(0, 0, 0), (0, 0, 1), (0, 1, 1), (1, 1, 1)]
 
-        for r in np.arange(4):
+        list_triplets, list_grids = [], []
+        num_elements = [x for x in range(len(self.elements))]
+        perm_list = list(combinations_with_replacement(num_elements, 3))
+
+        for trip in perm_list:
+            is_this_the_right_triplet = np.sum(el_indices == [trip], axis = 1) == 3
+            list_triplets.append(is_this_the_right_triplet)
+            list_grids.append((trip))
+
+        for r in np.arange(len(list_triplets)):
             mapped = self.grids_3b[list_grids[r]].ev_all(d_ij[list_triplets[r]], d_jk[list_triplets[r]],
                                                          d_ki[list_triplets[r]])
             for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices[list_triplets[r]], mapped[0], mapped[1],

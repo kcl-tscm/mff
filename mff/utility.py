@@ -356,15 +356,32 @@ def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, trainin
     try:
         if not isinstance(train_folder, Path):
             train_folder = Path(train_folder)
-        gp_name = "_%s_%.2f_%.2f_%.4f_%i.json" %(kernel, cutoff, sigma, noise, training_points)
-        full_path = train_folder / "GP" / gp_name
+
+        gp_name = get_model_name(elements_1, kernel, training_points)
+        full_path = train_folder / "models" / gp_name
         m = load_model.load(full_path)
 
     except FileNotFoundError:
         m = train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e, Y_e, train_mode = train_mode, ncores = ncores)
 
     return m
+    
 
+def get_model_name(elements, kernel, ntr):
+    if kernel == "2b":
+        first_name = "TwoBody"
+    elif kernel == "3b":
+        first_name = "ThreeBody"
+    elif kernel == "combined":
+        first_name = "Combined"
+
+    if len(elements) == 1:
+        second_name = "SingleSpecies"
+    if len(elements) >= 2:
+        second_name = "ManySpecies"
+    name = first_name + second_name
+    full_name = "MODEL_ker_" + name + "_ntr" + str(ntr) + ".json"
+    return full_name
 
 def test_forces(m, x, y, plot = False):   
     """ Test forces and report significant statystics on the errors incurred by the GP.
@@ -419,10 +436,10 @@ def save_gp(m, folder, kernel, cutoff, sigma, noise, ntr):
     """
     if not isinstance(folder, Path):
         folder = Path(folder)
-    if not os.path.exists(folder / "GP"):
-        os.makedirs(folder / "GP")
-    filename = "%s_%.2f_%.2f_%.4f_%i.json" %(kernel, cutoff, sigma, noise, ntr)
-    m.save(folder / "GP" / filename)
+    if not os.path.exists(folder / "models"):
+        os.makedirs(folder / "models")
+    # filename = "%s_%.2f_%.2f_%.4f_%i.json" %(kernel, cutoff, sigma, noise, ntr)
+    m.save(folder / "models")
 
 
 def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, kernel, cutoff, sigma, noise, ntr, sampling, MAE=None, SMAE=None, RMSE_e = None):
@@ -477,6 +494,14 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
     m = get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e, Y_e, train_mode, ncores)
 
     # Test the GP
+    MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, MAE_e, SMAE_e, RMSE_e = test_gp(m, x, y, x_e, y_e, plot, test_mode)
+
+    # Save a report of the errors
+    save_report(MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, train_folder, kernel, cutoff, sigma, noise, len(X), sampling, MAE_e, SMAE_e, RMSE_e)
+    return m
+
+
+def test_gp(m, x = None, y = None, x_e = None, y_e = None, plot = False, test_mode = "forces"):
     if test_mode == "force":
         MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = test_forces(m, x, y, plot)
         MAE_e, SMAE_e, RMSE_e = None, None, None
@@ -488,10 +513,8 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
         MAE_e, SMAE_e, RMSE_e = test_energies(m, x_e, y_e, plot)
     else:
         print("Test mode not understood, use either force, energy or force_and_energy")
+    return MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, MAE_e, SMAE_e, RMSE_e
 
-    # Save a report of the errors
-    save_report(MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, train_folder, kernel, cutoff, sigma, noise, len(X), sampling, MAE_e, SMAE_e, RMSE_e)
-    return m
 
 def density_plot(x, y, mode):
     from matplotlib import pyplot as plt

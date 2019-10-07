@@ -384,10 +384,7 @@ class GaussianProcess(object):
         Update an existing energy-energy gram matrix with a single new datapoint 
         
         """
-#         if len(np.shape(y2_up)) > 1:
-#             logger.error(" Use the fit_update_energy function for more than one input, quitting now")
-#             return
-            
+
         X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
         y2_up = np.reshape(y2_up, 1)
         past_d = self.energy_K.shape[0]

@@ -221,8 +221,6 @@ class TwoBodySingleSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         params = {
             'model': self.__class__.__name__,
             'element': self.element,
@@ -240,18 +238,18 @@ class TwoBodySingleSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
         if self.grid:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params)
+            grid_filename = 'GRID_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz'.format(p=params)
 
             params['grid']['filename'] = grid_filename
-            self.grid.save(directory / grid_filename)
+            self.grid.save(path / grid_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
@@ -505,8 +503,6 @@ class TwoBodyTwoSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         params = {
             'model': self.__class__.__name__,
             'elements': self.elements,
@@ -525,21 +521,24 @@ class TwoBodyTwoSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
             params['grid']['filename'][key] = grid_filename
-            grid.save(directory / grid_filename)
+            grid.save(path / grid_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print('Saved model with name:', str(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params)))
+
 
     @classmethod
     def from_json(cls, path):
@@ -801,8 +800,6 @@ class TwoBodyManySpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         params = {
             'model': self.__class__.__name__,
             'elements': self.elements,
@@ -821,20 +818,20 @@ class TwoBodyManySpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_2_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
             params['grid']['filename'][key] = grid_filename
-            grid.save(directory / grid_filename)
+            grid.save(path / grid_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod

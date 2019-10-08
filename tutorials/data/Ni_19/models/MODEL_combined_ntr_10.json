@@ -1,0 +1,33 @@
+{
+    "model": "CombinedSingleSpeciesModel",
+    "element": [
+        28
+    ],
+    "r_cut": 6.4,
+    "gp_2b": {
+        "kernel": "TwoBodySingleSpecies",
+        "n_train": 10,
+        "sigma": 0.5,
+        "theta": 1.28,
+        "noise": 0.001,
+        "filename": "GP_ker_TwoBodySingleSpecies_ntr_10.npy"
+    },
+    "gp_3b": {
+        "kernel": "ThreeBodySingleSpecies",
+        "n_train": 10,
+        "sigma": 1.0,
+        "theta": 1.28,
+        "noise": 0.001,
+        "filename": "GP_ker_ThreeBodySingleSpecies_ntr_10.npy"
+    },
+    "grid_2b": {
+        "r_min": 1.5,
+        "r_num": 5,
+        "filename": "GRID_ker_TwoBodySingleSpecies_ntr_10.npz"
+    },
+    "grid_3b": {
+        "r_min": 1.5,
+        "r_num": 5,
+        "filename": "GRID_ker_ThreeBodySingleSpecies_ntr_10.npz"
+    }
+}

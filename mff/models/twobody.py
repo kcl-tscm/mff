@@ -529,8 +529,7 @@ class TwoBodyTwoSpeciesModel(Model):
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
-
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
             params['grid']['filename'][key] = grid_filename
             grid.save(path / grid_filename)
 
@@ -826,8 +825,7 @@ class TwoBodyManySpeciesModel(Model):
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
-
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
             params['grid']['filename'][key] = grid_filename
             grid.save(path / grid_filename)
 

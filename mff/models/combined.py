@@ -346,8 +346,6 @@ class CombinedSingleSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         ### SAVE THE 2B MODEL ###
         params = {
             'model': self.__class__.__name__,
@@ -380,30 +378,30 @@ class CombinedSingleSpeciesModel(Model):
             } if self.grid_3b else {}
         }
 
-        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp_2b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(p=params)
 
         params['gp_2b']['filename'] = gp_filename_2b
-        self.gp_2b.save(directory / gp_filename_2b)
+        self.gp_2b.save(path / gp_filename_2b)
 
         if self.grid_2b:
-            grid_filename_2b = '{}_grid_2b_num_{p[grid_2b][r_num]}.npz'.format(prefix, p=params)
+            grid_filename_2b = "GRID_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npz".format(p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'] = grid_filename_2b
-            self.grid_2b.save(directory / grid_filename_2b)
+            self.grid_2b.save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
-        gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(p=params)
 
         params['gp_3b']['filename'] = gp_filename_3b
-        self.gp_3b.save(directory / gp_filename_3b)
+        self.gp_3b.save(path / gp_filename_3b)
 
         if self.grid_3b:
-            grid_filename_3b = '{}_grid_3b_num_{p[grid_3b][r_num]}.npz'.format(prefix, p=params)
+            grid_filename_3b = "GRID_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npz".format(p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'] = grid_filename_3b
-            self.grid_3b.save(directory / grid_filename_3b)
+            self.grid_3b.save(path / grid_filename_3b)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / "MODEL_combined_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
@@ -863,8 +861,6 @@ class CombinedTwoSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         ### SAVE THE MODEL ###
         params = {
             'model': self.__class__.__name__,
@@ -897,33 +893,33 @@ class CombinedTwoSpeciesModel(Model):
             } if self.grid_3b else {}
         }
 
-        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp_2b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(p=params)
 
         params['gp_2b']['filename'] = gp_filename_2b
-        self.gp_2b.save(directory / gp_filename_2b)
+        self.gp_2b.save(path / gp_filename_2b)
         
             
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_2b = '{}_grid_{}_num_{p[grid_2b][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(key, p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
-            self.grid_2b[k].save(directory / grid_filename_2b)
+            self.grid_2b[k].save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
-        gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(p=params)
 
         params['gp_3b']['filename'] = gp_filename_3b
-        self.gp_3b.save(directory / gp_filename_3b)
+        self.gp_3b.save(path / gp_filename_3b)
 
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(key, p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
-            self.grid_3b[k].save(directory / grid_filename_3b)
+            self.grid_3b[k].save(path / grid_filename_3b)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / "MODEL_combined_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
@@ -1374,8 +1370,6 @@ class CombinedManySpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         ### SAVE THE MODEL ###
         params = {
             'model': self.__class__.__name__,
@@ -1408,33 +1402,33 @@ class CombinedManySpeciesModel(Model):
             } if self.grid_3b else {}
         }
 
-        gp_filename_2b = "{}_gp_ker_2_ntr_{p[gp_2b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(p=params)
 
         params['gp_2b']['filename'] = gp_filename_2b
-        self.gp_2b.save(directory / gp_filename_2b)
+        self.gp_2b.save(path / gp_filename_2b)
         
             
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_2b = '{}_grid_{}_num_{p[grid_2b][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(key, p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
-            self.grid_2b[k].save(directory / grid_filename_2b)
+            self.grid_2b[k].save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
-        gp_filename_3b = "{}_gp_ker_3_ntr_{p[gp_3b][n_train]}.npy".format(prefix, p=params)
+        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(p=params)
 
         params['gp_3b']['filename'] = gp_filename_3b
-        self.gp_3b.save(directory / gp_filename_3b)
+        self.gp_3b.save(path / gp_filename_3b)
 
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_3b = '{}_grid_{}_num_{p[grid_3b][r_num]}.npz'.format(prefix, key, p=params)
+            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(key, p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
-            self.grid_3b[k].save(directory / grid_filename_3b)
+            self.grid_3b[k].save(path / grid_filename_3b)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / "MODEL_combined_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod

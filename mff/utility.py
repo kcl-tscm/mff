@@ -204,10 +204,10 @@ def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_
 
     X, Y, X_e, Y_e = c[ind_train], f[ind_train], gc[ind_train_e], en[ind_train_e]
     x, y, x_e, y_e = c[ind_test], f[ind_test], gc[ind_test_e], en[ind_test_e]
-    X, Y = get_training_set(X, Y, el, ntr, method, cutoff, nbins, traj)
+    X, Y = get_training_set(X, Y, el, ntr, method, cutoff, nbins, traj, cna_cut)
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
-def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins = None, traj = None):
+def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins = None, traj = None, cna_cut = None):
     """ Get training and test set from two databases with method of choice
     """
     ind_test = np.random.choice(np.arange(len(c2)), size=ntest, replace=False)
@@ -220,7 +220,7 @@ def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, nt
         en2 = np.zeros(len(c2))
     X_e, Y_e = gc1[ind_train_e], en1[ind_train_e]
     x, y, x_e, y_e = c2[ind_test], f2[ind_test], gc2[ind_test_e], en2[ind_test_e]
-    X, Y = get_training_set(c1, f1, el1, ntr, method, cutoff, nbins, traj)
+    X, Y = get_training_set(c1, f1, el1, ntr, method, cutoff, nbins, traj, cna_cut)
 
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
@@ -574,7 +574,7 @@ def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, kernel, cutoff, sigma, noi
 def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = None, 
             training_points = 100, test_points = 100,
             kernel = '2b', sigma = 0.5, noise = 0.001, sampling = "random", nbins = None,
-             ncores = 1, train_mode = "force", test_mode = "force", f_e_ratio = 100, plot = True):
+             ncores = 1, train_mode = "force", test_mode = "force", f_e_ratio = 100, plot = True, cna_cut = None):
 
     # Get data, and create training and test sets
     elements_1, confs_1, forces_1, energies_1, global_confs_1 = get_data(train_folder, cutoff, traj_filename)
@@ -583,10 +583,10 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
         confs_2, forces_2, energies_2, elements_2, global_confs_2 = get_data(test_folder, cutoff, traj_filename)
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_twosets(confs_1, forces_1, global_confs_1,
                 energies_1, elements_1, confs_2, forces_2, global_confs_2, energies_2, 
-                elements_2, sampling, training_points, test_points, cutoff, nbins)
+                elements_2, sampling, training_points, test_points, cutoff, nbins,  train_folder + '/' +traj_filename, cna_cut)
     else:
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_oneset(confs_1, forces_1, global_confs_1,
-                energies_1, elements_1, sampling, training_points, test_points, cutoff, nbins, f_e_ratio, train_folder + '/' +traj_filename)
+                energies_1, elements_1, sampling, training_points, test_points, cutoff, nbins, f_e_ratio, train_folder + '/' +traj_filename, cna_cut)
 
     # See if the GP is aleady there, if not train the Gaussian Process
     m = get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e, Y_e, train_mode, ncores)

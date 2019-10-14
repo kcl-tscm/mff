@@ -12,6 +12,7 @@ from mff import configurations
 from scipy.spatial.distance import cdist
 from pathlib import Path
 from itertools import combinations_with_replacement
+from asap3.analysis import FullCNA
 
 # Keep track on whether there are actual energies in your dataset or they have been discarded
 global energydefault
@@ -184,7 +185,7 @@ def grid_3b_manysp(X, nbins, cutoff, elements):
     return index
 
 
-def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_e_ratio = 100):
+def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_e_ratio = 100, traj = None):
     """ Get training and test set from one database with method of choice
     """
     ind = np.random.choice(np.arange(len(c)), ntr+ntest, replace = False)
@@ -203,10 +204,10 @@ def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_
 
     X, Y, X_e, Y_e = c[ind_train], f[ind_train], gc[ind_train_e], en[ind_train_e]
     x, y, x_e, y_e = c[ind_test], f[ind_test], gc[ind_test_e], en[ind_test_e]
-    X, Y = get_training_set(X, Y, el, ntr, method, cutoff, nbins)
+    X, Y = get_training_set(X, Y, el, ntr, method, cutoff, nbins, traj)
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
-def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins = None):
+def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins = None, traj = None):
     """ Get training and test set from two databases with method of choice
     """
     ind_test = np.random.choice(np.arange(len(c2)), size=ntest, replace=False)
@@ -219,7 +220,7 @@ def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, nt
         en2 = np.zeros(len(c2))
     X_e, Y_e = gc1[ind_train_e], en1[ind_train_e]
     x, y, x_e, y_e = c2[ind_test], f2[ind_test], gc2[ind_test_e], en2[ind_test_e]
-    X, Y = get_training_set(c1, f1, el1, ntr, method, cutoff, nbins)
+    X, Y = get_training_set(c1, f1, el1, ntr, method, cutoff, nbins, traj)
 
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
@@ -270,7 +271,99 @@ def get_right_nbins(c, el, cutoff, method, ntr):
 
     return nbins
 
-def get_training_set(c, f, el, ntr, method, cutoff, nbins = None):
+def transform_cna(cna, meaningful_cnas):
+    """ Given a cna and a list containing the tuples defining the 
+    meaningful cnas, this method returns an array with length equal to the
+    total number of cnas which contains the number of times each cna occurrs.
+    """
+    result = np.zeros(len(meaningful_cnas))
+    for i, key in enumerate(meaningful_cnas):
+        try:
+            result[i] = cna[key]
+        except KeyError:
+            result[i] = 0
+    return result
+
+def get_atomic_cnas(traj, meaningful_cnas, r_cut):
+    """ Given a trajectory, a list of tuples containing the CNAS the user is interested
+    in, and a cutoff radius, this returns, for every atom for every snapshot in traj, 
+    an array which contians the count of cnas for that atom, arranged accordin to the order
+    found in meaningful_cnas
+    """
+    transformed_cna = np.zeros((len(traj)*len(traj[0]), len(meaningful_cnas)))
+    for j, atoms in enumerate(traj):
+        cna = FullCNA(atoms, r_cut)
+        atoms.set_cell([[100,0,0],[0,100,0],[0,0,100]])
+        snapshot_cna = cna.get_normal_cna()
+        for i, atomic_cna in enumerate(snapshot_cna):
+            transformed_cna[j*len(traj[0])+i] = transform_cna(atomic_cna, meaningful_cnas)
+    return transformed_cna
+
+def get_all_cnas(traj, r_cut):
+    """ Given a trajectory and a cutoff radius, returns a dictionary, sorted by value,
+    with all the cnas that appear in the trajectyory as keys and the number
+    of times they appear as value.
+    """
+    all_cnas = {}
+    for j, atoms in enumerate(traj):
+        cna = FullCNA(atoms, r_cut)
+        atoms.set_cell([[100,0,0],[0,100,0],[0,0,100]])
+        snapshot_cna = cna.get_normal_cna()
+        for i, atomic_cna in enumerate(snapshot_cna):
+            for key in atomic_cna:
+                try:
+                    all_cnas[key] += atomic_cna[key]
+                except KeyError:
+                    all_cnas[key] = atomic_cna[key]
+    
+    sorted_cnas = sorted(all_cnas.items(), key=lambda kv: kv[1])
+    sorted_cnas_dict = {}
+    for t in sorted_cnas:
+        sorted_cnas_dict[t[0]] = t[1]
+        
+    return sorted_cnas_dict
+
+def extract_cnas(traj, r_cut):
+    """ Get all the cnas in the trajectory file, then extract the atomic CNA signatures for each CNA present.
+    For each atom, the atomic cnas contains a row entry with dimensionality equal to the number of cnas present in the trajectory.
+    The all_cnas variable contains a count of occurrance of each cna in the trajectory.
+    """
+    all_cnas = get_all_cnas(traj, r_cut)
+    atomic_cnas = get_atomic_cnas(traj, all_cnas, r_cut)
+    return atomic_cnas, all_cnas
+
+def sample_uniform_cna(ntr, transformed_cnas):
+    """ Sample from an array of transformed cnas a ntr number of indexes.
+        For each cnas class, ntr//len(cna classes) atoms are selected which do
+        contain at least one pair of that particular class.
+    """
+    tr_ind = []
+    sampled_atoms = np.ones(len(transformed_cnas), dtype = 'bool')
+    ntr = 500
+    ntr_sampled = 0
+    for i in range(transformed_cnas.shape[1]):
+        indx_this_class = np.where(transformed_cnas[:,i][sampled_atoms] > 0)[0]
+        ntr_this_class = min(len(indx_this_class), ntr//transformed_cnas.shape[1])
+        sampled_inds = np.random.choice(indx_this_class, ntr_this_class, replace = False)
+        sampled_atoms[sampled_inds] = False
+        tr_ind.extend(sampled_inds)
+        ntr_sampled += len(sampled_inds)
+
+    if ntr_sampled < ntr:
+        additional_inds = np.random.choice(np.arange(len(transformed_cnas))[sampled_atoms], ntr-ntr_sampled, replace = False)
+        tr_ind.extend(additional_inds)
+    return np.array(tr_ind)
+
+def sample_cna(traj, r_cut, ntr):
+    """ From a trajcetory file, calculate CNAS using r_cut as cutoff, 
+        order the classes and sample according to the sample_using_cna method
+    """
+    transformed_cnas, all_cnas = extract_cnas(traj, r_cut)
+    print("CNA classes are: \n", all_cnas)
+    training_indexes = sample_uniform_cna(ntr, transformed_cnas)
+    return training_indexes
+
+def get_training_set(c, f, el, ntr, method, cutoff, nbins = None, traj = None, cna_cut = None):
     """ Call training set sampling
     """
     if method == "random":
@@ -286,6 +379,11 @@ def get_training_set(c, f, el, ntr, method, cutoff, nbins = None):
             nbins = get_right_nbins(c, el, cutoff, method, ntr)
         ind = get_right_grid(c, el, nbins, cutoff, method)
         X, Y = c[ind], f[ind]
+
+    elif method == "cna":
+        ind = sample_cna(traj, cna_cut, ntr)
+        X, Y, = c[ind], f[ind]
+
     else:
         print("Training method not understood, using random.")
         ind = np.arange(len(c))
@@ -488,7 +586,7 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
                 elements_2, sampling, training_points, test_points, cutoff, nbins)
     else:
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_oneset(confs_1, forces_1, global_confs_1,
-                energies_1, elements_1, sampling, training_points, test_points, cutoff, nbins, f_e_ratio)
+                energies_1, elements_1, sampling, training_points, test_points, cutoff, nbins, f_e_ratio, train_folder + '/' +traj_filename)
 
     # See if the GP is aleady there, if not train the Gaussian Process
     m = get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e, Y_e, train_mode, ncores)

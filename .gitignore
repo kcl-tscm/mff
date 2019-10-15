@@ -30,6 +30,7 @@ parts/
 sdist/
 var/
 wheels/
+tutorials/data/Ni_19/trajectory_mff.xyz
 *.egg-info/
 .installed.cfg
 *.egg

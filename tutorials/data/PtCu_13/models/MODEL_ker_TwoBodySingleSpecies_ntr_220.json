@@ -1,0 +1,16 @@
+{
+    "model": "TwoBodySingleSpeciesModel",
+    "element": [
+        28
+    ],
+    "r_cut": 8.0,
+    "gp": {
+        "kernel": "TwoBodySingleSpecies",
+        "n_train": 220,
+        "sigma": 0.5,
+        "theta": 1.6,
+        "noise": 0.001,
+        "filename": "GP_ker_TwoBodySingleSpecies_ntr_220.npy"
+    },
+    "grid": {}
+}

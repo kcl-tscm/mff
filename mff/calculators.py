@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 # TODO: Factory method
 
-class SingleSpecies(Exception):
-    pass
 
 
 class MappedPotential(Calculator, metaclass=ABCMeta):

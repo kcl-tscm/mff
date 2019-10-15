@@ -185,13 +185,15 @@ def grid_3b_manysp(X, nbins, cutoff, elements):
     return index
 
 
-def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_e_ratio = 100, traj = None):
+def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_e_ratio = 100, traj = None, cna_cut = None):
     """ Get training and test set from one database with method of choice
     """
-    ind = np.random.choice(np.arange(len(c)), ntr+ntest, replace = False)
+    # For the forces, isolate a test set at random and then apply database selection on the remaining data
+    ind = np.arange(len(c))
     ind_test = np.random.choice(ind, size=ntest, replace=False)
     ind_train = np.array(list(set(ind) - set(ind_test)))
 
+    # For the energy we always use random sampling
     ntr_e = ntr//f_e_ratio + 1
     ntest_e = ntest//f_e_ratio+1
     ind_e = np.random.choice(np.arange(len(gc)), ntr_e+ntest_e, replace = False)
@@ -204,7 +206,7 @@ def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins = None, f_
 
     X, Y, X_e, Y_e = c[ind_train], f[ind_train], gc[ind_train_e], en[ind_train_e]
     x, y, x_e, y_e = c[ind_test], f[ind_test], gc[ind_test_e], en[ind_test_e]
-    X, Y = get_training_set(X, Y, el, ntr, method, cutoff, nbins, traj, cna_cut)
+    X, Y = get_training_set(c, f, el, ntr, method, cutoff, nbins, traj, cna_cut)
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
 def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins = None, traj = None, cna_cut = None):
@@ -299,14 +301,14 @@ def get_atomic_cnas(traj, meaningful_cnas, r_cut):
             transformed_cna[j*len(traj[0])+i] = transform_cna(atomic_cna, meaningful_cnas)
     return transformed_cna
 
-def get_all_cnas(traj, r_cut):
+def get_all_cnas(traj, cna_cut):
     """ Given a trajectory and a cutoff radius, returns a dictionary, sorted by value,
     with all the cnas that appear in the trajectyory as keys and the number
     of times they appear as value.
     """
     all_cnas = {}
     for j, atoms in enumerate(traj):
-        cna = FullCNA(atoms, r_cut)
+        cna = FullCNA(atoms, cna_cut)
         atoms.set_cell([[100,0,0],[0,100,0],[0,0,100]])
         snapshot_cna = cna.get_normal_cna()
         for i, atomic_cna in enumerate(snapshot_cna):
@@ -323,13 +325,13 @@ def get_all_cnas(traj, r_cut):
         
     return sorted_cnas_dict
 
-def extract_cnas(traj, r_cut):
+def extract_cnas(traj, cna_cut):
     """ Get all the cnas in the trajectory file, then extract the atomic CNA signatures for each CNA present.
     For each atom, the atomic cnas contains a row entry with dimensionality equal to the number of cnas present in the trajectory.
     The all_cnas variable contains a count of occurrance of each cna in the trajectory.
     """
-    all_cnas = get_all_cnas(traj, r_cut)
-    atomic_cnas = get_atomic_cnas(traj, all_cnas, r_cut)
+    all_cnas = get_all_cnas(traj, cna_cut)
+    atomic_cnas = get_atomic_cnas(traj, all_cnas, cna_cut)
     return atomic_cnas, all_cnas
 
 def sample_uniform_cna(ntr, transformed_cnas):
@@ -339,7 +341,6 @@ def sample_uniform_cna(ntr, transformed_cnas):
     """
     tr_ind = []
     sampled_atoms = np.ones(len(transformed_cnas), dtype = 'bool')
-    ntr = 500
     ntr_sampled = 0
     for i in range(transformed_cnas.shape[1]):
         indx_this_class = np.where(transformed_cnas[:,i][sampled_atoms] > 0)[0]
@@ -354,11 +355,11 @@ def sample_uniform_cna(ntr, transformed_cnas):
         tr_ind.extend(additional_inds)
     return np.array(tr_ind)
 
-def sample_cna(traj, r_cut, ntr):
-    """ From a trajcetory file, calculate CNAS using r_cut as cutoff, 
+def sample_cna(traj, cna_cut, ntr):
+    """ From a trajcetory file, calculate CNAS using cna_cut as cutoff, 
         order the classes and sample according to the sample_using_cna method
     """
-    transformed_cnas, all_cnas = extract_cnas(traj, r_cut)
+    transformed_cnas, all_cnas = extract_cnas(traj, cna_cut)
     print("CNA classes are: \n", all_cnas)
     training_indexes = sample_uniform_cna(ntr, transformed_cnas)
     return training_indexes

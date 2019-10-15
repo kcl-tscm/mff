@@ -24,5 +24,13 @@ setup(
     url="https://github.com/kcl-tscm/mff",
     packages=find_packages(),
     ext_modules=[tricube_cpp_module, tricube_fortran_module],
-    requires=['numpy', 'asap3', 'ase', 'theano', 'scipy', 'ray']
+    install_requires=[
+    'numpy >= 1.17.2', 
+    'asap3 >= 3.11.10', 
+    'ase >= 3.18.1', 
+    'theano >= 1.0.4', 
+    'scipy >= 1.3.1', 
+    'ray >= 0.7.5', 
+    'psutil'
+    ]
 )

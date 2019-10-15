@@ -29,19 +29,26 @@ Clone the repo into a folder:
     git clone https://github.com/kcl-tscm/mff.git
     cd mff
 
-Create a base environment for the mff package
 
-    conda env create -f mff-env.yaml
+If you don't have it, install virtualenv
+
+    pip install virtualenv
  
-Based on your system activate the conda environment with one of the following two option:
+ 
+Create a virtual environment using a python 3.6 installation
 
-    conda activate mff-env
-    source activate mff-env
+	virtualenv --python=/usr/bin/python3.6 <path/to/new/virtualenv/>
+
+
+Activate the new virtual environment 
+	
+	source <path/to/new/virtualenv/bin/activate>
 
 
 To install from source run the following command:
     
     python setup.py install
+	
 
 Or, to build in place for development, run:
     

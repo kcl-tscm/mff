@@ -194,11 +194,11 @@ class Sampling(object):
             if ker == '2b':
                 self.gp2 = GaussianProcess(kernel= kernels.TwoBodySingleSpeciesKernel(
                     theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
-                self.gp2.nnodes = 1
+                self.gp2.ncores = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodySingleSpeciesKernel(
                     theta=[self.sigma_3b, self.theta, self.r_cut]), noise= self.noise)
-                self.gp3.nnodes = 1
+                self.gp3.ncores = 1
             else:
                 print('Kernel type not understood, shutting down')
                 return 0 
@@ -207,11 +207,11 @@ class Sampling(object):
             if ker == '2b':
                 self.gp2 = GaussianProcess(kernel= kernels.TwoBodyTwoSpeciesKernel(
                     theta=[self.sigma_2b, self.theta, self.r_cut]), noise= self.noise)
-                self.gp2.nnodes = 1
+                self.gp2.ncores = 1
             elif ker == '3b':
                 self.gp3 = GaussianProcess(kernel= kernels.ThreeBodyTwoSpeciesKernel(
                     theta=[self.sigma_3b, self.theta, self.r_cut]), noise= self.noise)
-                self.gp3.nnodes = 1
+                self.gp3.ncores = 1
             else:
                 print('Kernel type not understood, shutting down')
                 return 0     

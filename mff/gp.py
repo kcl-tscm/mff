@@ -50,7 +50,7 @@ class GaussianProcess(object):
 
         self.kernel_ = self.kernel
         self.X_train_ = X
-        K = self.kernel_.calc_gram(self.X_train_, self.nnodes)
+        K = self.kernel_.calc_gram(self.X_train_, self.ncores)
         return K
 
     def calc_gram_ee(self, X):
@@ -65,16 +65,16 @@ class GaussianProcess(object):
 
         self.kernel_ = self.kernel
         self.X_train_ = X
-        K = self.kernel_.calc_gram_e(self.X_train_, self.nnodes)
+        K = self.kernel_.calc_gram_e(self.X_train_, self.ncores)
         return K
 
-    def fit(self, X, y, nnodes=1):
+    def fit(self, X, y, ncores=1):
         """Fit a Gaussian process regression model on training forces
 
         Args:
             X (list): training configurations
             y (np.ndarray): training forces
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         self.kernel_ = self.kernel
@@ -122,7 +122,7 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        K = self.kernel_.calc_gram(self.X_train_, nnodes)
+        K = self.kernel_.calc_gram(self.X_train_, ncores)
         K[np.diag_indices_from(K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
@@ -141,11 +141,11 @@ class GaussianProcess(object):
         self.energy_alpha_ = None
         self.energy_K = None
         self.fitted[0] = 'force'
-        self.n_train = len(self.y_train_) / 3
+        self.n_train = len(self.y_train_) // 3
 
         return self
     
-    def fit_update_single(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_single(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing force-force gram matrix with a single new datapoint 
         
@@ -160,7 +160,7 @@ class GaussianProcess(object):
         up_d = 3
         new_d = past_d + up_d
 
-        gram_up_up = self.kernel_.calc_gram(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up = self.kernel_.calc_gram(X2_up, ncores)  # Kernel with the new entries only
         gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
 
         Kvecs_up_past = self.kernel_.calc(X2_up, self.X_train_)  # Kernel between old and new entries
@@ -180,23 +180,23 @@ class GaussianProcess(object):
         self.L_ = cholesky(self.K, lower=True)
         self.alpha_ = cho_solve((self.L_, True), self.y_train_)
 
-    def fit_update(self, X2_up, y2_up, nnodes = 1):  
+    def fit_update(self, X2_up, y2_up, ncores = 1):  
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
         Args:
             X2_up (list): training configurations
             y2_up (np.ndarray): training forces
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         try:
             for i in np.arange(len(X2_up)):
-                self.fit_update_single(X2_up[i], y2_up[i], nnodes)
+                self.fit_update_single(X2_up[i], y2_up[i], ncores)
         except:
-            self.fit_update_single(X2_up, y2_up, nnodes)
+            self.fit_update_single(X2_up, y2_up, ncores)
 
-    def fit_force_and_energy(self, X, y_force, X_glob, y_energy, nnodes=1):
+    def fit_force_and_energy(self, X, y_force, X_glob, y_energy, ncores=1):
         """Fit a Gaussian process regression model using forces and energies
 
         Args:
@@ -204,7 +204,7 @@ class GaussianProcess(object):
             y_force (np.ndarray): training forces
             X_glob (list of lists of arrays): list of grouped training configurations
             y_energy (np.ndarray): training total energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         self.kernel_ = self.kernel
@@ -261,13 +261,13 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        K_ff = self.kernel_.calc_gram(self.X_train_, nnodes)
+        K_ff = self.kernel_.calc_gram(self.X_train_, ncores)
         K_ff[np.diag_indices_from(K_ff)] += self.noise
 
-        K_ee = self.kernel_.calc_gram_e(self.X_glob_train_, nnodes)
+        K_ee = self.kernel_.calc_gram_e(self.X_glob_train_, ncores)
         K_ee[np.diag_indices_from(K_ee)] += self.noise
 
-        K_ef = self.kernel_.calc_gram_ef_mixed(self.X_train_, self.X_glob_train_, nnodes)
+        K_ef = self.kernel_.calc_gram_ef(self.X_train_, self.X_glob_train_, ncores)
 
         K = np.zeros((y_force.shape[0] * 3 + y_energy.shape[0], y_force.shape[0] * 3 + y_energy.shape[0]))
         K[:y_energy.shape[0], :y_energy.shape[0]] = K_ee
@@ -293,17 +293,17 @@ class GaussianProcess(object):
         self.K = K
         self.energy_K = None  # Used to distinguish pure energy fitting
         self.fitted = ['force', 'energy']
-        self.n_train = len(self.y_energy_and_force) / 4
+        self.n_train = len(self.X_train_) + len(self.X_glob_train_)
 
         return self
 
-    def fit_energy(self, X_glob, y, nnodes=1):  # Untested, log_marginal_linkelihood not working as for now
+    def fit_energy(self, X_glob, y, ncores=1):  # Untested, log_marginal_linkelihood not working as for now
         """Fit a Gaussian process regression model using local energies.
 
         Args:
             X_glob (list of lists of arrays): list of grouped training configurations
             y (np.ndarray): training total energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
             
         """
         self.kernel_ = self.kernel
@@ -357,7 +357,7 @@ class GaussianProcess(object):
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
-        self.energy_K = self.kernel_.calc_gram_e(self.X_glob_train_, nnodes)
+        self.energy_K = self.kernel_.calc_gram_e(self.X_glob_train_, ncores)
         self.energy_K[np.diag_indices_from(self.energy_K)] += self.noise
 
         try:  # Use Cholesky decomposition to build the lower triangular matrix
@@ -379,22 +379,19 @@ class GaussianProcess(object):
 
         return self
 
-    def fit_update_single_energy(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_single_energy(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing energy-energy gram matrix with a single new datapoint 
         
         """
-#         if len(np.shape(y2_up)) > 1:
-#             logger.error(" Use the fit_update_energy function for more than one input, quitting now")
-#             return
-            
+
         X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
         y2_up = np.reshape(y2_up, 1)
         past_d = self.energy_K.shape[0]
         up_d = 1
         new_d = past_d + up_d
 
-        gram_up_up = self.kernel_.calc_gram_e(X2_up, nnodes)  # Kernel with the new entries only
+        gram_up_up = self.kernel_.calc_gram_e(X2_up, ncores)  # Kernel with the new entries only
         gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
 
         Kvecs_up_past = self.kernel_.calc_ee(X2_up, self.X_glob_train_)  # Kernel between old and new entries
@@ -415,21 +412,21 @@ class GaussianProcess(object):
         self.L_ = cholesky(self.energy_K, lower=True)
         self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)
 
-    def fit_update_energy(self, X2_up, y2_up, nnodes = 1):   
+    def fit_update_energy(self, X2_up, y2_up, ncores = 1):   
         """
         Update an existing energy-energy gram matrix with a list of new datapoints
         
         Args:
             X2_up (list): training configurations
             y2_up (np.ndarray): training energies
-            nnodes (int): number of CPU workers to use, default is 1
+            ncores (int): number of CPU workers to use, default is 1
 
         """
         try:
             for i in np.arange(len(X2_up)):
-                self.fit_update_single_energy(X2_up[i], y2_up[i], nnodes)
+                self.fit_update_single_energy(X2_up[i], y2_up[i], ncores)
         except:
-            self.fit_update_single_energy(X2_up, y2_up, nnodes)
+            self.fit_update_single_energy(X2_up, y2_up, ncores)
             
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model
@@ -580,6 +577,11 @@ class GaussianProcess(object):
                 configurations. Only returned when return_std is True.
                 
         """
+        try:
+            X = np.reshape(X, (1, len(X), 5))
+        except ValueError:
+            pass
+
         if not hasattr(self, "X_glob_train_") and not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
             e_mean = np.zeros(X.shape[0])
@@ -637,81 +639,6 @@ class GaussianProcess(object):
                 return e_mean, np.sqrt(e_var)
             else:
                 return e_mean
-
-    def predict_energy_map(self, X, return_std=False):
-        """Predict energies using the Gaussian process regression model
-
-        We can also predict based on an unfitted model by using the GP prior.
-        In addition to the mean of the predictive distribution, also its
-        standard deviation (return_std=True)
-
-        Args:
-            X (list): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
-
-        Returns:
-            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
-                
-        """
-        
-        y_mean = np.zeros(len(X))
-        if return_std:
-            y_std = np.zeros(len(X))
-            for i in np.arange(len(X)):
-                y_mean[i], y_std[i] = self.predict_energy_single_map(X[i])
-            return y_mean, y_std
-        else:
-            for i in np.arange(len(X)):
-                y_mean[i] = self.predict_energy_single_map(X[i])
-            return y_mean
-        
-    def predict_energy_single_map(self, X, return_std=False):
-        """Predict energies from forces only using the Gaussian process regression model
-
-        This function evaluates the GP energies for a set of test configurations.
-
-        Args:
-            X (np.ndarray): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
-
-        Returns:
-            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
-                
-        """
-
-        X = np.reshape(X, (1, len(X), 5))
-
-        if not hasattr(self, "X_train_") and not hasattr(self, "X_glob_train_"):  # Unfitted; predict based on GP prior
-            kernel = self.kernel
-            e_mean = np.zeros(X.shape[0])
-            logger.warning("No training data, predicting based on prior")
-            return e_mean
-
-        else:  # Predict based on GP posterior
-
-            if self.fitted == ['force', None]:  # Predict using force data
-                K_trans = self.kernel_.calc_ef_reverse(X, self.X_train_)
-                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
-
-            elif self.fitted == [None, 'energy']:  # Predict using energy data
-                K_energy = self.kernel_.calc_ee_single(X, self.X_glob_train_)
-                e_mean = K_energy.dot(self.energy_alpha_)
-
-            else:  # Predict using both force and energy data
-                K_energy = self.kernel_.calc_ee_single(X, self.X_glob_train_)
-                K_energy_force = self.kernel_.calc_ef_reverse(X, self.X_train_)
-                K = np.hstack((K_energy, K_energy_force))
-                e_mean = K.dot(self.alpha_)
-                
-            return e_mean
             
     # TODO: debug for energy and energy-force fitting
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):

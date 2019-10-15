@@ -9,6 +9,20 @@ from mff import kernels
 from mff import interpolation
 from pathlib import Path
 from mff.models.base import Model
+import ray
+from itertools import combinations_with_replacement
+
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 
 class ThreeBodySingleSpeciesModel(Model):
@@ -40,7 +54,7 @@ class ThreeBodySingleSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = None, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
         3-body single species force-force kernel function
 
@@ -49,12 +63,12 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, glob_confs, energies, nnodes=1):
+    def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
         3-body single species energy-energy kernel function
 
@@ -63,12 +77,12 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, nnodes)
+        self.gp.fit_energy(glob_confs, energies, ncores)
 
-    def fit_force_and_energy(self, confs, forces, glob_confs, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
         3-body single species force-force, energy-force and energy-energy kernels
 
@@ -79,12 +93,12 @@ class ThreeBodySingleSpeciesModel(Model):
                 the central atoms of the training configurations
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
         
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         3-body single species force-force kernels
 
@@ -93,13 +107,13 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         3-body single species energy-energy kernels
 
@@ -108,11 +122,11 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
@@ -148,22 +162,19 @@ class ThreeBodySingleSpeciesModel(Model):
 
         return self.gp.predict_energy(confs, return_std)
 
-    def predict_energy_map(self, confs, return_std=False):
-        """ Predict the local energies of the central atoms of confs using a GP 
+    @ray.remote
+    def predict_energy_ray(self, confs):
+        """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
             
         Returns:
             energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
         """
 
-        return self.gp.predict_energy_map(confs)
+        return self.gp.predict_energy(confs)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -179,7 +190,7 @@ class ThreeBodySingleSpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, num, nnodes=1):
+    def build_grid(self, start, num, ncores=1):
         """ Build the mapped 3-body potential. 
         Calculates the energy predicted by the GP for three atoms at all possible combination 
         of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
@@ -199,7 +210,7 @@ class ThreeBodySingleSpeciesModel(Model):
                 by the GP and stored inn the 3-body mapped potential
             num (int): number of points to use to generate the list of distances used to
                 generate the triplets of atoms for the mapped potential
-            nnodes (int): number of CPUs to use to calculate the energy predictions
+            ncores (int): number of CPUs to use to calculate the energy predictions
         """
 
         self.grid_start = start
@@ -220,25 +231,26 @@ class ThreeBodySingleSpeciesModel(Model):
 
         grid_data = np.zeros((num, num, num))
 
-        if nnodes > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+        if ncores > 1:
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
-            print('Using %i cores for the mapping' % (nnodes))
-            pool = ProcessingPool(nodes=nnodes)
-            splitind = np.zeros(nnodes + 1)
-            factor = (n + (nnodes - 1)) / nnodes
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+            sys.setrecursionlimit(100000)
+            print('Using %i cores for the mapping' % (ncores))
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
-            result = np.array(pool.map(self.gp.predict_energy_map, clist))
+            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_data[inds] = result
 
         else:
-            grid_data[inds] = self.predict_energy_map(confs).flatten()
+            grid_data[inds] = self.predict_energy(confs).flatten()
 
         for ind_i in range(num):
             for ind_j in range(ind_i + 1):
@@ -312,8 +324,6 @@ class ThreeBodySingleSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         params = {
             'model': self.__class__.__name__,
             'elements': self.element,
@@ -332,19 +342,19 @@ class ThreeBodySingleSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_3_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
         if self.grid:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params)
+            grid_filename = 'GRID_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz'.format(p=params)
 
             params['grid']['filename'] = grid_filename
-            self.grid.save(directory / grid_filename)
+            self.grid.save(path / grid_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+        with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
+            json.dump(params, fp, indent=4, cls=NpEncoder)
 
     @classmethod
     def from_json(cls, path):
@@ -419,7 +429,7 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
-    def fit(self, confs, forces, nnodes=1):
+    def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
         3-body two species force-force kernel function
 
@@ -428,12 +438,12 @@ class ThreeBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, nnodes)
+        self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, confs, forces, nnodes=1):
+    def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
         3-body two species energy-energy kernel function
 
@@ -442,12 +452,12 @@ class ThreeBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(confs, forces, nnodes)
+        self.gp.fit_energy(glob_confs, energies, ncores)
 
-    def fit_force_and_energy(self, confs, forces, energies, nnodes=1):
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
         3-body two species force-force, energy-force and energy-energy kernels
 
@@ -458,12 +468,12 @@ class ThreeBodyTwoSpeciesModel(Model):
                 the central atoms of the training configurations
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, energies, nnodes)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
 
-    def update_force(self, confs, forces, nnodes=1):
+    def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
         3-body twp species force-force kernels
 
@@ -472,26 +482,26 @@ class ThreeBodyTwoSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update(confs, forces, nnodes)
+        self.gp.fit_update(confs, forces, ncores)
         
-    def update_energy(self, confs, energies, nnodes=1):
+    def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         3-body two species energy-energy kernels
 
         Args:
-            confs (list): List of M x 5 arrays containing coordinates and
+            glob_confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             energies (array) : Array containing the scalar local energies of 
                 the central atoms of the training configurations
-            nnodes (int): number of CPUs to use for the gram matrix evaluation
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
 
-        self.gp.fit_update_energy(confs, energies, nnodes)
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
@@ -510,7 +520,7 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         return self.gp.predict(confs, return_std)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False):
         """ Predict the local energies of the central atoms of confs using a GP 
 
         Args:
@@ -525,25 +535,22 @@ class ThreeBodyTwoSpeciesModel(Model):
                 returned only if return_std is True
         """
 
-        return self.gp.predict_energy(confs, return_std)
+        return self.gp.predict_energy(glob_confs, return_std)
 
-    def predict_energy_map(self, confs, return_std=False):
+    @ray.remote
+    def predict_energy_ray(self, glob_confs):
         """ Predict the local energies of the central atoms of confs using a GP 
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
-            return_std (bool): if True, returns the standard deviation 
-                associated to predictions according to the GP framework
             
         Returns:
             energies (array): array of force vectors predicted by the GP
-            energies_errors (array): errors associated to the energies predictions,
-                returned only if return_std is True
         """
 
-        return self.gp.predict_energy_map(confs)
-    
+        return self.gp.predict_energy(glob_confs)
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -556,7 +563,7 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         self.gp.load(filename)
 
-    def build_grid(self, start, num, nnodes=1):
+    def build_grid(self, start, num, ncores=1):
         """Function used to create the four different 3-body energy grids for 
         atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
         ``build_grid_3b`` function for each of those combinations of elements.
@@ -566,19 +573,19 @@ class ThreeBodyTwoSpeciesModel(Model):
                 by the GP and stored inn the 3-body mapped potential
             num (int): number of points to use to generate the list of distances used to
                 generate the triplets of atoms for the mapped potential
-            nnodes (int): number of CPUs to use to calculate the energy predictions
+            ncores (int): number of CPUs to use to calculate the energy predictions
         """
 
         self.grid_start = start
         self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
-        self.grid[(0, 0, 0)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], nnodes)
-        self.grid[(0, 0, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], nnodes)
-        self.grid[(0, 1, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], nnodes)
-        self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], nnodes)
+        self.grid[(0, 0, 0)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[0], ncores)
+        self.grid[(0, 0, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[0], self.elements[1], ncores)
+        self.grid[(0, 1, 1)] = self.build_grid_3b(dists, self.elements[0], self.elements[1], self.elements[1], ncores)
+        self.grid[(1, 1, 1)] = self.build_grid_3b(dists, self.elements[1], self.elements[1], self.elements[1], ncores)
 
-    def build_grid_3b(self, dists, element_i, element_j, element_k, nnodes):
+    def build_grid_3b(self, dists, element_i, element_j, element_k, ncores):
         """ Build a mapped 3-body potential. 
         Calculates the energy predicted by the GP for three atoms of elements element_i, element_j, element_k, 
         at all possible combinations of num distances ranging from start to r_cut. 
@@ -599,7 +606,7 @@ class ThreeBodyTwoSpeciesModel(Model):
             element_i (int): atomic number of the central atom i in a triplet
             element_j (int): atomic number of the second atom j in a triplet
             element_k (int): atomic number of the third atom k in a triplet
-            nnodes (int): number of CPUs to use when computing the triplet local energies
+            ncores (int): number of CPUs to use when computing the triplet local energies
             
         Returns:
             spline3D (obj): a 3D spline object that can be used to predict the energy and the force associated
@@ -621,25 +628,26 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         grid_3b = np.zeros((num, num, num))
 
-        if nnodes > 1:
-            from pathos.multiprocessing import ProcessingPool  # Import multiprocessing package
+        if ncores > 1:
             n = len(confs)
             import sys
-            sys.setrecursionlimit(1000000)
-            print('Using %i cores for the mapping' % (nnodes))
-            pool = ProcessingPool(nodes=nnodes)
-            splitind = np.zeros(nnodes + 1)
-            factor = (n + (nnodes - 1)) / nnodes
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(nnodes - 1)]
+            sys.setrecursionlimit(100000)
+            print('Using %i cores for the mapping' % (ncores))
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(nnodes)]
-            result = np.array(pool.map(self.gp.predict_energy_map, clist))
+            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
             result = np.concatenate(result).flatten()
             grid_3b[inds] = result
 
         else:
-            grid_3b[inds] = self.gp.predict_energy_map(confs).flatten()
+            grid_3b[inds] = self.gp.predict_energy(confs).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
@@ -746,8 +754,6 @@ class ThreeBodyTwoSpeciesModel(Model):
         if not isinstance(path, Path):
             path = Path(path)
 
-        directory, prefix = path.parent, path.stem
-
         params = {
             'model': self.__class__.__name__,
             'elements': self.elements,
@@ -765,21 +771,22 @@ class ThreeBodyTwoSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_3_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
         params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
-
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
             params['grid']['filename'][key] = grid_filename
-            self.grid[k].save(directory / grid_filename)
+            grid.save(path / grid_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
-            json.dump(params, fp, indent=4)
+        with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
+            json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print('Saved model with name:', str(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params)))
 
     @classmethod
     def from_json(cls, path):
@@ -824,6 +831,444 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         return model
 
+
+class ThreeBodyManySpeciesModel(Model):
+    """ 3-body many species model class
+    Class managing the Gaussian process and its mapped counterpart
+
+    Args:
+        elements (list): List containing the atomic numbers in increasing order
+        r_cut (foat): The cutoff radius used to carve the atomic environments
+        sigma (foat): Lengthscale parameter of the Gaussian process
+        theta (float): decay ratio of the cutoff function in the Gaussian Process
+        noise (float): noise value associated with the training output data
+
+    Attributes:
+        gp (class): The 3-body two species Gaussian Process
+        grid (list): Contains the three 3-body two species tabulated potentials, accounting for
+            interactions between three atoms of types 0-0-0, 0-0-1, 0-1-1, and 1-1-1.
+        grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0)
+        grid_num (int): number of points per side used to create the 3-body grids. These are 
+            3-dimensional grids, therefore the total number of grid points will be grid_num^3.  
+    """
+
+    def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
+        super().__init__()
+        self.elements = elements
+        self.r_cut = r_cut
+
+        kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
+
+        self.grid, self.grid_start, self.grid_num = {}, None, None
+
+    def fit(self, confs, forces, ncores=1):
+        """ Fit the GP to a set of training forces using a 
+        3-body two species force-force kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+        """
+
+        self.gp.fit(confs, forces, ncores)
+
+    def fit_energy(self, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training energies using a 
+        3-body two species energy-energy kernel function
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+        """
+
+        self.gp.fit_energy(glob_confs, energies, ncores)
+
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training forces and energies using 
+        3-body two species force-force, energy-force and energy-energy kernels
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+        """
+
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
+
+    def update_force(self, confs, forces, ncores=1):
+        """ Update a fitted GP with a set of forces and using 
+        3-body twp species force-force kernels
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            forces (array) : Array containing the vector forces on 
+                the central atoms of the training configurations
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+
+        """
+
+        self.gp.fit_update(confs, forces, ncores)
+        
+    def update_energy(self, glob_confs, energies, ncores=1):
+        """ Update a fitted GP with a set of energies and using 
+        3-body two species energy-energy kernels
+
+        Args:
+            glob_confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            energies (array) : Array containing the scalar local energies of 
+                the central atoms of the training configurations
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+
+        """
+
+        self.gp.fit_update_energy(glob_confs, energies, ncores)
+        
+    def predict(self, confs, return_std=False):
+        """ Predict the forces acting on the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            forces (array): array of force vectors predicted by the GP
+            forces_errors (array): errors associated to the force predictions,
+                returned only if return_std is True
+        """
+
+        return self.gp.predict(confs, return_std)
+
+    def predict_energy(self, glob_confs, return_std=False):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            return_std (bool): if True, returns the standard deviation 
+                associated to predictions according to the GP framework
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+            energies_errors (array): errors associated to the energies predictions,
+                returned only if return_std is True
+        """
+
+        return self.gp.predict_energy(glob_confs, return_std)
+
+    @ray.remote
+    def predict_energy_ray(self, glob_confs):
+        """ Predict the local energies of the central atoms of confs using a GP 
+
+        Args:
+            confs (list): List of M x 5 arrays containing coordinates and
+                atomic numbers of atoms within a cutoff from the central one
+            
+        Returns:
+            energies (array): array of force vectors predicted by the GP
+        """
+
+        return self.gp.predict_energy(glob_confs)
+
+    def save_gp(self, filename):
+        """ Saves the GP object, now obsolete
+        """
+
+        self.gp.save(filename)
+
+    def load_gp(self, filename):
+        """ Loads the GP object, now obsolete
+        """
+
+        self.gp.load(filename)
+
+    def build_grid(self, start, num, ncores=1):
+        """Function used to create the four different 3-body energy grids for 
+        atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
+        ``build_grid_3b`` function for each of those combinations of elements.
+        
+        Args:
+            start (float): smallest interatomic distance for which the energy is predicted
+                by the GP and stored inn the 3-body mapped potential
+            num (int): number of points to use to generate the list of distances used to
+                generate the triplets of atoms for the mapped potential
+            ncores (int): number of CPUs to use to calculate the energy predictions
+        """
+
+        self.grid_start = start
+        self.grid_num = num
+
+        dists = np.linspace(start, self.r_cut, num)
+        num_elements = [x for x in range(len(self.elements))]
+        perm_list = list(combinations_with_replacement(num_elements, 3))
+
+        for trip in perm_list:
+            ind1 = trip[0]
+            ind2 = trip[1]
+            ind3 = trip[2]
+
+            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
+
+
+    def build_grid_3b(self, dists, element_i, element_j, element_k, ncores):
+        """ Build a mapped 3-body potential. 
+        Calculates the energy predicted by the GP for three atoms of elements element_i, element_j, element_k, 
+        at all possible combinations of num distances ranging from start to r_cut. 
+        The energy is calculated only for ``valid`` triplets of atoms, i.e. sets of three distances 
+        which form a triangle (this is checked via the triangle inequality), found by calling the 
+        ``generate_triplets_with_permutation_invariance`` function.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+            element_i (int): atomic number of the central atom i in a triplet
+            element_j (int): atomic number of the second atom j in a triplet
+            element_k (int): atomic number of the third atom k in a triplet
+            ncores (int): number of CPUs to use when computing the triplet local energies
+            
+        Returns:
+            spline3D (obj): a 3D spline object that can be used to predict the energy and the force associated
+                to the central atom of a triplet.
+        """
+
+        num = len(dists)
+        inds, r_ij_x, r_ki_x, r_ki_y = self.generate_triplets_all(dists)
+
+        confs = np.zeros((len(r_ij_x), 2, 5))
+
+        confs[:, 0, 0] = r_ij_x  # Element on the x axis
+        confs[:, 1, 0] = r_ki_x  # Reshape into confs shape: this is x2
+        confs[:, 1, 1] = r_ki_y  # Reshape into confs shape: this is y2
+
+        confs[:, :, 3] = element_i  # Central element is always element 1
+        confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
+        confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
+
+        grid_3b = np.zeros((num, num, num))
+
+        if ncores > 1:
+            n = len(confs)
+            import sys
+            sys.setrecursionlimit(100000)
+            print('Using %i cores for the mapping' % (ncores))
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
+            ray.init()
+            # Using the dummy function that has a single argument
+            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
+            ray.shutdown()            
+            result = np.concatenate(result).flatten()
+            grid_3b[inds] = result
+
+        else:
+            grid_3b[inds] = self.gp.predict_energy(confs).flatten()
+
+        return interpolation.Spline3D(dists, dists, dists, grid_3b)
+
+    @staticmethod
+    def generate_triplets_with_permutation_invariance(dists):
+        """ Generate a list of all valid triplets using perutational invariance.
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality). The grid building exploits all the permutation invariances to
+        reduce the number of energy calculations needed to fill the grid.
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+
+        Returns:
+            inds (array): array of booleans indicating which triplets (three distance values) need to be
+                evaluated to fill the 3D grid of energy values.
+            r_ij_x (array): array containing the x coordinate of the second atom j w.r.t. the central atom i
+            r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
+            r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
+        """
+
+        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+
+        # Valid triangles according to triangle inequality
+        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+
+        # Utilizing permutation invariance
+        inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
+
+        # Element on the x axis
+        r_ij_x = d_ij[inds]
+
+        # Element on the xy plane
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+
+        # using abs to avoid numerical error near to 0
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
+
+        return inds, r_ij_x, r_ki_x, r_ki_y
+
+    @staticmethod
+    def generate_triplets_all(dists):
+        """ Generate a list of all valid triplets
+        Calculates the energy predicted by the GP for three atoms at all possible combination 
+        of num distances ranging from start to r_cut. The energy is calculated only for ``valid``
+        triplets of atoms, i.e. sets of three distances which form a triangle (this is checked via 
+        the triangle inequality).
+        The computed energies are stored in a 3D cube of values, and a 3D spline interpolation is 
+        created, which can be used to predict the energy and, through its analytic derivative, 
+        the force associated to any triplet of atoms.
+        The total force or local energy can then be calculated for any atom by summing the 
+        triplet contributions of every valid triplet of atoms of which one is always the central one.
+        The prediction is done by the ``calculator`` module which is built to work within 
+        the ase python package.
+        
+        Args:
+            dists (array): array of floats containing all of the distances which can be used to 
+                build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
+
+        Returns:
+            inds (array): array of booleans indicating which triplets (three distance values) need to be
+                evaluated to fill the 3D grid of energy values.
+            r_ij_x (array): array containing the x coordinate of the second atom j w.r.t. the central atom i
+            r_ki_x (array): array containing the x coordinate of the third atom k w.r.t. the central atom i
+            r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
+        """
+
+        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+
+        # Valid triangles according to triangle inequality
+        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+
+        # Element on the x axis
+        r_ij_x = d_ij[inds]
+
+        # Element on the xy plane
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+
+        # using abs to avoid numerical error near to 0
+        r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
+
+        return inds, r_ij_x, r_ki_x, r_ki_y
+
+    def save(self, path):
+        """ Save the model.
+        This creates a .json file containing the parameters of the model and the
+        paths to the GP objects and the mapped potentials, which are saved as 
+        separate .gpy and .gpz files, respectively.
+        
+        Args:
+            path (str): path to the file 
+        """
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        params = {
+            'model': self.__class__.__name__,
+            'elements': self.elements,
+            'r_cut': self.r_cut,
+            'gp': {
+                'kernel': self.gp.kernel.kernel_name,
+                'n_train': self.gp.n_train,
+                'sigma': self.gp.kernel.theta[0],
+                'theta': self.gp.kernel.theta[1],
+                'noise': self.gp.noise
+            },
+            'grid': {
+                'r_min': self.grid_start,
+                'r_num': self.grid_num
+            } if self.grid else {}
+        }
+
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
+
+        params['gp']['filename'] = gp_filename
+        self.gp.save(path / gp_filename)
+
+        params['grid']['filename'] = {}
+        for k, grid in self.grid.items():
+            key = '_'.join(str(element) for element in k)
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
+            params['grid']['filename'][key] = grid_filename
+            grid.save(path / grid_filename)
+
+        with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
+            json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print('Saved model with name:', str(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params)))
+
+    @classmethod
+    def from_json(cls, path):
+        """ Load the model.
+        Loads the model, the associated GP and the mapped potential, if available.
+        
+        Args:
+            path (str): path to the .json model file 
+        
+        Return:
+            model (obj): the model object
+        """
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        directory, prefix = path.parent, path.stem
+
+        with open(path) as fp:
+            params = json.load(fp)
+        model = cls(params['elements'],
+                    params['r_cut'],
+                    params['gp']['sigma'],
+                    params['gp']['theta'],
+                    params['gp']['noise'])
+
+        gp_filename = params['gp']['filename']
+        try:
+            model.gp.load(directory / gp_filename)
+        except:
+            warnings.warn("The 3-body GP file is missing")
+            pass
+
+        if params['grid']:
+
+            for key, grid_filename in params['grid']['filename'].items():
+                k = tuple(int(ind) for ind in key.split('_'))
+                model.grid[k] = interpolation.Spline3D.load(directory / grid_filename)
+
+            model.grid_start = params['grid']['r_min']
+            model.grid_num = params['grid']['r_num']
+
+        return model
 
 if __name__ == '__main__':
     def test_three_body_single_species_model():

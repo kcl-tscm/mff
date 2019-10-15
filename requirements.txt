@@ -1,3 +1,6 @@
 theano
 ase
 asap3
+ray
+numpy
+scipy

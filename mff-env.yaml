@@ -8,3 +8,5 @@ dependencies:
   - asap3
   - theano
   - mkl-service
+  - ray
+  - psutil

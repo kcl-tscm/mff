@@ -49,15 +49,6 @@ Or, to build in place for development, run:
     python setup.py develop
 
 
-## Usage
-
-Description on how to use the package.
-
-```py
-import mff
-
-```
-
 ## Examples
 Refer to the two files in the Tutorial folder for working jupyter notebooks showing most of the functionalities of this package.
 

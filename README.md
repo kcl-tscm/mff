@@ -11,7 +11,6 @@ An example tutorial jupyter notebook can be found in the `tutorials` folder.
 
 - [Background on MFFs](#background)
 - [Install](#install)
-- [Usage](#usage)
 - [Examples](#examples)
 - [Maintainers](#maintainers)
 - [References](#references)

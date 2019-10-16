@@ -25,12 +25,12 @@ setup(
     packages=find_packages(),
     ext_modules=[tricube_cpp_module, tricube_fortran_module],
     install_requires=[
-    'numpy >= 1.17.2', 
-    'asap3 >= 3.11.10', 
-    'ase >= 3.18.1', 
+    'numpy', 
+    'asap3', 
+    'ase', 
     'theano >= 1.0.4', 
-    'scipy >= 1.3.1', 
-    'ray >= 0.7.5', 
+    'scipy', 
+    'ray', 
     'psutil'
     ]
 )

@@ -234,6 +234,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing call
     @ray.remote
     def dummy_calc_ff(self, array):
+        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
         result = np.zeros((len(array), 3, 3))
         for i in np.arange(len(array)):
             result[i] = self.k3_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])

@@ -12,7 +12,8 @@ from mff import configurations
 from scipy.spatial.distance import cdist
 from pathlib import Path
 from itertools import combinations_with_replacement
-from asap3.analysis import FullCNA
+from asap3.analysis import FullCNA  
+from ase.io import read
 
 # Keep track on whether there are actual energies in your dataset or they have been discarded
 global energydefault
@@ -359,6 +360,7 @@ def sample_cna(traj, cna_cut, ntr):
     """ From a trajcetory file, calculate CNAS using cna_cut as cutoff, 
         order the classes and sample according to the sample_using_cna method
     """
+    traj = read(traj, index = ':')
     transformed_cnas, all_cnas = extract_cnas(traj, cna_cut)
     print("CNA classes are: \n", all_cnas)
     training_indexes = sample_uniform_cna(ntr, transformed_cnas)

@@ -9,6 +9,7 @@ from mff.kernels.base import Kernel
 import theano.tensor as T
 from theano import function, scan
 import ray
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -234,10 +235,15 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing call
     @ray.remote
     def dummy_calc_ff(self, array):
-        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
+        if self.type == "single":
+            with open("k3_ff_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif self.type == "multi":
+            with open("k3_ff_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
         result = np.zeros((len(array), 3, 3))
         for i in np.arange(len(array)):
-            result[i] = self.k3_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
+            result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
         return result
 
     def calc_gram_e(self, X, ncores=1, eval_gradient=False):  # Untested
@@ -311,12 +317,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing call    
     @ray.remote
     def dummy_calc_ee(self, array):
-
-        result = np.zeros(len(array))
+        if self.type == "single":
+            with open("k3_ee_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif self.type == "multi":
+            with open("k3_ee_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
-                    result[i] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                    result[i] += fun(zp.zeros(3), np.zeros(3), npconf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return result
 
@@ -385,12 +395,18 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
     # Used to simplify multiprocessing
     @ray.remote
     def dummy_calc_ef(self, array):
+        if self.type == "single":
+            with open("k3_ef_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif self.type == "multi":
+            with open("k3_ef_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
         result = np.zeros((len(array), 3))
         for i in np.arange(len(array)):
             conf2 = np.array(array[i][1], dtype = 'float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype = 'float')
-                result[i] += self.k3_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return result
     
@@ -430,6 +446,7 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
         super().__init__(kernel_name='ThreeBodySingleSpecies', theta=theta, bounds=bounds)
+        self.type = "single"
 
     @staticmethod
     def compile_theano():
@@ -541,8 +558,17 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
                                      sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
         k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, on_unused_input='ignore')
 
+        # Save the function that we want to use for multiprocessing
+        # This is necessary because theano is a crybaby and does not want to access the
+        # Automaticallly stored compiled object from different processes
+        with open('k3_ee_s.pickle', 'wb') as f:
+            pickle.dump(k_ee_fun, f)
+        with open('k3_ef_s.pickle', 'wb') as f:
+            pickle.dump(k_ef_fun, f)
+        with open('k3_ff_s.pickle', 'wb') as f:
+            pickle.dump(k_ff_fun, f)
+        
         # WRAPPERS (we don't want to plug the position of the central element every time)
-
         def k3_ee(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for global energy-energy correlation
@@ -596,6 +622,7 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
 
         logger.info("Ended compilation of theano three body kernels")
 
+
         return k3_ee, k3_ef, k3_ff
 
 class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
@@ -610,6 +637,7 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
         super().__init__(kernel_name='ThreeBody', theta=theta, bounds=bounds)
+        self.type = "multi"
 
     @staticmethod
     def compile_theano():
@@ -763,6 +791,16 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
         k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
                                      sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
         k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
+
+        # Save the function that we want to use for multiprocessing
+        # This is necessary because theano is a crybaby and does not want to access the
+        # Automaticallly stored compiled object from different processes
+        with open('k3_ee_m.pickle', 'wb') as f:
+            pickle.dump(k_ee_fun, f)
+        with open('k3_ef_m.pickle', 'wb') as f:
+            pickle.dump(k_ef_fun, f)
+        with open('k3_ff_m.pickle', 'wb') as f:
+            pickle.dump(k_ff_fun, f)
 
         # WRAPPERS (we don't want to plug the position of the central element every time)
 

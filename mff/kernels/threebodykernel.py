@@ -193,7 +193,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 logger.info('Using %i cores for the 3-body force-force gram matrix calculation' % (ncores))
 
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(ncores + 1)
@@ -273,7 +273,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                         
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
                 logger.info('Using %i cores for the 3-body energy-energy gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -359,7 +359,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes

@@ -19,6 +19,46 @@ from ase.io import read
 global energydefault
 energydefault = False
 
+def find_repulstion_sigma(confs):
+    """ Function used to find the repulsion parameter 
+    sigma such that the energy of a bond at distance r is 0.01 eV.
+    The distance r is the smallest bond distance found in the training set.
+    """
+
+    dists = []
+    for c in confs:
+        if len(c.shape) == 2:
+            d = np.sum(c[:,:3]**2, axis = 1)**0.5
+            dists.extend(d)
+        else:
+            for c1 in c:
+                d = np.sum(c1[:,:3]**2, axis = 1)**0.5
+                dists.extend(d) 
+
+    r =  min(dists)
+    sigma = r*0.01**(1/12)
+
+    return sigma
+
+def get_repulsive_forces(confs, sig):
+    forces = np.zeros((len(confs), 3))
+    for i, c in enumerate(confs):
+        d = np.sum(c[:,:3]**2, axis =1)**0.5
+        v = c[:,:3]/d[:,None]
+        f = 12*(sig/d)**12/d
+        forces[i] = np.sum(f[:, None]*v, axis = 0)
+
+    return forces
+
+def get_repulsive_energies(confs, sig):
+    energies = np.zeros(len(confs))
+    for i, c in enumerate(confs):
+        for c1 in c:
+            d = np.sum(c1[:,:3]**2, axis = 1)**0.5
+            energies[i] += np.sum((sig/d)**12)
+
+    return energies
+    
 def open_data(folder, cutoff):
     """ Open already extracted conf, force and energy data
     """

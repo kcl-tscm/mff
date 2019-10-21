@@ -43,7 +43,7 @@ class TwoBodySingleSpeciesModel(Model):
 
     """
 
-    def __init__(self, element, r_cut, sigma, theta, noise, rep_sig = 0, **kwargs):
+    def __init__(self, element, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.element = element
@@ -311,7 +311,7 @@ class TwoBodyTwoSpeciesModel(Model):
 
     """
 
-    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 0, **kwargs):
+    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.elements = elements
@@ -602,7 +602,7 @@ class TwoBodyManySpeciesModel(Model):
 
     """
 
-    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 0, **kwargs):
+    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.elements = elements

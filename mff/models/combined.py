@@ -55,7 +55,7 @@ class CombinedSingleSpeciesModel(Model):
             grid is 3-dimensional, therefore its total number of grid points will be grid_num^3    
     """
 
-    def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 0, **kwargs):
+    def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 1, **kwargs):
         super().__init__()
         self.element = element
         self.r_cut = r_cut
@@ -541,7 +541,7 @@ class CombinedTwoSpeciesModel(Model):
                 generate the triplets of atoms for the 2-body mapped potential  
     """
 
-    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 0, **kwargs):
+    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig =1, **kwargs):
         super().__init__()
         self.elements = elements
         self.r_cut = r_cut
@@ -1055,7 +1055,7 @@ class CombinedManySpeciesModel(Model):
                 generate the triplets of atoms for the 2-body mapped potential  
     """
 
-    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 0, **kwargs):
+    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 1, **kwargs):
         super().__init__()
         self.elements = elements
         self.r_cut = r_cut

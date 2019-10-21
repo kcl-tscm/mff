@@ -13,6 +13,19 @@ import pickle
 
 logger = logging.getLogger(__name__)
 
+def dummy_calc_ff(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k3_ff_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k3_ff_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros((len(array), 3, 3))
+    for i in np.arange(len(array)):
+        result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1],  theta0, theta1, theta2)
+    return result
+
 
 class BaseThreeBody(Kernel, metaclass=ABCMeta):
     """ Three body kernel class
@@ -201,15 +214,21 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(ncores)]))
-                ray.shutdown()
+                import multiprocessing as mp
 
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ff, clist)
                 result = np.concatenate(result).reshape((n, 3, 3))
+
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
+
+                # result = np.concatenate(result).reshape((n, 3, 3))
 
 
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))

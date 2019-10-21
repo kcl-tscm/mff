@@ -11,7 +11,8 @@ from pathlib import Path
 from mff.models.base import Model
 import ray
 from itertools import combinations_with_replacement
-
+import sys
+sys.setrecursionlimit(100000)       
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):

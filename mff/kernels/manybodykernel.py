@@ -6,8 +6,8 @@ from abc import ABCMeta, abstractmethod
 
 from mff.kernels.base import Kernel
 
-import theano.tensor as T
-from theano import function, scan
+# import theano.tensor as T
+# from theano import function, scan
 import ray
 
 logger = logging.getLogger(__name__)

@@ -5,11 +5,9 @@ import numpy as np
 from abc import ABCMeta, abstractmethod
 
 from mff.kernels.base import Kernel
-
-import theano.tensor as T
-from theano import function, scan
 import ray
 import pickle
+import os.path
 
 logger = logging.getLogger(__name__)
 
@@ -471,112 +469,126 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
             k3_ef (func): energy-force kernel
             k3_ff (func): force-force kernel
         """
+        if not (os.path.exists('k3_ee_s.pickle') and 
+            os.path.exists('k3_ef_s.pickle') and os.path.exists('k3_ff_s.pickle')):
+            print("Building Kernels")
 
-        logger.info("Started compilation of theano three body kernels")
+            import theano.tensor as T
+            from theano import function, scan
+            logger.info("Started compilation of theano three body kernels")
 
-        # --------------------------------------------------
-        # INITIAL DEFINITIONS
-        # --------------------------------------------------
+            # --------------------------------------------------
+            # INITIAL DEFINITIONS
+            # --------------------------------------------------
 
-        # positions of central atoms
-        r1, r2 = T.dvectors('r1d', 'r2d')
-        # positions of neighbours
-        rho1, rho2 = T.dmatrices('rho1', 'rho2')
-        # hyperparameter
-        sig = T.dscalar('sig')
-        # cutoff hyperparameters
-        theta = T.dscalar('theta')
-        rc = T.dscalar('rc')
+            # positions of central atoms
+            r1, r2 = T.dvectors('r1d', 'r2d')
+            # positions of neighbours
+            rho1, rho2 = T.dmatrices('rho1', 'rho2')
+            # hyperparameter
+            sig = T.dscalar('sig')
+            # cutoff hyperparameters
+            theta = T.dscalar('theta')
+            rc = T.dscalar('rc')
 
-        # positions of neighbours without chemical species
+            # positions of neighbours without chemical species
 
-        rho1s = rho1[:, 0:3]
-        rho2s = rho2[:, 0:3]
+            rho1s = rho1[:, 0:3]
+            rho2s = rho2[:, 0:3]
 
-        # --------------------------------------------------
-        # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
-        # --------------------------------------------------
+            # --------------------------------------------------
+            # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
+            # --------------------------------------------------
 
-        # first and second configuration
-        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-        rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-        rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
-
-
-        # --------------------------------------------------
-        # BUILD THE KERNEL
-        # --------------------------------------------------
-
-        # Squared exp of differences
-        se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
-        se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-        se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-        se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
-
-        # Kernel not summed (cyclic permutations)
-        k1n = (se_1j2m[:, None, :, None] * se_1j2m[None, :, None, :] * se_jkmn)
-        k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :, None, :] * se_1j2m[None, :, :, None])
-        k3n = (se_1j2m[:, None, None, :] * se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
-                
-        # final shape is M1 M1 M2 M2
-        ker = k1n  + k2n  + k3n 
-
-        cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
-        cut_jk = cut_j[:, None] * cut_j[None, :] *(
-                  T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                  (0.5 * (T.sgn(rc - rjk) + 1))[:, :])    
-
-        cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
-        cut_mn = cut_m[:, None] * cut_m[None, :] *(
-                  T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                  (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
-
-        # --------------------------------------------------
-        # REMOVE DIAGONAL ELEMENTS AND ADD CUTOFF
-        # --------------------------------------------------
-
-        # remove diagonal elements AND lower triangular ones from first configuration
-        mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
-
-        # remove diagonal elements from second configuration
-        mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
-
-        # Combine masks
-        mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
-
-        # Apply mask and then apply cutoff functions
-        ker = ker * mask_jkmn
-        ker = T.sum(ker * cut_jk[:, :, None, None] * cut_mn[None, None, :, :])
+            # first and second configuration
+            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+            rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
+            rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
 
 
-        # --------------------------------------------------
-        # FINAL FUNCTIONS
-        # --------------------------------------------------
+            # --------------------------------------------------
+            # BUILD THE KERNEL
+            # --------------------------------------------------
 
-        # global energy energy kernel
-        k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker, on_unused_input='ignore')
+            # Squared exp of differences
+            se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+            se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
+            se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
+            se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
 
-        # global energy force kernel
-        k_ef = T.grad(ker, r2)
-        k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef, on_unused_input='ignore')
+            # Kernel not summed (cyclic permutations)
+            k1n = (se_1j2m[:, None, :, None] * se_1j2m[None, :, None, :] * se_jkmn)
+            k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :, None, :] * se_1j2m[None, :, :, None])
+            k3n = (se_1j2m[:, None, None, :] * se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
+                    
+            # final shape is M1 M1 M2 M2
+            ker = k1n  + k2n  + k3n 
+
+            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
+            cut_jk = cut_j[:, None] * cut_j[None, :] *(
+                    T.exp(-theta / T.abs_(rc - rjk[:, :])) *
+                    (0.5 * (T.sgn(rc - rjk) + 1))[:, :])    
+
+            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
+            cut_mn = cut_m[:, None] * cut_m[None, :] *(
+                    T.exp(-theta / T.abs_(rc - rmn[:, :])) *
+                    (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
+
+            # --------------------------------------------------
+            # REMOVE DIAGONAL ELEMENTS AND ADD CUTOFF
+            # --------------------------------------------------
+
+            # remove diagonal elements AND lower triangular ones from first configuration
+            mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
+
+            # remove diagonal elements from second configuration
+            mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
+
+            # Combine masks
+            mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
+
+            # Apply mask and then apply cutoff functions
+            ker = ker * mask_jkmn
+            ker = T.sum(ker * cut_jk[:, :, None, None] * cut_mn[None, None, :, :])
+
+
+            # --------------------------------------------------
+            # FINAL FUNCTIONS
+            # --------------------------------------------------
+
+            # global energy energy kernel
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker, on_unused_input='ignore')
+
+            # global energy force kernel
+            k_ef = T.grad(ker, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef, on_unused_input='ignore')
+            
+            # local force force kernel
+            k_ff = T.grad(ker, r1)
+            k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+                                        sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, on_unused_input='ignore')
+
+            # Save the function that we want to use for multiprocessing
+            # This is necessary because theano is a crybaby and does not want to access the
+            # Automaticallly stored compiled object from different processes
+            with open('k3_ee_s.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun, f)
+            with open('k3_ef_s.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun, f)
+            with open('k3_ff_s.pickle', 'wb') as f:
+                pickle.dump(k_ff_fun, f)
         
-        # local force force kernel
-        k_ff = T.grad(ker, r1)
-        k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
-                                     sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
-        k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, on_unused_input='ignore')
+        else:
+            print("Loading Kernels")
+            with open("k3_ee_s.pickle", 'rb') as f:
+                k_ee_fun = pickle.load(f)
+            with open("k3_ef_s.pickle", 'rb') as f:
+                k_ef_fun = pickle.load(f)
+            with open("k3_ff_s.pickle", 'rb') as f:
+                k_ff_fun = pickle.load(f)
 
-        # Save the function that we want to use for multiprocessing
-        # This is necessary because theano is a crybaby and does not want to access the
-        # Automaticallly stored compiled object from different processes
-        with open('k3_ee_s.pickle', 'wb') as f:
-            pickle.dump(k_ee_fun, f)
-        with open('k3_ef_s.pickle', 'wb') as f:
-            pickle.dump(k_ef_fun, f)
-        with open('k3_ff_s.pickle', 'wb') as f:
-            pickle.dump(k_ff_fun, f)
-        
         # WRAPPERS (we don't want to plug the position of the central element every time)
         def k3_ee(conf1, conf2, sig, theta, rc):
             """
@@ -665,151 +677,168 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
 
         logger.info("Started compilation of theano three body kernels")
 
-        # --------------------------------------------------
-        # INITIAL DEFINITIONS
-        # --------------------------------------------------
+        if not (os.path.exists('k3_ee_m.pickle') and 
+            os.path.exists('k3_ef_m.pickle') and os.path.exists('k3_ff_m.pickle')):
+            print("Building Kernels")
 
-        # positions of central atoms
-        r1, r2 = T.dvectors('r1d', 'r2d')
-        # positions of neighbours
-        rho1, rho2 = T.dmatrices('rho1', 'rho2')
-        # hyperparameter
-        sig = T.dscalar('sig')
-        # cutoff hyperparameters
-        theta = T.dscalar('theta')
-        rc = T.dscalar('rc')
+            import theano.tensor as T
+            from theano import function, scan
 
-        # positions of neighbours without chemical species
+            # --------------------------------------------------
+            # INITIAL DEFINITIONS
+            # --------------------------------------------------
 
-        rho1s = rho1[:, 0:3]
-        rho2s = rho2[:, 0:3]
+            # positions of central atoms
+            r1, r2 = T.dvectors('r1d', 'r2d')
+            # positions of neighbours
+            rho1, rho2 = T.dmatrices('rho1', 'rho2')
+            # hyperparameter
+            sig = T.dscalar('sig')
+            # cutoff hyperparameters
+            theta = T.dscalar('theta')
+            rc = T.dscalar('rc')
 
-        alpha_1 = rho1[:, 3].flatten()
-        alpha_2 = rho2[:, 3].flatten()
+            # positions of neighbours without chemical species
 
-        alpha_j = rho1[:, 4].flatten()
-        alpha_m = rho2[:, 4].flatten()
+            rho1s = rho1[:, 0:3]
+            rho2s = rho2[:, 0:3]
 
-        alpha_k = rho1[:, 4].flatten()
-        alpha_n = rho2[:, 4].flatten()
-        
-        
-        # --------------------------------------------------
-        # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
-        # --------------------------------------------------
+            alpha_1 = rho1[:, 3].flatten()
+            alpha_2 = rho2[:, 3].flatten()
 
-        # first and second configuration
-        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-        rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-        rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
+            alpha_j = rho1[:, 4].flatten()
+            alpha_m = rho2[:, 4].flatten()
 
-        # --------------------------------------------------
-        # CHEMICAL SPECIES MASK
-        # --------------------------------------------------
+            alpha_k = rho1[:, 4].flatten()
+            alpha_n = rho2[:, 4].flatten()
+            
+            
+            # --------------------------------------------------
+            # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
+            # --------------------------------------------------
 
-        # numerical kronecker
-        def delta_alpha2(a1j, a2m):
-            d = np.exp(-(a1j - a2m) ** 2 / (2 * 0.00001 ** 2))
-            return d
+            # first and second configuration
+            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+            rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
+            rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
 
-        # permutation 1
+            # --------------------------------------------------
+            # CHEMICAL SPECIES MASK
+            # --------------------------------------------------
 
-        delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
-        delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
-        delta_alphas_jmkn = delta_alphasjm[:, None, :, None] * delta_alphasjm[None, :, None, :]
-        
-        delta_perm1 = delta_alphas12 * delta_alphas_jmkn
+            # numerical kronecker
+            def delta_alpha2(a1j, a2m):
+                d = np.exp(-(a1j - a2m) ** 2 / (2 * 0.00001 ** 2))
+                return d
 
-        # permutation 3
-        delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
-        delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
-        delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
+            # permutation 1
 
-        delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * \
-                      delta_alphask2[None, :, None, None]
+            delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
+            delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
+            delta_alphas_jmkn = delta_alphasjm[:, None, :, None] * delta_alphasjm[None, :, None, :]
+            
+            delta_perm1 = delta_alphas12 * delta_alphas_jmkn
 
-        # permutation 5
-        delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
-        delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
-        delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
+            # permutation 3
+            delta_alphas1m = delta_alpha2(alpha_1[0, None], alpha_m[None, :]).flatten()
+            delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
+            delta_alphask2 = delta_alpha2(alpha_k[:, None], alpha_2[None, 0]).flatten()
 
-        delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
-                      delta_alphasj2[:, None, None, None]
+            delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * \
+                        delta_alphask2[None, :, None, None]
 
-        # --------------------------------------------------
-        # BUILD THE KERNEL
-        # --------------------------------------------------
+            # permutation 5
+            delta_alphas1n = delta_alpha2(alpha_1[0, None], alpha_n[None, :]).flatten()
+            delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, 0]).flatten()
+            delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
 
-        # Squared exp of differences
-        se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
-        se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-        se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-        se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
+            delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
+                        delta_alphasj2[:, None, None, None]
 
-        # Kernel not summed (cyclic permutations)
-        k1n = (se_1j2m[:, None, :, None] * se_1j2m[None, :, None, :] * se_jkmn)
-        k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :, None, :] * se_1j2m[None, :, :, None])
-        k3n = (se_1j2m[:, None, None, :] * se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
+            # --------------------------------------------------
+            # BUILD THE KERNEL
+            # --------------------------------------------------
 
-        # final shape is M1 M1 M2 M2
+            # Squared exp of differences
+            se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+            se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
+            se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
+            se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
 
-        ker_loc = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
+            # Kernel not summed (cyclic permutations)
+            k1n = (se_1j2m[:, None, :, None] * se_1j2m[None, :, None, :] * se_jkmn)
+            k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :, None, :] * se_1j2m[None, :, :, None])
+            k3n = (se_1j2m[:, None, None, :] * se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
 
-        # Faster version of cutoff (less calculations)
-        cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
-        cut_jk = cut_j[:, None] * cut_j[None, :] *(
-                  T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                  (0.5 * (T.sgn(rc - rjk) + 1))[:, :])    
+            # final shape is M1 M1 M2 M2
 
-        cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
-        cut_mn = cut_m[:, None] * cut_m[None, :] *(
-                  T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                  (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
-        
-        # --------------------------------------------------
-        # REMOVE DIAGONAL ELEMENTS
-        # --------------------------------------------------
-        
-        # remove diagonal elements AND lower triangular ones from first configuration
-        mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
+            ker_loc = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
 
-        # remove diagonal elements from second configuration
-        mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
+            # Faster version of cutoff (less calculations)
+            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * (0.5 * (T.sgn(rc - r1j) + 1))
+            cut_jk = cut_j[:, None] * cut_j[None, :] *(
+                    T.exp(-theta / T.abs_(rc - rjk[:, :])) *
+                    (0.5 * (T.sgn(rc - rjk) + 1))[:, :])    
 
-        # Combine masks
-        mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
+            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * (0.5 * (T.sgn(rc - r2m) + 1))
+            cut_mn = cut_m[:, None] * cut_m[None, :] *(
+                    T.exp(-theta / T.abs_(rc - rmn[:, :])) *
+                    (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
+            
+            # --------------------------------------------------
+            # REMOVE DIAGONAL ELEMENTS
+            # --------------------------------------------------
+            
+            # remove diagonal elements AND lower triangular ones from first configuration
+            mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
 
-        # Apply mask and then apply cutoff functions
-        ker_loc = ker_loc * mask_jkmn
-        ker_loc = T.sum(ker_loc * cut_jk[:, :, None, None] * cut_mn[None, None, :, :])
-        
-        # --------------------------------------------------
-        # FINAL FUNCTIONS
-        # --------------------------------------------------
+            # remove diagonal elements from second configuration
+            mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
 
-        # energy energy kernel
-        k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker_loc, on_unused_input='ignore')
+            # Combine masks
+            mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
 
-        # energy force kernel
-        k_ef_cut = T.grad(ker_loc, r2)
-        k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
-        
-        # force force kernel
-        k_ff_cut = T.grad(ker_loc, r1)
-        k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
-                                     sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
-        k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
+            # Apply mask and then apply cutoff functions
+            ker_loc = ker_loc * mask_jkmn
+            ker_loc = T.sum(ker_loc * cut_jk[:, :, None, None] * cut_mn[None, None, :, :])
+            
+            # --------------------------------------------------
+            # FINAL FUNCTIONS
+            # --------------------------------------------------
 
-        # Save the function that we want to use for multiprocessing
-        # This is necessary because theano is a crybaby and does not want to access the
-        # Automaticallly stored compiled object from different processes
-        with open('k3_ee_m.pickle', 'wb') as f:
-            pickle.dump(k_ee_fun, f)
-        with open('k3_ef_m.pickle', 'wb') as f:
-            pickle.dump(k_ef_fun, f)
-        with open('k3_ff_m.pickle', 'wb') as f:
-            pickle.dump(k_ff_fun, f)
+            # energy energy kernel
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker_loc, on_unused_input='ignore')
+
+            # energy force kernel
+            k_ef_cut = T.grad(ker_loc, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
+            
+            # force force kernel
+            k_ff_cut = T.grad(ker_loc, r1)
+            k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
+                                        sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
+
+            # Save the function that we want to use for multiprocessing
+            # This is necessary because theano is a crybaby and does not want to access the
+            # Automaticallly stored compiled object from different processes
+            with open('k3_ee_m.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun, f)
+            with open('k3_ef_m.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun, f)
+            with open('k3_ff_m.pickle', 'wb') as f:
+                pickle.dump(k_ff_fun, f)
+
+
+        else:
+            print("Loading Kernels")
+            with open("k3_ee_m.pickle", 'rb') as f:
+                k_ee_fun = pickle.load(f)
+            with open("k3_ef_m.pickle", 'rb') as f:
+                k_ef_fun = pickle.load(f)
+            with open("k3_ff_m.pickle", 'rb') as f:
+                k_ff_fun = pickle.load(f)
 
         # WRAPPERS (we don't want to plug the position of the central element every time)
         def k3_ee(conf1, conf2, sig, theta, rc):

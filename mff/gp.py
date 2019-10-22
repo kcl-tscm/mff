@@ -81,44 +81,44 @@ class GaussianProcess(object):
         self.X_train_ = X
         self.y_train_ = np.reshape(y, (y.shape[0] * 3, 1))
 
-        if self.optimizer is not None:
-            # Choose hyperparameters based on maximizing the log-marginal
-            # likelihood (potentially starting from several initial values)
-            def obj_func(theta, eval_gradient=True):
-                if eval_gradient:
-                    lml, grad = self.log_marginal_likelihood(
-                        theta, eval_gradient=True)
-                    return -lml, -grad
-                else:
-                    return -self.log_marginal_likelihood(theta)
+        # if self.optimizer is not None:
+        #     # Choose hyperparameters based on maximizing the log-marginal
+        #     # likelihood (potentially starting from several initial values)
+        #     def obj_func(theta, eval_gradient=True):
+        #         if eval_gradient:
+        #             lml, grad = self.log_marginal_likelihood(
+        #                 theta, eval_gradient=True)
+        #             return -lml, -grad
+        #         else:
+        #             return -self.log_marginal_likelihood(theta)
 
-            # First optimize starting from theta specified in kernel
-            optima = [(self._constrained_optimization(obj_func,
-                                                      self.kernel_.theta,
-                                                      self.kernel_.bounds))]
+        #     # First optimize starting from theta specified in kernel_
+        #     optima = [(self._constrained_optimization(obj_func,
+        #                                               self.kernel_.theta,
+        #                                               self.kernel_.bounds))]
 
-            # Additional runs are performed from log-uniform chosen initial
-            # theta
-            if self.n_restarts_optimizer > 0:
-                if not np.isfinite(self.kernel_.bounds).all():
-                    raise ValueError(
-                        "Multiple optimizer restarts (n_restarts_optimizer>0) "
-                        "requires that all bounds are finite.")
-                bounds = self.kernel_.bounds
-                for iteration in range(self.n_restarts_optimizer):
-                    theta_initial = \
-                        self._rng.uniform(bounds[:, 0], bounds[:, 1])
-                    optima.append(
-                        self._constrained_optimization(obj_func, theta_initial,
-                                                       bounds))
-            # Select result from run with minimal (negative) log-marginal
-            # likelihood
-            lml_values = list(map(itemgetter(1), optima))
-            self.kernel_.theta = optima[np.argmin(lml_values)][0]
-            self.log_marginal_likelihood_value_ = -np.min(lml_values)
-        else:
-            self.log_marginal_likelihood_value_ = \
-                self.log_marginal_likelihood(self.kernel_.theta)
+        #     # Additional runs are performed from log-uniform chosen initial
+        #     # theta
+        #     if self.n_restarts_optimizer > 0:
+        #         if not np.isfinite(self.kernel_.bounds).all():
+        #             raise ValueError(
+        #                 "Multiple optimizer restarts (n_restarts_optimizer>0) "
+        #                 "requires that all bounds are finite.")
+        #         bounds = self.kernel_.bounds
+        #         for iteration in range(self.n_restarts_optimizer):
+        #             theta_initial = \
+        #                 self._rng.uniform(bounds[:, 0], bounds[:, 1])
+        #             optima.append(
+        #                 self._constrained_optimization(obj_func, theta_initial,
+        #                                                bounds))
+        #     # Select result from run with minimal (negative) log-marginal
+        #     # likelihood
+        #     lml_values = list(map(itemgetter(1), optima))
+        #     self.kernel_.theta = optima[np.argmin(lml_values)][0]
+        #     self.log_marginal_likelihood_value_ = -np.min(lml_values)
+        # else:
+        #     self.log_marginal_likelihood_value_ = \
+        #         self.log_marginal_likelihood(self.kernel_.theta)
 
         # Precompute quantities required for predictions which are independent
         # of actual query points
@@ -144,58 +144,7 @@ class GaussianProcess(object):
         self.n_train = len(self.y_train_) // 3
 
         return self
-    
-    def fit_update_single(self, X2_up, y2_up, ncores = 1):   
-        """
-        Update an existing force-force gram matrix with a single new datapoint 
-        
-        """
-        if len(np.shape(y2_up)) > 2:
-            logger.error(" Use the fit_update function for more than one input, quitting now")
-            return
-            
-        X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
-        y2_up = np.reshape(y2_up, (3, 1))
-        past_d = self.K.shape[0]
-        up_d = 3
-        new_d = past_d + up_d
-
-        gram_up_up = self.kernel_.calc_gram(X2_up, ncores)  # Kernel with the new entries only
-        gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
-
-        Kvecs_up_past = self.kernel_.calc(X2_up, self.X_train_)  # Kernel between old and new entries
-
-        gram = np.zeros((new_d,new_d))
-
-        gram[0:past_d,0:past_d] = self.K
-        gram[past_d:new_d,past_d:new_d] = gram_up_up
-        gram[past_d:new_d, 0:past_d] = Kvecs_up_past
-        gram[0:past_d, past_d:new_d] = Kvecs_up_past.T
-        
-        self.X_train_ = np.asarray(self.X_train_.tolist()  + X2_up.tolist())
-        self.y_train_ = np.concatenate((self.y_train_, y2_up), axis = 0) 
-
-        self.K = gram
-
-        self.L_ = cholesky(self.K, lower=True)
-        self.alpha_ = cho_solve((self.L_, True), self.y_train_)
-
-    def fit_update(self, X2_up, y2_up, ncores = 1):  
-        """
-        Update an existing energy-energy gram matrix with a list of new datapoints
-        
-        Args:
-            X2_up (list): training configurations
-            y2_up (np.ndarray): training forces
-            ncores (int): number of CPU workers to use, default is 1
-
-        """
-        try:
-            for i in np.arange(len(X2_up)):
-                self.fit_update_single(X2_up[i], y2_up[i], ncores)
-        except:
-            self.fit_update_single(X2_up, y2_up, ncores)
-
+   
     def fit_force_and_energy(self, X, y_force, X_glob, y_energy, ncores=1):
         """Fit a Gaussian process regression model using forces and energies
 
@@ -379,55 +328,6 @@ class GaussianProcess(object):
 
         return self
 
-    def fit_update_single_energy(self, X2_up, y2_up, ncores = 1):   
-        """
-        Update an existing energy-energy gram matrix with a single new datapoint 
-        
-        """
-
-        X2_up = np.reshape(X2_up, (1, len(X2_up), 5))
-        y2_up = np.reshape(y2_up, 1)
-        past_d = self.energy_K.shape[0]
-        up_d = 1
-        new_d = past_d + up_d
-
-        gram_up_up = self.kernel_.calc_gram_e(X2_up, ncores)  # Kernel with the new entries only
-        gram_up_up += np.identity(gram_up_up.shape[0])*self.noise
-
-        Kvecs_up_past = self.kernel_.calc_ee(X2_up, self.X_glob_train_)  # Kernel between old and new entries
-
-        gram = np.zeros((new_d,new_d))
-
-        gram[0:past_d,0:past_d] = self.energy_K
-        gram[past_d:new_d,past_d:new_d] = gram_up_up
-        gram[past_d:new_d, 0:past_d] = Kvecs_up_past
-        gram[0:past_d, past_d:new_d] = Kvecs_up_past.T
-        
-        self.X_glob_train_ = np.asarray(self.X_glob_train_.tolist()  + X2_up.tolist())
-        y2_up = np.reshape(y2_up, (1,1))
-        self.y_train_energy_ = np.concatenate((self.y_train_energy_, y2_up), axis = 0) 
-
-        self.energy_K = gram
-
-        self.L_ = cholesky(self.energy_K, lower=True)
-        self.energy_alpha_ = cho_solve((self.L_, True), self.y_train_energy_)
-
-    def fit_update_energy(self, X2_up, y2_up, ncores = 1):   
-        """
-        Update an existing energy-energy gram matrix with a list of new datapoints
-        
-        Args:
-            X2_up (list): training configurations
-            y2_up (np.ndarray): training energies
-            ncores (int): number of CPU workers to use, default is 1
-
-        """
-        try:
-            for i in np.arange(len(X2_up)):
-                self.fit_update_single_energy(X2_up[i], y2_up[i], ncores)
-        except:
-            self.fit_update_single_energy(X2_up, y2_up, ncores)
-            
     def predict(self, X, return_std=False):
         """Predict forces using the Gaussian process regression model
 

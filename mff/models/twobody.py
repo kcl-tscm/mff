@@ -10,6 +10,7 @@ from mff import gp
 from mff import kernels
 from mff import interpolation
 from mff.models.base import Model
+from mff import utility
 from itertools import combinations_with_replacement
 
 class NpEncoder(json.JSONEncoder):
@@ -42,11 +43,12 @@ class TwoBodySingleSpeciesModel(Model):
 
     """
 
-    def __init__(self, element, r_cut, sigma, theta, noise, **kwargs):
+    def __init__(self, element, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.element = element
         self.r_cut = r_cut
+        self.rep_sig = rep_sig
 
         kernel = kernels.TwoBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
@@ -65,6 +67,11 @@ class TwoBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
+
         self.gp.fit(confs, forces, ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
@@ -77,6 +84,11 @@ class TwoBodySingleSpeciesModel(Model):
             energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
+
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_forces
 
         self.gp.fit_energy(glob_confs, energies, ncores)
 
@@ -95,37 +107,14 @@ class TwoBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_energies
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
 
         self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
-        
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        2-body single species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        2-body single species energy-energy kernels
-
-        Args:
-            glob_confs (list of lists): List of configurations arranged so that
-                grouped configurations belong to the same snapshot
-            energies (array) : Array containing the total energy of each snapshot
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP
@@ -143,7 +132,12 @@ class TwoBodySingleSpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std)
+        if self.rep_sig:
+            rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            return self.gp.predict(confs, return_std) + rep_forces
+
+        else:
+            return self.gp.predict(confs, return_std)
 
     def predict_energy(self, glob_confs, return_std=False):
         """ Predict the global energies of the central atoms of confs using a GP
@@ -160,8 +154,12 @@ class TwoBodySingleSpeciesModel(Model):
                 returned only if return_std is True
 
         """
+        if self.rep_sig:
+            rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            return self.gp.predict_energy(glob_confs, return_std) + rep_energies
+        else:
+            return self.gp.predict_energy(glob_confs, return_std)
 
-        return self.gp.predict_energy(glob_confs, return_std)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -225,6 +223,7 @@ class TwoBodySingleSpeciesModel(Model):
             'model': self.__class__.__name__,
             'element': self.element,
             'r_cut': self.r_cut,
+            'rep_sig': self.rep_sig,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -274,6 +273,7 @@ class TwoBodySingleSpeciesModel(Model):
 
         model = cls(params['element'],
                     params['r_cut'],
+                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
                     params['gp']['noise'])
@@ -311,20 +311,22 @@ class TwoBodyTwoSpeciesModel(Model):
 
     """
 
-    def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
+    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.elements = elements
         self.r_cut = r_cut
+        self.rep_sig = rep_sig
 
         kernel = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
+
     def fit(self, confs, forces, ncores=1):
-        """ Fit the GP to a set of training forces using a two 
-        body two species force-force kernel
+        """ Fit the GP to a set of training forces using a 
+        2-body single species force-force kernel
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -332,28 +334,36 @@ class TwoBodyTwoSpeciesModel(Model):
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
             ncores (int): number of CPUs to use for the gram matrix evaluation
-
         """
+
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
 
         self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, glob_confs, energy, ncores=1):
-        """ Fit the GP to a set of training energies using a two 
-        body two species energy-energy kernel
+    def fit_energy(self, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training energies using a 
+        2-body single species energy-energy kernel
 
         Args:
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
-
         """
 
-        self.gp.fit_energy(glob_confs, energy, ncores)
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_forces
 
-    def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
-        """ Fit the GP to a set of training forces and energies using two 
-        body two species force-force, energy-force and energy-energy kernels
+        self.gp.fit_energy(glob_confs, energies, ncores)
+
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training forces and energies using 
+        2-body single species force-force, energy-force and energy-energy kernels
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -366,47 +376,24 @@ class TwoBodyTwoSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_energies
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
-
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        2-body two species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        2-body two species energy-energy kernels
-
-        Args:
-            glob_confs (list of lists): List of configurations arranged so that
-                grouped configurations belong to the same snapshot
-            energies (array) : Array containing the total energy of each snapshot
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
-        """ Predict the forces acting on the central atoms of confs using a GP 
+        """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
@@ -414,26 +401,35 @@ class TwoBodyTwoSpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std)
+        if self.rep_sig:
+            rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            return self.gp.predict(confs, return_std) + rep_forces
+
+        else:
+            return self.gp.predict(confs, return_std)
 
     def predict_energy(self, glob_confs, return_std=False):
-        """ Predict the global energies of the central atoms of confs using a GP 
+        """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
+        if self.rep_sig:
+            rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            return self.gp.predict_energy(glob_confs, return_std) + rep_energies
+        else:
+            return self.gp.predict_energy(glob_confs, return_std)
 
-        return self.gp.predict_energy(glob_confs, return_std)
-    
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -507,6 +503,7 @@ class TwoBodyTwoSpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.elements,
             'r_cut': self.r_cut,
+            'rep_sig': self.rep_sig,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -562,6 +559,7 @@ class TwoBodyTwoSpeciesModel(Model):
 
         model = cls(params['elements'],
                     params['r_cut'],
+                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
                     params['gp']['noise'])
@@ -604,20 +602,22 @@ class TwoBodyManySpeciesModel(Model):
 
     """
 
-    def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
+    def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig = 1, **kwargs):
         super().__init__()
 
         self.elements = elements
         self.r_cut = r_cut
+        self.rep_sig = rep_sig
 
         kernel = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
 
+
     def fit(self, confs, forces, ncores=1):
-        """ Fit the GP to a set of training forces using a two 
-        body two species force-force kernel
+        """ Fit the GP to a set of training forces using a 
+        2-body single species force-force kernel
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -625,28 +625,36 @@ class TwoBodyManySpeciesModel(Model):
             forces (array) : Array containing the vector forces on 
                 the central atoms of the training configurations
             ncores (int): number of CPUs to use for the gram matrix evaluation
-
         """
+
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
 
         self.gp.fit(confs, forces, ncores)
 
-    def fit_energy(self, glob_confs, energy, ncores=1):
-        """ Fit the GP to a set of training energies using a two 
-        body two species energy-energy kernel
+    def fit_energy(self, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training energies using a 
+        2-body single species energy-energy kernel
 
         Args:
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
-
         """
 
-        self.gp.fit_energy(glob_confs, energy, ncores)
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_forces
 
-    def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
-        """ Fit the GP to a set of training forces and energies using two 
-        body two species force-force, energy-force and energy-energy kernels
+        self.gp.fit_energy(glob_confs, energies, ncores)
+
+    def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
+        """ Fit the GP to a set of training forces and energies using 
+        2-body single species force-force, energy-force and energy-energy kernels
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
@@ -659,47 +667,24 @@ class TwoBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
 
         """
+        if self.rep_sig:
+            self.rep_sig = utility.find_repulstion_sigma(confs)
+            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            energies -= self.rep_energies
+            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            forces -= self.rep_forces
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
-
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        2-body two species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        2-body two species energy-energy kernels
-
-        Args:
-            glob_confs (list of lists): List of configurations arranged so that
-                grouped configurations belong to the same snapshot
-            energies (array) : Array containing the total energy of each snapshot
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
         
     def predict(self, confs, return_std=False):
-        """ Predict the forces acting on the central atoms of confs using a GP 
+        """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
             confs (list): List of M x 5 arrays containing coordinates and
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
@@ -707,26 +692,34 @@ class TwoBodyManySpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std)
+        if self.rep_sig:
+            rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+            return self.gp.predict(confs, return_std) + rep_forces
+
+        else:
+            return self.gp.predict(confs, return_std)
 
     def predict_energy(self, glob_confs, return_std=False):
-        """ Predict the global energies of the central atoms of confs using a GP 
+        """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
             glob_confs (list of lists): List of configurations arranged so that
                 grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
 
         """
+        if self.rep_sig:
+            rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            return self.gp.predict_energy(glob_confs, return_std) + rep_energies
+        else:
+            return self.gp.predict_energy(glob_confs, return_std)
 
-        return self.gp.predict_energy(glob_confs, return_std)
-    
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -803,6 +796,7 @@ class TwoBodyManySpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.elements,
             'r_cut': self.r_cut,
+            'rep_sig': self.rep_sig,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -855,6 +849,7 @@ class TwoBodyManySpeciesModel(Model):
 
         model = cls(params['elements'],
                     params['r_cut'],
+                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
                     params['gp']['noise'])

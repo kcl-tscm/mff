@@ -12,11 +12,52 @@ from mff import configurations
 from scipy.spatial.distance import cdist
 from pathlib import Path
 from itertools import combinations_with_replacement
-from asap3.analysis import FullCNA
+from asap3.analysis import FullCNA  
+from ase.io import read
 
 # Keep track on whether there are actual energies in your dataset or they have been discarded
 global energydefault
 energydefault = False
+
+def find_repulstion_sigma(confs):
+    """ Function used to find the repulsion parameter 
+    rep_sig such that the energy of a bond at distance r is 0.02 eV.
+    The distance r is the smallest bond distance found in the training set.
+    """
+
+    dists = []
+    for c in confs:
+        if len(c.shape) == 2:
+            d_ = np.sum(c[:,:3]**2, axis = 1)**0.5
+            dists.extend(d_)
+        else:
+            for c1 in c:
+                d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
+                dists.extend(d_) 
+
+    r =  min(dists)
+    rep_sig = r*0.02**(1/12)
+
+    return rep_sig
+
+def get_repulsive_forces(confs, sig):
+    forces = np.zeros((len(confs), 3))
+    for i, c in enumerate(confs):
+        d_ = np.sum(c[:,:3]**2, axis =1)**0.5
+        v = c[:,:3]/d_[:,None]
+        f = 12*(sig/d_)**12/d_
+        forces[i] = np.sum(f[:, None]*v, axis = 0)
+
+    return forces
+
+def get_repulsive_energies(confs, sig):
+    energies = np.zeros(len(confs))
+    for i, c in enumerate(confs):
+        for c1 in c:
+            d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
+            energies[i] += np.sum((sig/d_)**12)
+
+    return energies
 
 def open_data(folder, cutoff):
     """ Open already extracted conf, force and energy data
@@ -359,6 +400,7 @@ def sample_cna(traj, cna_cut, ntr):
     """ From a trajcetory file, calculate CNAS using cna_cut as cutoff, 
         order the classes and sample according to the sample_using_cna method
     """
+    traj = read(traj, index = ':')
     transformed_cnas, all_cnas = extract_cnas(traj, cna_cut)
     print("CNA classes are: \n", all_cnas)
     training_indexes = sample_uniform_cna(ntr, transformed_cnas)
@@ -394,26 +436,26 @@ def get_training_set(c, f, el, ntr, method, cutoff, nbins = None, traj = None, c
     return X, Y
 
 
-def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001):
+def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001, rep_sig = 1):
     if len(elements) == 1:
         if ker == '2b':
-            m = models.TwoBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
+            m = models.TwoBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta, rep_sig = rep_sig)
         elif ker == '3b':
             m = models.ThreeBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
         elif ker == 'combined':
             m = models.CombinedSingleSpeciesModel(element = elements, r_cut = r_cut, sigma_2b = sigma, sigma_3b = sigma*2, 
-                noise = noise, theta_2b = theta, theta_3b = theta)
+                noise = noise, theta_2b = theta, theta_3b = theta,  rep_sig = rep_sig)
         else:
             print("Kernel Type not understood, available options are 2b, 3b or combined.")
 
     elif len(elements) > 1:
         if ker == '2b':
-            m = models.TwoBodyManySpeciesModel(elements = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
+            m = models.TwoBodyManySpeciesModel(elements = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta,  rep_sig = rep_sig)
         elif ker == '3b':
             m = models.ThreeBodyManySpeciesModel(elements = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
         elif ker == 'combined':
             m = models.CombinedManySpeciesModel(elements = elements, r_cut = r_cut, sigma_2b = sigma, sigma_3b = sigma*2, 
-                noise = noise, theta_2b = theta, theta_3b = theta)
+                noise = noise, theta_2b = theta, theta_3b = theta,  rep_sig = rep_sig)
         else:
             print("Kernel Type not understood, available options are 2b, 3b or combined.")
 
@@ -422,11 +464,11 @@ def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001):
         
     return m
 
-def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e = None, Y_e = None, train_mode = "force", ncores=1):
+def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e = None, Y_e = None, train_mode = "force", ncores=1, rep_sig=1):
     """ Train GP module based on train mode, kernel and number of atomic species.
     """
 
-    m = get_model(elements_1, cutoff, kernel, sigma, cutoff/5.0, noise)
+    m = get_model(elements_1, cutoff, kernel, sigma, cutoff/5.0, noise, rep_sig)
 
     print("Training using %i points on %i cores" %(len(X), ncores))
     if train_mode == "force":
@@ -450,7 +492,7 @@ def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder,
     return m
 
 
-def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e = None, Y_e = None, train_mode = "force", ncores=1):
+def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e = None, Y_e = None, train_mode = "force", ncores=1, rep_sig=1):
     
     try:
         if not isinstance(train_folder, Path):
@@ -461,7 +503,7 @@ def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, trainin
         m = load_model.load(full_path)
 
     except FileNotFoundError:
-        m = train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e, Y_e, train_mode = train_mode, ncores = ncores)
+        m = train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e, Y_e, train_mode = train_mode, ncores = ncores, rep_sig = rep_sig)
 
     return m
     

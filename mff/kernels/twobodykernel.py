@@ -2,18 +2,60 @@
 
 import logging
 import numpy as np
-import theano.tensor as T
 
 from abc import ABCMeta, abstractmethod
 from mff.kernels.base import Kernel
-from theano import function, scan
 
 from scipy.spatial.distance import cdist
 import ray
-
-
+import pickle
+import os.path
 
 logger = logging.getLogger(__name__)
+
+def dummy_calc_ff(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k2_ff_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k2_ff_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros((len(array), 3, 3))
+    for i in np.arange(len(array)):
+        result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1],  theta0, theta1, theta2)
+    return result
+
+def dummy_calc_ee(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k2_ee_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k2_ee_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros(len(array))
+    for i in np.arange(len(array)):
+        for conf1 in array[i][0]:
+            for conf2 in array[i][1]:
+                result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
+    return result
+
+def dummy_calc_ef(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k2_ef_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k2_ef_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros((len(array), 3))
+    for i in np.arange(len(array)):
+        conf2 = np.array(array[i][1], dtype = 'float')
+        for conf1 in array[i][0]:
+            conf1 = np.array(conf1, dtype = 'float')
+            result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+    return result
 
 
 class BaseTwoBody(Kernel, metaclass=ABCMeta):
@@ -192,7 +234,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         confs.append(thislist)
                 n = len(confs)                
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
                 logger.info('Using %i cores for the 2-body force-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -201,15 +243,19 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(ncores)]))
-                ray.shutdown()
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ff, clist)
+
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
+                
                 result = np.concatenate(result).reshape((n, 3, 3))
-
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
                 for i in np.arange(len(X)):
@@ -229,15 +275,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
             gram = diag + off_diag + off_diag.T  # The gram matrix is symmetric
             return gram
-
-    # Used to simplify multiprocessing call
-    @ray.remote
-    def dummy_calc_ff(self, array):
-        result = np.zeros((len(array), 3, 3))
-        for i in np.arange(len(array)):
-            result[i] = self.k2_ff(array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
-
-        return result
 
     def calc_gram_e(self, X, ncores=1, eval_gradient=False):
         """
@@ -266,7 +303,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
                 logger.info('Using %i cores for the 2-body energy-energy gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -275,14 +312,19 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(ncores)]))
-                ray.shutdown()
-                result = np.concatenate(result).ravel()
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ee, clist)
+
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([dummy_calc_ee.remote( clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
+
+                result = np.concatenate(result).ravel()
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
                 for i in np.arange(len(X)):
@@ -306,18 +348,6 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
 
             return gram
-
-    # Used to simplify multiprocessing call
-    @ray.remote
-    def dummy_calc_ee(self, array):
-        result = np.zeros(len(array))
-        for i in np.arange(len(array)):
-            for conf1 in array[i][0]:
-                for conf2 in array[i][1]:
-                    result[i] += self.k2_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
-        return result
-
 
     def calc_gram_ef(self, X, X_glob, ncores=1, eval_gradient=False):
         """
@@ -348,7 +378,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                         confs.append(thislist)
                 n = len(confs)
                 import sys
-                sys.setrecursionlimit(10000)
+                sys.setrecursionlimit(100000)
                 logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
@@ -357,16 +387,19 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(ncores)])
-                ray.shutdown()     
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ef, clist)
+
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
+                # ray.shutdown()     
 
                 result = np.concatenate(result).ravel()
-
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = result[3*(j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]
@@ -380,19 +413,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
             self.gram_ef = gram
 
             return gram
-
-    # Used to simplify multiprocessing
-    @ray.remote
-    def dummy_calc_ef(self, array):
-        result = np.zeros((len(array), 3))
-        for i in np.arange(len(array)):
-            conf2 = np.array(array[i][1], dtype = 'float')
-            for conf1 in array[i][0]:
-                conf1 = np.array(conf1, dtype = 'float')
-                result[i] += self.k2_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
-        return result
-    
+   
     @staticmethod
     @abstractmethod
     def compile_theano():
@@ -411,6 +432,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
         super().__init__(kernel_name='TwoBodySingleSpecies', theta=theta, bounds=bounds)
+        self.type = "single"
 
     @staticmethod
     def compile_theano():
@@ -426,63 +448,86 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             k2_ff (func): force-force kernel
         """
 
-        logger.info("Started compilation of theano two body single species kernels")
-        # --------------------------------------------------
-        # INITIAL DEFINITIONS
-        # --------------------------------------------------
+        if not (os.path.exists('k2_ee_s.pickle') and 
+            os.path.exists('k2_ef_s.pickle') and os.path.exists('k2_ff_s.pickle')):
+            print("Building Kernels")
 
-        # positions of central atoms
-        r1, r2 = T.dvectors('r1d', 'r2d')
-        # positions of neighbours
-        rho1, rho2 = T.dmatrices('rho1', 'rho2')
-        # lengthscale hyperparameter
-        sig = T.dscalar('sig')
-        # cutoff hyperparameters
-        theta = T.dscalar('theta')
-        rc = T.dscalar('rc')
+            import theano.tensor as T
+            from theano import function, scan
+            logger.info("Started compilation of theano two body single species kernels")
+            # --------------------------------------------------
+            # INITIAL DEFINITIONS
+            # --------------------------------------------------
 
-        # positions of neighbours without chemical species (3D space assumed)
-        rho1s = rho1[:, 0:3]
-        rho2s = rho2[:, 0:3]
+            # positions of central atoms
+            r1, r2 = T.dvectors('r1d', 'r2d')
+            # positions of neighbours
+            rho1, rho2 = T.dmatrices('rho1', 'rho2')
+            # lengthscale hyperparameter
+            sig = T.dscalar('sig')
+            # cutoff hyperparameters
+            theta = T.dscalar('theta')
+            rc = T.dscalar('rc')
+
+            # positions of neighbours without chemical species (3D space assumed)
+            rho1s = rho1[:, 0:3]
+            rho2s = rho2[:, 0:3]
+            
+            # distances of atoms wrt to the central one and wrt each other in 1 and 2
+            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+            
+            # squared exponential of the above distance matrices
+            se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+
+            # cutoff functions calculated for the various distance matrices  
+            cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+                    (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+
+            
+            # apply the cutoff function to the squared exponential partial kernels
+            se_jm = se_jm*cut_jm
+
+            k = T.sum(se_jm)
+
+            # --------------------------------------------------
+            # FINAL FUNCTIONS
+            # --------------------------------------------------
+
+            # energy energy kernel
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
+                                allow_input_downcast=False, on_unused_input='warn')
+
+            # energy force kernel - Used to predict energies from forces
+            k_ef = T.grad(k, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+                                allow_input_downcast=False, on_unused_input='warn')
         
-        # distances of atoms wrt to the central one and wrt each other in 1 and 2
-        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-        
-        # squared exponential of the above distance matrices
-        se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+            # force force kernel - it uses only local atom pairs to avoid useless computation
+            k_ff = T.grad(k, r1)
+            k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+                                    sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
-        # cutoff functions calculated for the various distance matrices  
-        cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                 (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
+                                allow_input_downcast=False, on_unused_input='warn')
+            # Save the function that we want to use for multiprocessing
+            # This is necessary because theano is a crybaby and does not want to access the
+            # Automaticallly stored compiled object from different processes
+            with open('k2_ee_s.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun, f)
+            with open('k2_ef_s.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun, f)
+            with open('k2_ff_s.pickle', 'wb') as f:
+                pickle.dump(k_ff_fun, f)
 
-        
-        # apply the cutoff function to the squared exponential partial kernels
-        se_jm = se_jm*cut_jm
-
-        k = T.sum(se_jm)
-
-        # --------------------------------------------------
-        # FINAL FUNCTIONS
-        # --------------------------------------------------
-
-        # energy energy kernel
-        k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k,
-                            allow_input_downcast=False, on_unused_input='warn')
-
-        # energy force kernel - Used to predict energies from forces
-        k_ef = T.grad(k, r2)
-        k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
-                            allow_input_downcast=False, on_unused_input='warn')
-       
-        # force force kernel - it uses only local atom pairs to avoid useless computation
-        k_ff = T.grad(k, r1)
-        k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
-                                 sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
-
-        k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
-                            allow_input_downcast=False, on_unused_input='warn')
-
+        else:
+            print("Loading Kernels")
+            with open("k2_ee_s.pickle", 'rb') as f:
+                k_ee_fun = pickle.load(f)
+            with open("k2_ef_s.pickle", 'rb') as f:
+                k_ef_fun = pickle.load(f)
+            with open("k2_ff_s.pickle", 'rb') as f:
+                k_ff_fun = pickle.load(f)
         # --------------------------------------------------
         # WRAPPERS (we don't want to plug the position of the central element every time)
         # --------------------------------------------------
@@ -555,6 +600,7 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
         super().__init__(kernel_name='TwoBody', theta=theta, bounds=bounds)
+        self.type = "multi"
 
     @staticmethod
     def compile_theano():
@@ -570,90 +616,115 @@ class TwoBodyTwoSpeciesKernel(BaseTwoBody):
             k2_ff (func): force-force kernel
         """
 
-        logger.info("Started compilation of theano two body kernels")
-        # --------------------------------------------------
-        # INITIAL DEFINITIONS
-        # --------------------------------------------------
+        if not (os.path.exists('k2_ee_m.pickle') and 
+            os.path.exists('k2_ef_m.pickle') and os.path.exists('k2_ff_m.pickle')):
+            print("Building Kernels")
 
-        # positions of central atoms
-        r1, r2 = T.dvectors('r1d', 'r2d')
-        # positions of neighbours
-        rho1, rho2 = T.dmatrices('rho1', 'rho2')
-        # lengthscale hyperparameter
-        sig = T.dscalar('sig')
-        # cutoff hyperparameters
-        theta = T.dscalar('theta')
-        rc = T.dscalar('rc')
+            import theano.tensor as T
+            from theano import function, scan
+            logger.info("Started compilation of theano two body kernels")
+            # --------------------------------------------------
+            # INITIAL DEFINITIONS
+            # --------------------------------------------------
 
-        # positions of neighbours without chemical species (3D space assumed)
-        rho1s = rho1[:, 0:3]
-        rho2s = rho2[:, 0:3]
-        alpha_1 = rho1[:, 3]#.flatten()
-        alpha_2 = rho2[:, 3]#.flatten()
-        alpha_j = rho1[:, 4]#.flatten()
-        alpha_m = rho2[:, 4]#.flatten()
+            # positions of central atoms
+            r1, r2 = T.dvectors('r1d', 'r2d')
+            # positions of neighbours
+            rho1, rho2 = T.dmatrices('rho1', 'rho2')
+            # lengthscale hyperparameter
+            sig = T.dscalar('sig')
+            # cutoff hyperparameters
+            theta = T.dscalar('theta')
+            rc = T.dscalar('rc')
+
+            # positions of neighbours without chemical species (3D space assumed)
+            rho1s = rho1[:, 0:3]
+            rho2s = rho2[:, 0:3]
+            alpha_1 = rho1[:, 3]#.flatten()
+            alpha_2 = rho2[:, 3]#.flatten()
+            alpha_j = rho1[:, 4]#.flatten()
+            alpha_m = rho2[:, 4]#.flatten()
+            
+            # numerical kronecker
+            def delta_alpha2(a1j, a2m):
+                d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
+                return d
+
+            # matrices determining whether couples of atoms have the same atomic number
+            delta_alphas12 = delta_alpha2(alpha_1[:, None], alpha_2[None, :])
+            delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
+            delta_alphas1m = delta_alpha2(alpha_1[:, None], alpha_m[None, :])
+            delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
+            
+            # distances of atoms wrt to the central one and wrt each other in 1 and 2
+            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
+            rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
+            rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
+            
+            # Get the squared exponential kernels
+            se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
+            se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
+            se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
+            se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
+
+            # Define cutoff functions 
+            cut_jkmn = (0.5 * (1 + T.sgn(rc - rjk[:, :, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, None, :, :]))) * \
+                    (T.exp(-theta / abs(rc - rjk[:, :, None, None])) * T.exp(-theta / abs(rc - rmn[None, None, :, :])))
         
-        # numerical kronecker
-        def delta_alpha2(a1j, a2m):
-            d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
-            return d
+            cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
+                    (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
+            
+            cut_jkm = (0.5 * (1 + T.sgn(rc - rjk[:, :, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, None, :]))) * \
+                    (T.exp(-theta / abs(rc - rjk[:, :, None])) * T.exp(-theta / abs(rc - r2m[None, None, :])))
 
-        # matrices determining whether couples of atoms have the same atomic number
-        delta_alphas12 = delta_alpha2(alpha_1[:, None], alpha_2[None, :])
-        delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
-        delta_alphas1m = delta_alpha2(alpha_1[:, None], alpha_m[None, :])
-        delta_alphasj2 = delta_alpha2(alpha_j[:, None], alpha_2[None, :])
-        
-        # distances of atoms wrt to the central one and wrt each other in 1 and 2
-        r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-        r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-        rjk = T.sqrt(T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-        rmn = T.sqrt(T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
-        
-        # Get the squared exponential kernels
-        se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
-        se_jkmn = T.exp(-(rjk[:, :, None, None] - rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-        se_jk2m = T.exp(-(rjk[:, :, None] - r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-        se_1jmn = T.exp(-(r1j[:, None, None] - rmn[None, :, :]) ** 2 / (2 * sig ** 2))
+            cut_jmn = (0.5 * (1 + T.sgn(rc - r1j[:, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, :, :]))) * \
+                    (T.exp(-theta / abs(rc - r1j[:, None, None])) * T.exp(-theta / abs(rc - rmn[None, :, :])))
+            
+            # Apply cutoffs and chemical species masks
+            se_jm = se_jm*cut_jm* (delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2)
 
-        # Define cutoff functions 
-        cut_jkmn = (0.5 * (1 + T.sgn(rc - rjk[:, :, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, None, :, :]))) * \
-                 (T.exp(-theta / abs(rc - rjk[:, :, None, None])) * T.exp(-theta / abs(rc - rmn[None, None, :, :])))
-    
-        cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                 (T.exp(-theta / abs(rc - r1j[:, None])) * T.exp(-theta / abs(rc - r2m[None, :])))
-        
-        cut_jkm = (0.5 * (1 + T.sgn(rc - rjk[:, :, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, None, :]))) * \
-                 (T.exp(-theta / abs(rc - rjk[:, :, None])) * T.exp(-theta / abs(rc - r2m[None, None, :])))
+            ker = T.sum(se_jm)
 
-        cut_jmn = (0.5 * (1 + T.sgn(rc - r1j[:, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, :, :]))) * \
-                 (T.exp(-theta / abs(rc - r1j[:, None, None])) * T.exp(-theta / abs(rc - rmn[None, :, :])))
-        
-        # Apply cutoffs and chemical species masks
-        se_jm = se_jm*cut_jm* (delta_alphas12 * delta_alphasjm + delta_alphas1m * delta_alphasj2)
+            # --------------------------------------------------
+            # FINAL FUNCTIONS
+            # --------------------------------------------------
 
-        ker = T.sum(se_jm)
+            # global energy energy kernel
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-        # --------------------------------------------------
-        # FINAL FUNCTIONS
-        # --------------------------------------------------
+            # energy force kernel - Used to predict energies from forces
+            k_ef = T.grad(ker, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
+                                allow_input_downcast=False, on_unused_input='warn')
+            
+            # force force kernel - it uses only local atom pairs to avoid useless computation
+            k_ff = T.grad(ker, r1)
+            k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+                                    sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
-        # global energy energy kernel
-        k_ee_fun = function([r1, r2, rho1, rho2, sig, theta, rc], ker,
-                            allow_input_downcast=False, on_unused_input='warn')
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-        # energy force kernel - Used to predict energies from forces
-        k_ef = T.grad(ker, r2)
-        k_ef_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ef,
-                            allow_input_downcast=False, on_unused_input='warn')
-        
-        # force force kernel - it uses only local atom pairs to avoid useless computation
-        k_ff = T.grad(ker, r1)
-        k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
-                                 sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
+            # Save the function that we want to use for multiprocessing
+            # This is necessary because theano is a crybaby and does not want to access the
+            # Automaticallly stored compiled object from different processes
+            with open('k2_ee_m.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun, f)
+            with open('k2_ef_m.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun, f)
+            with open('k2_ff_m.pickle', 'wb') as f:
+                pickle.dump(k_ff_fun, f)
 
-        k_ff_fun = function([r1, r2, rho1, rho2, sig, theta, rc], k_ff_der,
-                            allow_input_downcast=False, on_unused_input='warn')
+        else:
+            print("Loading Kernels")
+            with open("k2_ee_m.pickle", 'rb') as f:
+                k_ee_fun = pickle.load(f)
+            with open("k2_ef_m.pickle", 'rb') as f:
+                k_ef_fun = pickle.load(f)
+            with open("k2_ff_m.pickle", 'rb') as f:
+                k_ff_fun = pickle.load(f)
 
 #         # --------------------------------------------------
 #         # WRAPPERS (we don't want to plug the position of the central element every time)

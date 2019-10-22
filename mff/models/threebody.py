@@ -98,37 +98,7 @@ class ThreeBodySingleSpeciesModel(Model):
         """
 
         self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
-        
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        3-body single species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        3-body single species energy-energy kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(confs, energies, ncores)
-        
+   
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
@@ -474,36 +444,6 @@ class ThreeBodyTwoSpeciesModel(Model):
 
         self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
 
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        3-body twp species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        3-body two species energy-energy kernels
-
-        Args:
-            glob_confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            energies (array) : Array containing the scalar local energies of 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
-        
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
 

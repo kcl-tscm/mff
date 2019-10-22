@@ -13,6 +13,7 @@ import pickle
 
 logger = logging.getLogger(__name__)
 
+@ray.remote
 def dummy_calc_ff(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -26,6 +27,38 @@ def dummy_calc_ff(data):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1],  theta0, theta1, theta2)
     return result
 
+@ray.remote
+def dummy_calc_ee(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k3_ee_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k3_ee_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros(len(array))
+    for i in np.arange(len(array)):
+        for conf1 in array[i][0]:
+            for conf2 in array[i][1]:
+                result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
+    return result
+
+@ray.remote
+def dummy_calc_ef(data):
+    array, theta0, theta1, theta2, kertype = data
+    if kertype == "single":
+        with open("k3_ef_s.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    elif kertype == "multi":
+        with open("k3_ef_m.pickle", 'rb') as f:
+            fun = pickle.load(f)
+    result = np.zeros((len(array), 3))
+    for i in np.arange(len(array)):
+        conf2 = np.array(array[i][1], dtype = 'float')
+        for conf1 in array[i][0]:
+            conf1 = np.array(conf1, dtype = 'float')
+            result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+    return result
 
 class BaseThreeBody(Kernel, metaclass=ABCMeta):
     """ Three body kernel class
@@ -217,20 +250,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                import multiprocessing as mp
+                # import multiprocessing as mp
+                # pool = mp.Pool(ncores)
+                # result = pool.map(dummy_calc_ff, clist)
 
-                pool = mp.Pool(ncores)
-                result = pool.map(dummy_calc_ff, clist)
+                ray.init()
+                # Using the dummy function that has a single argument
+                result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
+                ray.shutdown()
+
                 result = np.concatenate(result).reshape((n, 3, 3))
-
-                # ray.init()
-                # # Using the dummy function that has a single argument
-                # result = np.array(ray.get([self.dummy_calc_ff.remote(self, clist[i]) for i in range(ncores)]))
-                # ray.shutdown()
-
-                # result = np.concatenate(result).reshape((n, 3, 3))
-
-
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
                 for i in np.arange(len(X)):
@@ -250,20 +279,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
             gram = diag + off_diag + off_diag.T
             return gram
-
-    # Used to simplify multiprocessing call
-    @ray.remote
-    def dummy_calc_ff(self, array):
-        if self.type == "single":
-            with open("k3_ff_s.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        elif self.type == "multi":
-            with open("k3_ff_m.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        result = np.zeros((len(array), 3, 3))
-        for i in np.arange(len(array)):
-            result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1], self.theta[0], self.theta[1], self.theta[2])
-        return result
 
     def calc_gram_e(self, X, ncores=1, eval_gradient=False):  # Untested
         """
@@ -301,13 +316,18 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores * 2 * single_conf
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+
+                # import multiprocessing as mp
+                # pool = mp.Pool(ncores)
+                # result = pool.map(dummy_calc_ee, clist)
 
                 ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(ray.get([self.dummy_calc_ee.remote(self, clist[i]) for i in range(ncores)]))
+                result = np.array(ray.get([dummy_calc_ee.remote(clist[i]) for i in range(ncores)]))
                 ray.shutdown()
+
                 result = np.concatenate(result).ravel()
 
                 off_diag = np.zeros((len(X), len(X)))
@@ -332,22 +352,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
             gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
             return gram
-
-    # Used to simplify multiprocessing call    
-    @ray.remote
-    def dummy_calc_ee(self, array):
-        if self.type == "single":
-            with open("k3_ee_s.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        elif self.type == "multi":
-            with open("k3_ee_m.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        for i in np.arange(len(array)):
-            for conf1 in array[i][0]:
-                for conf2 in array[i][1]:
-                    result[i] += fun(zp.zeros(3), np.zeros(3), npconf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
-        return result
 
     def calc_gram_ef(self, X, X_glob, ncores=1, eval_gradient=False):
         """
@@ -387,12 +391,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [confs[splitind[i]:splitind[i + 1]] for i in
-                         np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+
+                # import multiprocessing as mp
+                # pool = mp.Pool(ncores)
+                # result = pool.map(dummy_calc_ef, clist)
 
                 ray.init()
                 # Using the dummy function that has a single argument
-                result = ray.get([self.dummy_calc_ef.remote(self, clist[i]) for i in range(ncores)])
+                result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
                 ray.shutdown()
 
                 result = np.concatenate(result).ravel()
@@ -410,24 +418,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             self.gram_ef = gram
 
             return gram
-
-    # Used to simplify multiprocessing
-    @ray.remote
-    def dummy_calc_ef(self, array):
-        if self.type == "single":
-            with open("k3_ef_s.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        elif self.type == "multi":
-            with open("k3_ef_m.pickle", 'rb') as f:
-                fun = pickle.load(f)
-        result = np.zeros((len(array), 3))
-        for i in np.arange(len(array)):
-            conf2 = np.array(array[i][1], dtype = 'float')
-            for conf1 in array[i][0]:
-                conf1 = np.array(conf1, dtype = 'float')
-                result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
-        return result
     
     def calc_diag(self, X):
 
@@ -822,7 +812,6 @@ class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
             pickle.dump(k_ff_fun, f)
 
         # WRAPPERS (we don't want to plug the position of the central element every time)
-
         def k3_ee(conf1, conf2, sig, theta, rc):
             """
             Three body kernel for energy-energy correlation

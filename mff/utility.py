@@ -44,8 +44,8 @@ def get_repulsive_forces(confs, sig):
     forces = np.zeros((len(confs), 3))
     for i, c in enumerate(confs):
         d_ = np.sum(c[:,:3]**2, axis =1)**0.5
-        v = c[:,:3]/d[:,None]
-        f = 12*(sig/d)**12/d_
+        v = c[:,:3]/d_[:,None]
+        f = 12*(sig/d_)**12/d_
         forces[i] = np.sum(f[:, None]*v, axis = 0)
 
     return forces

@@ -113,7 +113,7 @@ class CombinedSingleSpeciesModel(Model):
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            energies -= self.rep_forces
+            energies -= self.rep_energies
 
         self.gp_2b.fit_energy(glob_confs, energies, ncores = 1)
 
@@ -599,7 +599,7 @@ class CombinedTwoSpeciesModel(Model):
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            energies -= self.rep_forces
+            energies -= self.rep_energies
 
         self.gp_2b.fit_energy(glob_confs, energies, ncores = 1)
 

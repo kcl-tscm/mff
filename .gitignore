@@ -118,3 +118,31 @@ test/
 
 
 tutorials/example.xyz
+
+mff/.vscode/ipch/30d2f1d619eb19f/mmap_address.bin
+
+mff/.vscode/ipch/39b1371227fdafc7/_TRICUBE.ipch
+
+mff/.vscode/ipch/39b1371227fdafc7/mmap_address.bin
+
+mff/.vscode/ipch/74f48abad804c9ca/_TRICUBE.ipch
+
+mff/.vscode/ipch/74f48abad804c9ca/mmap_address.bin
+
+mff/.vscode/ipch/ee4c8e2233de5bc/mmap_address.bin
+
+mff/.vscode/ipch/ee4c8e2233de5bc/TRICUBE_MODULE.ipch
+
+tutorials/data/Ni_19/models/MODEL_ker_TwoBodySingleSpecies_ntr_100.json
+
+tutorials/data/Ni_19/models/MODEL_ker_TwoBodySingleSpecies_ntr_211.json
+
+tutorials/data/Ni_19/models/MODEL_ker_TwoBodySingleSpecies_ntr_500.json
+
+tutorials/data/Ni_19/models/MODEL_ker_TwoBodySingleSpecies_ntr_511.json
+
+tutorials/k2_ee_s.pickle
+
+tutorials/k2_ef_s.pickle
+
+tutorials/k2_ff_s.pickle

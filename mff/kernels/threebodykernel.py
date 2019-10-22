@@ -11,7 +11,6 @@ import os.path
 
 logger = logging.getLogger(__name__)
 
-@ray.remote
 def dummy_calc_ff(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -25,7 +24,6 @@ def dummy_calc_ff(data):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1],  theta0, theta1, theta2)
     return result
 
-@ray.remote
 def dummy_calc_ee(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -41,7 +39,6 @@ def dummy_calc_ee(data):
                 result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
     return result
 
-@ray.remote
 def dummy_calc_ef(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -248,14 +245,14 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                # import multiprocessing as mp
-                # pool = mp.Pool(ncores)
-                # result = pool.map(dummy_calc_ff, clist)
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ff, clist)
 
-                ray.init()
+                # ray.init()
                 # Using the dummy function that has a single argument
-                result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
-                ray.shutdown()
+                # result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
 
                 result = np.concatenate(result).reshape((n, 3, 3))
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
@@ -317,14 +314,14 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                # import multiprocessing as mp
-                # pool = mp.Pool(ncores)
-                # result = pool.map(dummy_calc_ee, clist)
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ee, clist)
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([dummy_calc_ee.remote(clist[i]) for i in range(ncores)]))
-                ray.shutdown()
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([dummy_calc_ee.remote(clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
 
                 result = np.concatenate(result).ravel()
 
@@ -392,14 +389,14 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                # import multiprocessing as mp
-                # pool = mp.Pool(ncores)
-                # result = pool.map(dummy_calc_ef, clist)
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ef, clist)
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
-                ray.shutdown()
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
+                # ray.shutdown()
 
                 result = np.concatenate(result).ravel()
 

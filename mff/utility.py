@@ -21,7 +21,7 @@ energydefault = False
 
 def find_repulstion_sigma(confs):
     """ Function used to find the repulsion parameter 
-    sigma such that the energy of a bond at distance r is 0.01 eV.
+    rep_sig such that the energy of a bond at distance r is 0.02 eV.
     The distance r is the smallest bond distance found in the training set.
     """
 
@@ -36,9 +36,9 @@ def find_repulstion_sigma(confs):
                 dists.extend(d_) 
 
     r =  min(dists)
-    sigma = r*0.01**(1/12)
+    rep_sig = r*0.02**(1/12)
 
-    return sigma
+    return rep_sig
 
 def get_repulsive_forces(confs, sig):
     forces = np.zeros((len(confs), 3))

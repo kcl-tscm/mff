@@ -13,7 +13,6 @@ import os.path
 
 logger = logging.getLogger(__name__)
 
-@ray.remote
 def dummy_calc_ff(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -27,7 +26,6 @@ def dummy_calc_ff(data):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0], array[i][1],  theta0, theta1, theta2)
     return result
 
-@ray.remote
 def dummy_calc_ee(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -43,7 +41,6 @@ def dummy_calc_ee(data):
                 result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
     return result
 
-@ray.remote
 def dummy_calc_ef(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
@@ -249,12 +246,16 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
-                ray.shutdown()
-                result = np.concatenate(result).reshape((n, 3, 3))
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ff, clist)
 
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
+                
+                result = np.concatenate(result).reshape((n, 3, 3))
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
                 for i in np.arange(len(X)):
@@ -314,12 +315,16 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = np.array(ray.get([dummy_calc_ee.remote( clist[i]) for i in range(ncores)]))
-                ray.shutdown()
-                result = np.concatenate(result).ravel()
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ee, clist)
 
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = np.array(ray.get([dummy_calc_ee.remote( clist[i]) for i in range(ncores)]))
+                # ray.shutdown()
+
+                result = np.concatenate(result).ravel()
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
                 for i in np.arange(len(X)):
@@ -385,13 +390,16 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
                     self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-                ray.init()
-                # Using the dummy function that has a single argument
-                result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
-                ray.shutdown()     
+                import multiprocessing as mp
+                pool = mp.Pool(ncores)
+                result = pool.map(dummy_calc_ef, clist)
+
+                # ray.init()
+                # # Using the dummy function that has a single argument
+                # result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
+                # ray.shutdown()     
 
                 result = np.concatenate(result).ravel()
-
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = result[3*(j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]

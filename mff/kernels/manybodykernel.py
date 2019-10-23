@@ -630,8 +630,8 @@ class ManyBodySingleSpeciesKernel(BaseManyBody):
         return km_ee, km_ef, km_ff
 
 
-class ManyBodyTwoSpeciesKernel(BaseManyBody):
-    """Many body two species kernel.
+class ManyBodyManySpeciesKernel(BaseManyBody):
+    """Many body many species kernel.
 
     Args:
         theta[0] (float): lengthscale of the kernel

@@ -627,8 +627,8 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
 
         return k3_ee, k3_ef, k3_ff
 
-class ThreeBodyTwoSpeciesKernel(BaseThreeBody):
-    """Three body two species kernel.
+class ThreeBodyManySpeciesKernel(BaseThreeBody):
+    """Three body many species kernel.
 
     Args:
         theta[0] (float): lengthscale of the kernel

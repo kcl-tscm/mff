@@ -395,7 +395,7 @@ class ThreeBodyTwoSpeciesModel(Model):
         self.elements = elements
         self.r_cut = r_cut
 
-        kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ThreeBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
@@ -798,7 +798,7 @@ class ThreeBodyManySpeciesModel(Model):
         self.elements = elements
         self.r_cut = r_cut
 
-        kernel = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ThreeBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None

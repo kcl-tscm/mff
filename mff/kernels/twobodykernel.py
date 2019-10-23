@@ -571,8 +571,8 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
         return k2_ee, k2_ef, k2_ff
 
     
-class TwoBodyTwoSpeciesKernel(BaseTwoBody):
-    """Two body two species kernel.
+class TwoBodyManySpeciesKernel(BaseTwoBody):
+    """Two body many species kernel.
 
     Args:
         theta[0] (float): lengthscale of the kernel

@@ -262,9 +262,9 @@ class ManyBodySingleSpeciesModel(Model):
         return model
 
 
-class ManyBodyTwoSpeciesModel(Model):
-    """ many-body two species model class
-    Class managing the Gaussian process and its mapped counterpart
+class ManyBodyManySpeciesModel(Model):
+    """ many-body many species model class
+    Class managing the Gaussian process, there is no mapping method for this kernel.
 
     Args:
         elements (list): List containing the atomic numbers in increasing order
@@ -275,10 +275,9 @@ class ManyBodyTwoSpeciesModel(Model):
 
     Attributes:
         gp (class): The many-body two species Gaussian Process
-        grid (list): Contains the three many-body two species tabulated potentials, accounting for
-            interactions between two atoms of types 0-0, 0-1, and 1-1.
-        grid_start (float): Minimum atomic distance for which the grid is defined (cannot be 0)
-        grid_num (int): number of points used to create the many-body grids
+        grid (list): None
+        grid_start (float): None
+        grid_num (int): None
 
     """
 
@@ -340,35 +339,6 @@ class ManyBodyTwoSpeciesModel(Model):
 
         self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
 
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        many-body two species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        many-body two species energy-energy kernels
-
-        Args:
-            glob_confs (list of lists): List of configurations arranged so that
-                grouped configurations belong to the same snapshot
-            energies (array) : Array containing the total energy of each snapshot
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
-        
     def predict(self, confs, return_std=False):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
@@ -446,25 +416,13 @@ class ManyBodyTwoSpeciesModel(Model):
                 'theta': self.gp.kernel.theta[1],
                 'noise': self.gp.noise
             },
-            'grid': {
-                'r_min': self.grid_start,
-                'r_num': self.grid_num, 
-                'filename':{}
-            } if self.grid else {}
+            'grid': {}
         }
 
         gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
-
-        params['grid']['filename'] = {}
-        for k, grid in self.grid.items():
-            key = '_'.join(str(element) for element in k)
-            grid_filename = '{}_grid_{}_num_{p[grid][r_num]}.npz'.format(prefix, key, p=params)
-
-            params['grid']['filename'][key] = grid_filename
-            grid.save(directory / grid_filename)
 
         with open(directory / '{}.json'.format(prefix), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
@@ -502,14 +460,5 @@ class ManyBodyTwoSpeciesModel(Model):
         except:
             warnings.warn("The many-body GP file is missing")
             pass
-
-        if params['grid']:
-            model.grid_start = params['grid']['r_min']
-            model.grid_num = params['grid']['r_num']
-
-            for key, grid_filename in params['grid']['filename'].items():
-                k = tuple(int(ind) for ind in key.split('_'))
-
-                model.grid[k] = interpolation.Spline1D.load(directory / grid_filename)
 
         return model

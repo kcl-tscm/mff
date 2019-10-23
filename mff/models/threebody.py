@@ -299,6 +299,7 @@ class ThreeBodySingleSpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.element,
             'r_cut': self.r_cut,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -309,7 +310,7 @@ class ThreeBodySingleSpeciesModel(Model):
             'grid': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num, 
-                'filename':{}
+                'filename':None
             } if self.grid else {}
         }
 
@@ -699,6 +700,7 @@ class ThreeBodyTwoSpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.elements,
             'r_cut': self.r_cut,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -708,7 +710,8 @@ class ThreeBodyTwoSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num, 
+                'filename' : None
             } if self.grid else {}
         }
 
@@ -717,7 +720,6 @@ class ThreeBodyTwoSpeciesModel(Model):
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
-        params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
             grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
@@ -1138,6 +1140,7 @@ class ThreeBodyManySpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.elements,
             'r_cut': self.r_cut,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -1147,7 +1150,8 @@ class ThreeBodyManySpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num,
+                'filename' : None
             } if self.grid else {}
         }
 
@@ -1156,7 +1160,6 @@ class ThreeBodyManySpeciesModel(Model):
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
-        params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
             grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)

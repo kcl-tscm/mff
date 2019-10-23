@@ -224,6 +224,7 @@ class TwoBodySingleSpeciesModel(Model):
             'element': self.element,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -233,7 +234,8 @@ class TwoBodySingleSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num
+                'r_num': self.grid_num,
+                'filename': None
             } if self.grid else {}
         }
 
@@ -273,10 +275,10 @@ class TwoBodySingleSpeciesModel(Model):
 
         model = cls(params['element'],
                     params['r_cut'],
-                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
-                    params['gp']['noise'])
+                    params['gp']['noise'],
+                    params['rep_sig'])
 
         gp_filename = params['gp']['filename']
         model.gp.load(directory / gp_filename)
@@ -504,6 +506,7 @@ class TwoBodyTwoSpeciesModel(Model):
             'elements': self.elements,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -514,7 +517,7 @@ class TwoBodyTwoSpeciesModel(Model):
             'grid': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num, 
-                'filename':{}
+                'filename':None
             } if self.grid else {}
         }
 
@@ -522,8 +525,7 @@ class TwoBodyTwoSpeciesModel(Model):
 
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
-
-        params['grid']['filename'] = {}
+        
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
             grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
@@ -559,10 +561,10 @@ class TwoBodyTwoSpeciesModel(Model):
 
         model = cls(params['elements'],
                     params['r_cut'],
-                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
-                    params['gp']['noise'])
+                    params['gp']['noise'],
+                    params['rep_sig'])
 
         gp_filename = params['gp']['filename']
         try:
@@ -797,6 +799,7 @@ class TwoBodyManySpeciesModel(Model):
             'elements': self.elements,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -807,7 +810,7 @@ class TwoBodyManySpeciesModel(Model):
             'grid': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num, 
-                'filename':{}
+                'filename':None
             } if self.grid else {}
         }
 
@@ -816,7 +819,6 @@ class TwoBodyManySpeciesModel(Model):
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
-        params['grid']['filename'] = {}
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
             grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
@@ -849,10 +851,10 @@ class TwoBodyManySpeciesModel(Model):
 
         model = cls(params['elements'],
                     params['r_cut'],
-                    params['rep_sig'],
                     params['gp']['sigma'],
                     params['gp']['theta'],
-                    params['gp']['noise'])
+                    params['gp']['noise'],
+                    params['rep_sig'])
 
         gp_filename = params['gp']['filename']
         try:

@@ -253,7 +253,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 # result = pool.map(dummy_calc_ff, clist)
 
                 ray.init()
-                Using the dummy function that has a single argument
                 result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
                 ray.shutdown()
 
@@ -322,7 +321,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 # result = pool.map(dummy_calc_ee, clist)
 
                 ray.init()
-                # Using the dummy function that has a single argument
                 result = np.array(ray.get([dummy_calc_ee.remote(clist[i]) for i in range(ncores)]))
                 ray.shutdown()
 
@@ -397,7 +395,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 # result = pool.map(dummy_calc_ef, clist)
 
                 ray.init()
-                # Using the dummy function that has a single argument
                 result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
                 ray.shutdown()
 

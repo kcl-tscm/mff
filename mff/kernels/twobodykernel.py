@@ -52,7 +52,7 @@ def dummy_calc_ef(data):
         conf2 = np.array(array[i][1], dtype = 'float')
         for conf1 in array[i][0]:
             conf1 = np.array(conf1, dtype = 'float')
-            result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+            result[i] += -fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
     return result
 
 
@@ -387,11 +387,11 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 result = pool.map(dummy_calc_ef, clist)
                 pool.close()
                 pool.join()
-                
-                result = np.concatenate(result).ravel()
+                result = np.vstack(np.asarray(result))
+
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
-                        gram[i, 3 * j:3 * j + 3] = result[3*(j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]
+                        gram[i, 3 * j:3 * j + 3] = result[(j + i * X.shape[0])]
 
             else:
                 for i in np.arange(X_glob.shape[0]):

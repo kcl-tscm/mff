@@ -51,7 +51,7 @@ def dummy_calc_ef(data):
         conf2 = np.array(array[i][1], dtype = 'float')
         for conf1 in array[i][0]:
             conf1 = np.array(conf1, dtype = 'float')
-            result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+            result[i] += -fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
     return result
 
 class BaseThreeBody(Kernel, metaclass=ABCMeta):

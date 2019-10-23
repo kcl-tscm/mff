@@ -247,7 +247,9 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ff, clist)
-
+                pool.close()
+                pool.join()
+                
                 result = np.concatenate(result).reshape((n, 3, 3))
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
@@ -311,9 +313,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ee, clist)
-
+                pool.close()
+                pool.join()
+                
                 result = np.concatenate(result).ravel()
-
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
                 for i in np.arange(len(X)):
@@ -381,9 +384,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ef, clist)
-
+                pool.close()
+                pool.join()
+                
                 result = np.concatenate(result).ravel()
-
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = result[3*(j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]

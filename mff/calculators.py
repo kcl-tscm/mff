@@ -343,9 +343,7 @@ class ThreeBodyTwoSpecies(ManySpeciesMappedPotential):
         # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
         el_indices[el_indices < n_first_element] = 0
         el_indices[el_indices > 0] = 1
-        # print(el_indices)
-        # print("------------------")
-        # print(el_indices == [0, 0, 0])
+        
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
         list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis=1)).astype(bool)).astype(bool)
         list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis=1)).astype(bool)).astype(bool)
@@ -362,8 +360,8 @@ class ThreeBodyTwoSpecies(ManySpeciesMappedPotential):
                 forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki  # F = - dE/dx
                 forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij  # F = - dE/dx
                 forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk  # F = - dE/dx
-                potential_energies[
-                    [i, j, k]] += energy   # Energy of an atom is the sum of 1/3 of every triplet it is in
+                potential_energies[[i, j, k]] += energy   # Energy of an atom is the sum of 1/3 of every triplet it is in
+        
         self.results['energy'] += np.sum(potential_energies)
         self.results['forces'] += forces
 

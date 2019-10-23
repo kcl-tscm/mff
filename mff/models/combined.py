@@ -1263,14 +1263,14 @@ class CombinedManySpeciesModel(Model):
         perm_list_3b = list(combinations_with_replacement(num_elements, 3))
 
         dists_2b = np.linspace(start, self.r_cut, num_2b)
-        confs_2b = np.zeros((num, 1, 5))
+        confs_2b = np.zeros((num_2b, 1, 5))
         confs_2b[:, 0, 0] = dists_2b 
 
         for pair in perm_list_2b:  # in this for loop, predicting then save for each individual one
             ind1 = pair[0]
             ind2 = pair[1]
-            confs[:, 0, 3], confs[:, 0, 4] = self.elements[ind1], self.elements[ind2]
-            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, self.gp.predict_energy(confs_2b))
+            confs_2b[:, 0, 3], confs_2b[:, 0, 4] = self.elements[ind1], self.elements[ind2]
+            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(dists_2b, self.gp_2b.predict_energy(confs_2b))
 
         dists_3b= np.linspace(start, self.r_cut, num_3b)
 
@@ -1279,7 +1279,7 @@ class CombinedManySpeciesModel(Model):
             ind2 = trip[1]
             ind3 = trip[2]
 
-            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
+            self.grid_3b[(ind1, ind2, ind3)] = self.build_grid_3b(dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
 
 
     def build_grid_3b(self, dists, element_k, element_i, element_j, ncores):

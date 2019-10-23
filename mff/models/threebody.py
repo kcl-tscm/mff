@@ -199,6 +199,7 @@ class ThreeBodySingleSpeciesModel(Model):
         confs[:, :, 3] = self.element  # Central element is always element 1
         confs[:, 0, 4] = self.element  # Element on the x axis is always element 2
         confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
+        confs = np.nan_to_num(confs)  # Avoid nans to ruin everything
 
         grid_data = np.zeros((num, num, num))
 
@@ -567,6 +568,7 @@ class ThreeBodyTwoSpeciesModel(Model):
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
+        confs = np.nan_to_num(confs)  # Avoid nans to ruin everything
 
         grid_3b = np.zeros((num, num, num))
 
@@ -1007,6 +1009,7 @@ class ThreeBodyManySpeciesModel(Model):
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
         confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
+        confs = np.nan_to_num(confs)  # Avoid nans to ruin everything
 
         grid_3b = np.zeros((num, num, num))
 

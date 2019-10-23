@@ -343,6 +343,7 @@ class CombinedSingleSpeciesModel(Model):
             'element': self.element,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted' :self.gp_2b.fitted,
             'gp_2b': {
                 'kernel': self.gp_2b.kernel.kernel_name,
                 'n_train': self.gp_2b.n_train,
@@ -417,12 +418,12 @@ class CombinedSingleSpeciesModel(Model):
             params = json.load(fp)
         model = cls(params['element'],
                     params['r_cut'],
-                    params['rep_sig'],
                     params['gp_2b']['sigma'],
                     params['gp_3b']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
-                    params['gp_2b']['noise'])
+                    params['gp_2b']['noise'],
+                    params['rep_sig'])
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
@@ -541,7 +542,7 @@ class CombinedTwoSpeciesModel(Model):
                 generate the triplets of atoms for the 2-body mapped potential  
     """
 
-    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig =1, **kwargs):
+    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 1, **kwargs):
         super().__init__()
         self.elements = elements
         self.r_cut = r_cut
@@ -857,6 +858,7 @@ class CombinedTwoSpeciesModel(Model):
             'elements': self.elements,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted': self.fitted, 
             'gp_2b': {
                 'kernel': self.gp_2b.kernel.kernel_name,
                 'n_train': self.gp_2b.n_train,
@@ -939,7 +941,8 @@ class CombinedTwoSpeciesModel(Model):
                     params['gp_3b']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
-                    params['gp_2b']['noise'])
+                    params['gp_2b']['noise'],
+                    params['rep_sig'])
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
@@ -1365,6 +1368,7 @@ class CombinedManySpeciesModel(Model):
             'elements': self.elements,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
+            'fitted': self.gp_2b.fitted,
             'gp_2b': {
                 'kernel': self.gp_2b.kernel.kernel_name,
                 'n_train': self.gp_2b.n_train,
@@ -1397,7 +1401,6 @@ class CombinedManySpeciesModel(Model):
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(path / gp_filename_2b)
         
-            
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
             grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(key, p=params)
@@ -1442,12 +1445,12 @@ class CombinedManySpeciesModel(Model):
             params = json.load(fp)
         model = cls(params['elements'],
                     params['r_cut'],
-                    params['rep_sig'],
                     params['gp_2b']['sigma'],
                     params['gp_3b']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
-                    params['gp_2b']['noise'])
+                    params['gp_2b']['noise'],
+                    params['rep_sig'])
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']

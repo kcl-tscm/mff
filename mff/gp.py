@@ -140,6 +140,7 @@ class GaussianProcess(object):
         self.K = K
         self.energy_alpha_ = None
         self.energy_K = None
+        self.X_glob_train_ = None
         self.fitted[0] = 'force'
         self.n_train = len(self.y_train_) // 3
 
@@ -325,6 +326,7 @@ class GaussianProcess(object):
         self.alpha_ = None
         self.fitted[1] = 'energy'
         self.n_train = len(self.y_train_energy_)
+        self.X_train_ = None
 
         return self
 
@@ -694,6 +696,7 @@ class GaussianProcess(object):
                   self.energy_alpha_,
                   self.energy_K,
                   self.X_train_,
+                  self.X_glob_train_,
                   self.L_,
                   self.n_train]
 
@@ -717,6 +720,7 @@ class GaussianProcess(object):
         self.energy_alpha_, \
         self.energy_K, \
         self.X_train_, \
+        self.X_glob_train_, \
         self.L_, \
         self.n_train = np.load(filename, allow_pickle = True)
 

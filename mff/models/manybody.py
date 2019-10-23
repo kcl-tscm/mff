@@ -196,6 +196,7 @@ class ManyBodySingleSpeciesModel(Model):
             'model': self.__class__.__name__,
             'element': self.element,
             'r_cut': self.r_cut,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
@@ -409,6 +410,7 @@ class ManyBodyManySpeciesModel(Model):
             'model': self.__class__.__name__,
             'elements': self.elements,
             'r_cut': self.r_cut,
+            'fitted': self.gp.fitted,
             'gp': {
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,

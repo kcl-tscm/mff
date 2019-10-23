@@ -5,7 +5,6 @@ import numpy as np
 from abc import ABCMeta, abstractmethod
 
 from mff.kernels.base import Kernel
-import ray
 import pickle
 import os.path
 
@@ -249,11 +248,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ff, clist)
 
-                # ray.init()
-                # Using the dummy function that has a single argument
-                # result = np.array(ray.get([dummy_calc_ff.remote(clist[i]) for i in range(ncores)]))
-                # ray.shutdown()
-
                 result = np.concatenate(result).reshape((n, 3, 3))
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
@@ -318,11 +312,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ee, clist)
 
-                # ray.init()
-                # # Using the dummy function that has a single argument
-                # result = np.array(ray.get([dummy_calc_ee.remote(clist[i]) for i in range(ncores)]))
-                # ray.shutdown()
-
                 result = np.concatenate(result).ravel()
 
                 off_diag = np.zeros((len(X), len(X)))
@@ -378,7 +367,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(100000)
-                logger.info('Using %i cores for the 2-body energy-force gram matrix calculation' % (ncores))
+                logger.info('Using %i cores for the 3-body energy-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(ncores + 1)
@@ -392,11 +381,6 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ef, clist)
-
-                # ray.init()
-                # # Using the dummy function that has a single argument
-                # result = ray.get([dummy_calc_ef.remote(clist[i]) for i in range(ncores)])
-                # ray.shutdown()
 
                 result = np.concatenate(result).ravel()
 

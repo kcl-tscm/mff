@@ -1,6 +1,6 @@
-from .twobodykernel import TwoBodySingleSpeciesKernel, TwoBodyTwoSpeciesKernel
-from .threebodykernel import ThreeBodySingleSpeciesKernel, ThreeBodyTwoSpeciesKernel
-from .manybodykernel import ManyBodySingleSpeciesKernel, ManyBodyTwoSpeciesKernel
+from .twobodykernel import TwoBodySingleSpeciesKernel, TwoBodyManySpeciesKernel
+from .threebodykernel import ThreeBodySingleSpeciesKernel, ThreeBodyManySpeciesKernel
+from .manybodykernel import ManyBodySingleSpeciesKernel, ManyBodyManySpeciesKernel
 
-__all__ = [TwoBodySingleSpeciesKernel, TwoBodyTwoSpeciesKernel, ThreeBodySingleSpeciesKernel, ThreeBodyTwoSpeciesKernel, 
-          ManyBodySingleSpeciesKernel, ManyBodyTwoSpeciesKernel]
+__all__ = [TwoBodySingleSpeciesKernel, TwoBodyManySpeciesKernel, ThreeBodySingleSpeciesKernel, ThreeBodyManySpeciesKernel, 
+          ManyBodySingleSpeciesKernel, ManyBodyManySpeciesKernel]

@@ -318,7 +318,7 @@ class TwoBodyTwoSpeciesModel(Model):
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.TwoBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
@@ -609,7 +609,7 @@ class TwoBodyManySpeciesModel(Model):
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.TwoBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None

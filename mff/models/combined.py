@@ -547,10 +547,10 @@ class CombinedTwoSpeciesModel(Model):
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel_2b = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
+        kernel_2b = kernels.TwoBodyManySpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
 
-        kernel_3b = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
+        kernel_3b = kernels.ThreeBodyManySpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
         self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
@@ -1061,10 +1061,10 @@ class CombinedManySpeciesModel(Model):
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel_2b = kernels.TwoBodyTwoSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
+        kernel_2b = kernels.TwoBodyManySpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
 
-        kernel_3b = kernels.ThreeBodyTwoSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
+        kernel_3b = kernels.ThreeBodyManySpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
         self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None

@@ -15,12 +15,6 @@ def load(filename):
         m = models.ThreeBodySingleSpeciesModel.from_json(filename)
     elif model == "CombinedSingleSpeciesModel":
         m = models.CombinedSingleSpeciesModel.from_json(filename)
-    elif model == "TwoBodyTwoSpeciesModel":
-        m = models.TwoBodyTwoSpeciesModel.from_json(filename)
-    elif model == "ThreeBodyTwoSpeciesModel":
-        m = models.ThreeBodyTwoSpeciesModel.from_json(filename)
-    elif model == "CombinedTwoSpeciesModel":
-        m = models.CombinedTwoSpeciesModel.from_json(filename)
     elif model == "TwoBodyManySpeciesModel":
         m = models.TwoBodyManySpeciesModel.from_json(filename)
     elif model == "ThreeBodyManySpeciesModel":

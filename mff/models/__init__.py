@@ -1,12 +1,13 @@
-from .twobody import TwoBodySingleSpeciesModel, TwoBodyTwoSpeciesModel, TwoBodyManySpeciesModel
-from .threebody import ThreeBodySingleSpeciesModel, ThreeBodyTwoSpeciesModel, ThreeBodyManySpeciesModel
+from .twobody import TwoBodySingleSpeciesModel, TwoBodyManySpeciesModel
+from .threebody import ThreeBodySingleSpeciesModel, ThreeBodyManySpeciesModel
 from .manybody import ManyBodySingleSpeciesModel, ManyBodyManySpeciesModel
-from .combined import CombinedSingleSpeciesModel, CombinedTwoSpeciesModel, CombinedManySpeciesModel
+from .combined import CombinedSingleSpeciesModel, CombinedManySpeciesModel
 
-__all__ = [TwoBodySingleSpeciesModel, TwoBodyTwoSpeciesModel,
+__all__ = [TwoBodySingleSpeciesModel,
             TwoBodyManySpeciesModel,
-           ThreeBodySingleSpeciesModel, ThreeBodyTwoSpeciesModel,
+           ThreeBodySingleSpeciesModel,
            ThreeBodyManySpeciesModel,
-           ManyBodySingleSpeciesModel, ManyBodyManySpeciesModel,
-           CombinedSingleSpeciesModel, CombinedTwoSpeciesModel, 
+           ManyBodySingleSpeciesModel, 
+           ManyBodyManySpeciesModel,
+           CombinedSingleSpeciesModel, 
            CombinedManySpeciesModel]

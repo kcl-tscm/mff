@@ -297,123 +297,6 @@ class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, rep_alpha=rep_alpha, **kwargs)
 
 
-class ThreeBodyTwoSpecies(ManySpeciesMappedPotential):
-    """A mapped 3-body 2-species calculator for ase
-   
-    Attributes:
-        elements (list): List of ordered atomic numbers of the mapped two species system.
-        grids_3b (dict): contains the four 3D Spline interpolators relative to the 3-body 
-            mapped grids for element0-element0-element0, element0-element0-element1, 
-            element0-element1-element1 and element1-element1-element1 interactions.
-        results(dict): energy and forces calculated on the atoms object
-    
-    """
-
-    def __init__(self, r_cut, elements, grids_3b, **kwargs):
-        """
-        Args:
-            r_cut (float): cutoff radius
-            elements (list): List of ordered atomic numbers of the mapped two species system.
-            grids_3b (list): contains the four 3D Spline interpolators relative to the 3-body 
-                mapped grids for element0-element0-element0, element0-element0-element1, 
-                element0-element1-element1 and element1-element1-element1 interactions.
-        
-        """
-        super().__init__(r_cut, elements, **kwargs)
-
-        self.elements = elements
-        self.element_map = {element: index for index, element in enumerate(elements)}
-        self.grids_3b = grids_3b
-
-    def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
-        """Do the calculation.
-        """
-        super().calculate(atoms, properties, system_changes)
-
-        forces = np.zeros((len(self.atoms), 3))
-        potential_energies = np.zeros((len(self.atoms), 1))
-
-        indices, distances, positions = self.find_triplets(atoms)
-        
-        el_indices = indices.copy()
-        element_list = atoms.get_atomic_numbers()
-        # Find the index of the last element0 atom
-        n_first_element = (element_list == self.elements[0]).sum()
-
-        # Indixes of triplets that have 0 or 1 depending on the element of each participating atom
-        el_indices[el_indices < n_first_element] = 0
-        el_indices[el_indices > 0] = 1
-        # print(el_indices)
-        # print("------------------")
-        # print(el_indices == [0, 0, 0])
-        d_ij, d_jk, d_ki = np.hsplit(distances, 3)
-        list_000 = (1 - (np.sum(1 - el_indices == [0, 0, 0], axis=1)).astype(bool)).astype(bool)
-        list_001 = (1 - (np.sum(1 - el_indices == [0, 0, 1], axis=1)).astype(bool)).astype(bool)
-        list_011 = (1 - (np.sum(1 - el_indices == [0, 1, 1], axis=1)).astype(bool)).astype(bool)
-        list_111 = (1 - (np.sum(1 - el_indices == [1, 1, 1], axis=1)).astype(bool)).astype(bool)
-        list_triplets = [list_000, list_001, list_011, list_111]
-        list_grids = [(0, 0, 0), (0, 0, 1), (0, 1, 1), (1, 1, 1)]
-
-        for r in np.arange(4):
-            mapped = self.grids_3b[list_grids[r]].ev_all(d_ij[list_triplets[r]], d_jk[list_triplets[r]],
-                                                         d_ki[list_triplets[r]])
-            for (i, j, k), energy, dE_ij, dE_jk, dE_ki in zip(indices[list_triplets[r]], mapped[0], mapped[1],
-                                                              mapped[2], mapped[3]):
-                forces[i] += positions[(i, j)] * dE_ij + positions[(i, k)] * dE_ki  # F = - dE/dx
-                forces[j] += positions[(j, k)] * dE_jk + positions[(j, i)] * dE_ij  # F = - dE/dx
-                forces[k] += positions[(k, i)] * dE_ki + positions[(k, j)] * dE_jk  # F = - dE/dx
-                potential_energies[
-                    [i, j, k]] += energy   # Energy of an atom is the sum of 1/3 of every triplet it is in
-        self.results['energy'] += np.sum(potential_energies)
-        self.results['forces'] += forces
-
-    def find_triplets(self, atoms):
-        '''Function that efficiently finds all of the valid triplets of atoms in the atoms object.
-        
-        Returns:
-            indices (array): array containing the indices of atoms belonging to any valid triplet.
-                Has shape T by 3 where T is the number of valid triplets in the atoms object
-            distances (array): array containing the relative distances of every triplet of atoms.
-                Has shape T by 3 where T is the number of valid triplets in the atoms object
-            positions (dictionary): versor of position w.r.t. the central atom of every atom indexed in indices.
-                Has shape T by 3 where T is the number of valid triplets in the atoms object            
-        
-        '''
-        nl = self.nl
-        # atomic_numbers = self.atoms.get_array('numbers', copy=False)
-
-        indices, distances, positions = [], [], dict()
-
-        for i in range(len(atoms)):
-
-            inds, pos, dists2 = nl.get_neighbors(i)
-            # Limitation
-            assert len(inds) is len(np.unique(inds)), "There are repetitive indices!\n{}".format(inds)
-
-            # ignoring already visited atoms
-            inds, pos, dists2 = inds[inds > i], pos[inds > i, :], dists2[inds > i]
-            dists = np.sqrt(dists2)
-
-            for local_ind, (j, pos_ij, dist_ij) in enumerate(zip(inds, pos, dists)):
-
-                # Caching local displacement vectors
-                positions[(i, j)], positions[(j, i)] = pos_ij / dist_ij, -pos_ij / dist_ij
-
-                for k, dist_ik in islice(zip(inds, dists), local_ind + 1, None):
-
-                    try:
-                        jk_ind = list(nl[j]).index(k)
-                    except ValueError:
-                        continue  # no valid triplet
-
-                    _, _, dists_j = nl.get_neighbors(j)
-
-                    indices.append([i, j, k])
-                    distances.append([dist_ij, np.sqrt(dists_j[jk_ind]), dist_ik])
-
-        return np.array(indices), np.array(distances), positions
-
-
 class TwoBodyManySpecies(ManySpeciesMappedPotential):
     """A mapped 2-body 2-species calculator for ase
    
@@ -603,10 +486,6 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
 
         return np.array(indices), np.array(distances), positions
 
-class CombinedTwoSpecies(TwoBodyManySpecies, ThreeBodyTwoSpecies):
-    def __init__(self, r_cut, elements, grids_2b, grids_3b, rep_alpha=0.0, **kwargs):
-        super().__init__(r_cut, elements, grids_2b=grids_2b, grids_3b=grids_3b, rep_alpha=rep_alpha, **kwargs)
-        
 class CombinedManySpecies(TwoBodyManySpecies, ThreeBodyManySpecies):
     def __init__(self, r_cut, elements, grids_2b, grids_3b, rep_alpha=0.0, **kwargs):
         super().__init__(r_cut, elements, grids_2b=grids_2b, grids_3b=grids_3b, rep_alpha=rep_alpha, **kwargs)

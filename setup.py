@@ -16,7 +16,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='0.9.5',
+    version='1,0',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
     description='This is a demo package',
     long_description=long_description,

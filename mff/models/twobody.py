@@ -175,7 +175,7 @@ class TwoBodySingleSpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, num):
+    def build_grid(self, start, num, ncores=1):
         """ Build the mapped 2-body potential. 
         Calculates the energy predicted by the GP for two atoms at distances that range from
         start to r_cut, for a total of num points. These energies are stored and a 1D spline
@@ -201,8 +201,11 @@ class TwoBodySingleSpeciesModel(Model):
         confs = np.zeros((num, 1, 5))
         confs[:, 0, 0] = dists
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
+        confs = list(confs)
 
-        grid_data = self.gp.predict_energy(confs, ncores = ncores)
+        grid_data = self.gp.predict_energy(confs, ncores = ncores, mapping = True)
+        if self.rep_sig:
+            grid_data += utility.get_repulsive_energies(confs, self.rep_sig, mapping = True)
         self.grid = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
@@ -487,7 +490,10 @@ class TwoBodyManySpeciesModel(Model):
             ind1 = pair[0]
             ind2 = pair[1]
             confs[:, 0, 3], confs[:, 0, 4] = self.elements[ind1], self.elements[ind2]
-            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, self.gp.predict_energy(confs, ncores = ncores))
+            grid_data = self.gp.predict_energy(list(confs), ncores = ncores, mapping = True)
+            if self.rep_sig:
+                grid_data += utility.get_repulsive_energies(confs, self.rep_sig, mapping = True)
+            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
         """ Save the model.

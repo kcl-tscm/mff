@@ -399,7 +399,7 @@ class GaussianProcess(object):
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
         
-    def predict_energy(self, X, return_std=False, ncores = 1):
+    def predict_energy(self, X, return_std=False, ncores = 1, mapping = False):
         """Predict energies from forces only using the Gaussian process regression model
 
         This function evaluates the GP energies for a set of test configurations.
@@ -430,16 +430,16 @@ class GaussianProcess(object):
         else:  # Predict based on GP posterior
 
             if self.fitted == ['force', None]:  # Predict using force data
-                K_trans = self.kernel_.calc_ef(X, self.X_train_, ncores)
+                K_trans = self.kernel_.calc_ef(X, self.X_train_, ncores, mapping)
                 e_mean = K_trans.dot(self.alpha_[:,0])  # Line 4 (y_mean = f_star)
 
             elif self.fitted == [None, 'energy']:  # Predict using energy data
-                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores)
+                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores, mapping)
                 e_mean = K_energy.dot(self.energy_alpha_[:,0])
 
             else:  # Predict using both force and energy data
-                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores)
-                K_energy_force = self.kernel_.calc_ef(X, self.X_train_, ncores)
+                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores, mapping)
+                K_energy_force = self.kernel_.calc_ef(X, self.X_train_, ncores, mapping)
                 K = np.hstack((K_energy, K_energy_force))
                 e_mean = K.dot(self.alpha_[:,0])
 

@@ -49,13 +49,17 @@ def get_repulsive_forces(confs, sig):
 
     return forces
 
-def get_repulsive_energies(confs, sig):
+def get_repulsive_energies(confs, sig, mapping = False):
     energies = np.zeros(len(confs))
-    for i, c in enumerate(confs):
-        for c1 in c:
+    if not mapping:
+        for i, c in enumerate(confs):
+            for c1 in c:
+                d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
+                energies[i] += np.sum((sig/d_)**12)
+    else:
+        for i, c1 in enumerate(confs):
             d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
             energies[i] += np.sum((sig/d_)**12)
-
     return energies
 
 def open_data(folder, cutoff):

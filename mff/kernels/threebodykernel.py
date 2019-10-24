@@ -24,7 +24,7 @@ def dummy_calc_ff(data):
     return result
 
 def dummy_calc_ee(data):
-    array, theta0, theta1, theta2, kertype = data
+    array, theta0, theta1, theta2, kertype, mapping = data
     if kertype == "single":
         with open("k3_ee_s.pickle", 'rb') as f:
             fun = pickle.load(f)
@@ -32,14 +32,21 @@ def dummy_calc_ee(data):
         with open("k3_ee_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros(len(array))
-    for i in np.arange(len(array)):
-        for conf1 in array[i][0]:
+
+    if not mapping:
+        for i in np.arange(len(array)):
+            for conf1 in array[i][0]:
+                for conf2 in array[i][1]:
+                    result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
+    else:
+        for i in np.arange(len(array)):
             for conf2 in array[i][1]:
-                result[i] += fun(np.zeros(3), np.zeros(3), conf1, conf2, theta0, theta1, theta2)
+                result[i] += fun(np.zeros(3), np.zeros(3), array[i][0], conf2, theta0, theta1, theta2)
+
     return result
 
 def dummy_calc_ef(data):
-    array, theta0, theta1, theta2, kertype = data
+    array, theta0, theta1, theta2, kertype, mapping = data
     if kertype == "single":
         with open("k3_ef_s.pickle", 'rb') as f:
             fun = pickle.load(f)
@@ -47,11 +54,17 @@ def dummy_calc_ef(data):
         with open("k3_ef_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3))
-    for i in np.arange(len(array)):
-        conf2 = np.array(array[i][1], dtype = 'float')
-        for conf1 in array[i][0]:
-            conf1 = np.array(conf1, dtype = 'float')
-            result[i] += -fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+    if not mapping:
+        for i in np.arange(len(array)):
+            conf2 = np.array(array[i][1], dtype = 'float')
+            for conf1 in array[i][0]:
+                conf1 = np.array(conf1, dtype = 'float')
+                result[i] += -fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)
+    else:
+        for i in np.arange(len(array)):
+            conf2 = np.array(array[i][1], dtype = 'float')
+            conf1 = np.array(array[i][0], dtype = 'float')
+            result[i] += -fun(np.zeros(3), np.zeros(3), conf1, conf2,  theta0, theta1, theta2)      
     return result
 
 class BaseThreeBody(Kernel, metaclass=ABCMeta):
@@ -134,7 +147,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         return ker
         
 
-    def calc_ef(self, X_glob, X, ncores=1):
+    def calc_ef(self, X_glob, X, ncores=1, mapping = False):
         """
         Calculate the energy-force kernel between two sets of configurations.
         
@@ -165,7 +178,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
-                self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
@@ -179,15 +192,20 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                     ker[i, 3 * j:3 * j + 3] = result[(j + i * len(X))]
 
         else:
-            for i, x1 in enumerate(X_glob):
-                for j, conf2 in enumerate(X):
-                    for conf1 in x1:
+            if not mapping:
+                for i, x1 in enumerate(X_glob):
+                    for j, conf2 in enumerate(X):
+                        for conf1 in x1:
+                            ker[i, 3 * j:3 * j + 3] += self.k3_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+            else:
+                for i, conf1 in enumerate(X_glob):
+                    for j, conf2 in enumerate(X):
                         ker[i, 3 * j:3 * j + 3] += self.k3_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
+        
         return ker
 
 
-    def calc_ee(self, X1, X2, ncores=1):
+    def calc_ee(self, X1, X2, ncores=1, mapping = False):
         """
         Calculate the energy-energy kernel between two global environments.
         
@@ -218,7 +236,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
-                self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
@@ -233,13 +251,20 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                     ker[i, j] = result[j + i*len(X2)]
 
         else:
-            ker = np.zeros((len(X1), len(X2)))
-            for i, x1 in enumerate(X1):
-                for j, x2 in enumerate(X2):
-                    for conf1 in x1:
+            if not mapping:
+                ker = np.zeros((len(X1), len(X2)))
+                for i, x1 in enumerate(X1):
+                    for j, x2 in enumerate(X2):
+                        for conf1 in x1:
+                            for conf2 in x2:
+                                ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+            else:
+                ker = np.zeros((len(X1), len(X2)))
+                for i, conf1 in enumerate(X1):
+                    for j, x2 in enumerate(X2): 
                         for conf2 in x2:
-                            ker[i, j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
+                            ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                  
         return ker
 
 
@@ -344,7 +369,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
-                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                    self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
@@ -415,7 +440,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
-                    self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                    self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)

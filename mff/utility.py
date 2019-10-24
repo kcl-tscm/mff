@@ -13,6 +13,7 @@ from pathlib import Path
 from itertools import combinations_with_replacement
 from asap3.analysis import FullCNA  
 from ase.io import read
+import time
 
 # Keep track on whether there are actual energies in your dataset or they have been discarded
 global energydefault
@@ -478,6 +479,7 @@ def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder,
     m = get_model(elements_1, cutoff, kernel, sigma, cutoff/5.0, noise, rep_sig)
 
     print("Training using %i points on %i cores" %(len(X), ncores))
+    tic = time.time()
     if train_mode == "force":
         m.fit(X, Y, ncores = ncores)
     else:
@@ -492,7 +494,8 @@ def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder,
         else:
             print("No energies available. Defaulting to force training.")
             m.fit(X, Y, ncores = ncores)
-
+    toc = time.time()
+    print("Seconds for training: %.2f" %(toc-tic))
     # Save the GP
     save_gp(m, train_folder, kernel, cutoff, sigma, noise, len(X)+len(X_e))
 

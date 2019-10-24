@@ -81,52 +81,115 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         self.bounds = bounds
         self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
 
-    def calc(self, X1, X2):
+
+    def calc(self, X1, X2, ncores=1):
         """
-        Calculate the force-force kernel between two sets of configurations.
+        Calculate the energy-force kernel between two sets of configurations.
         
         Args:
             X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
             X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
             
         Returns:
-            K (matrix): N1*3 x N2*3 matrix of the matrix-valued kernels 
+            K (matrix): N2*3 matrix of the vector-valued kernels 
        
         """
-        K = np.zeros((X1.shape[0] * 3, X2.shape[0] * 3))
+        ker = np.zeros((len(X1) * 3, len(X2) * 3))
 
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                K[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
-                    self.k3_ff(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+        if ncores > 1:
+            confs = []
+            for x1 in X1:
+                for x2 in X2:
+                    confs.append(np.asarray([x1, x2]))
+            n = len(confs)
+            import sys
+            sys.setrecursionlimit(100000)
+            logger.info('Using %i cores for the 3-body force-force kernel calculation' % (ncores))
 
-        return K
+            # Way to split the kernels functions to compute evenly across the nodes
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-    def calc_ee(self, X1, X2):
+            import multiprocessing as mp
+            pool = mp.Pool(ncores)
+            result = pool.map(dummy_calc_ff, clist)
+            pool.close()
+            pool.join()
+            
+            result = np.concatenate(result).reshape((n, 3, 3))
+            for i in range(len(X1)):
+                for j in range(len(X2)):
+                    ker[i * 3 : i * 3 + 3, 3 * j:3 * j + 3] = result[(j + i * len(X2))]
+
+        else:
+            for i, conf1 in enumerate(X1):
+                for j, conf2 in enumerate(X2):
+                    ker[i * 3:i * 3 + 3, 3 * j:3 * j + 3] += self.k3_ff(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+
+        return ker
+        
+
+    def calc_ef(self, X_glob, X, ncores=1):
         """
-        Calculate the energy-energy kernel between two sets of configurations.
+        Calculate the energy-force kernel between two sets of configurations.
         
         Args:
             X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
             X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
             
         Returns:
-            K (matrix): N1 x N2 matrix of the scalar-valued kernels 
+            K (matrix): N2*3 matrix of the vector-valued kernels 
        
         """
-        K = np.zeros((X1.shape[0], X2.shape[0]))
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                for conf1 in X1[i]:
-                    for conf2 in X2[j]:
-                        K[i, j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+        ker = np.zeros((len(X_glob), len(X) * 3))
 
-        return K
+        if ncores > 1:
+            confs = []
+            for x1 in X_glob:
+                for x2 in X:
+                    confs.append(np.asarray([x1, x2]))
+            n = len(confs)
+            import sys
+            sys.setrecursionlimit(100000)
+            logger.info('Using %i cores for the 3-body energy-force kernel calculation' % (ncores))
+
+            # Way to split the kernels functions to compute evenly across the nodes
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+
+            import multiprocessing as mp
+            pool = mp.Pool(ncores)
+            result = pool.map(dummy_calc_ef, clist)
+            pool.close()
+            pool.join()
+            result = np.vstack(np.asarray(result))
+
+            for i in range(len(X_glob)):
+                for j in range(len(X)):
+                    ker[i, 3 * j:3 * j + 3] = result[(j + i * len(X))]
+
+        else:
+            for i, x1 in enumerate(X_glob):
+                for j, conf2 in enumerate(X):
+                    for conf1 in x1:
+                        ker[i, 3 * j:3 * j + 3] += self.k3_ef(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+
+        return ker
 
 
-    def calc_ee_single(self, X1, X2):
+    def calc_ee(self, X1, X2, ncores=1):
         """
-        Calculate the energy-energy kernel between a sets of configurations and a global environment.
+        Calculate the energy-energy kernel between two global environments.
         
         Args:
             X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
@@ -136,75 +199,48 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             K (matrix): N1 x N2 matrix of the scalar-valued kernels 
        
        """
-        K = np.zeros(X2.shape[0])
-        for conf1 in X1:
-            for j in np.arange(X2.shape[0]):
-                for conf2 in X2[j]:
-                    K[j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-
-        return K
-
-
-    def calc_ef(self, X1, X2):
-        """
-        Calculate the energy-force kernel between two sets of configurations.
-        
-        Args:
-            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
-            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
+        if ncores > 1:  # Used for multiprocessing
+            confs = []
             
-        Returns:
-            K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
-       
-        """
-        K = np.zeros((X1.shape[0], 3))
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                for conf1 in X1[i]:
-                    K[i, :] += self.k3_ef(conf1, X2[j], self.theta[0], self.theta[1], self.theta[2])
+            # Build a list of all input pairs which matrix needs to be computed
+            for x1 in X1:
+                for x2 in X2:
+                    confs.append(np.asarray([x1, x2]))
+            n = len(confs)                
+            import sys
+            sys.setrecursionlimit(100000)
+            logger.info('Using %i cores for the 3-body energy-energy kernel calculation' % (ncores))
 
-        return K
+            # Way to split the kernels functions to compute evenly across the nodes
+            splitind = np.zeros(ncores + 1)
+            factor = (n + (ncores - 1)) / ncores
+            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[-1] = n
+            splitind = splitind.astype(int)
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], 
+                self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
+            import multiprocessing as mp
+            pool = mp.Pool(ncores)
+            result = pool.map(dummy_calc_ee, clist)
+            pool.close()
+            pool.join()
+            result = np.concatenate(result).ravel()
 
-    def calc_ef_reverse(self, X1, X2):
-        """
-        Calculate the energy-force kernel between two sets of configurations.
-        
-        Args:
-            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
-            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
-            
-        Returns:
-            K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
-       
-       """
-        K = np.zeros(X2.shape[0] * 3)
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                K[3 * j:3 * j + 3] += self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])
+            ker = np.zeros((len(X1), len(X2)))
+            for i in range(len(X1)):
+                for j in range(len(X2)):
+                    ker[i, j] = result[j + i*len(X2)]
 
-        return K
+        else:
+            ker = np.zeros((len(X1), len(X2)))
+            for i, x1 in enumerate(X1):
+                for j, x2 in enumerate(X2):
+                    for conf1 in x1:
+                        for conf2 in x2:
+                            ker[i, j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
-
-    def calc_ef_loc(self, X1, X2):
-        """
-        Calculate the local energy-force kernel between two sets of configurations.
-        Used only during mapping since it is faster than calc_ef and equivalent in that case.
-        
-        Args:
-            X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
-            X2 (list): list of N2 Mx5 arrays containing xyz coordinates and atomic species
-            
-        Returns:
-            K (matrix): N1 x N2*3 matrix of the vector-valued kernels 
-       
-        """
-        K = np.zeros((X1.shape[0], X2.shape[0] * 3))
-
-        for i in np.arange(X1.shape[0]):
-            for j in np.arange(X2.shape[0]):
-                    K[i, 3 * j:3 * j + 3] += self.k3_ef(X1[i], X2[j], self.theta[0], self.theta[1], self.theta[2])                
-        return K
+        return ker
 
 
     def calc_gram(self, X, ncores=1, eval_gradient=False):

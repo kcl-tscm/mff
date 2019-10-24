@@ -16,7 +16,6 @@ import logging
 import warnings
 from itertools import combinations_with_replacement
 
-import ray
 logger = logging.getLogger(__name__)
 
 
@@ -89,12 +88,12 @@ class CombinedSingleSpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit(confs, forces, ncores = 1)
+        self.gp_2b.fit(confs, forces, ncores = ncores)
 
         ntr = len(confs)
-        two_body_forces = self.gp_2b.predict(confs)
+        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores)
+        self.gp_3b.fit(confs, forces - two_body_forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -115,12 +114,12 @@ class CombinedSingleSpeciesModel(Model):
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
             energies -= self.rep_energies
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores = 1)
+        self.gp_2b.fit_energy(glob_confs, energies, ncores = ncores)
 
         ntr = len(glob_confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores)
+        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -147,11 +146,11 @@ class CombinedSingleSpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = 1)
+        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
 
-        two_body_forces = self.gp_2b.predict(confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs)
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores = ncores)
 
         
     def predict(self, confs, return_std=False):
@@ -176,19 +175,19 @@ class CombinedSingleSpeciesModel(Model):
                 force_2b, std_2b = self.gp_2b.predict(confs, return_std)
                 force_2b += rep_forces
             else:
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std)
-            force_3b, std_3b = self.gp_2b.predict(confs, return_std)
+                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores = ncores)
+            force_3b, std_3b = self.gp_2b.predict(confs, return_std, ncores = ncores)
             return force_2b + force_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                return self.gp_2b.predict(confs, return_std) + rep_forces + \
-                   self.gp_3b.predict(confs, return_std)
+                return self.gp_2b.predict(confs, return_std, ncores = ncores) + rep_forces + \
+                   self.gp_3b.predict(confs, return_std, ncores = ncores)
             else:
-               return self.gp_2b.predict(confs, return_std) + \
-                   self.gp_3b.predict(confs, return_std)
+               return self.gp_2b.predict(confs, return_std, ncores = ncores) + \
+                   self.gp_3b.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the local energies of the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -207,34 +206,20 @@ class CombinedSingleSpeciesModel(Model):
         if return_std:
             if self.rep_sig:
                 rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std)
+                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
                 energy_2b += rep_energies
             else:
-                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std)
-            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std)
+                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncoress)
+            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
             return energy_2b + energy_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
                 return self.gp_2b.predict_energy(glob_confs, return_std) + rep_energies +\
-                   self.gp_3b.predict_energy(glob_confs, return_std)
+                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
             else:
-                return self.gp_2b.predict_energy(glob_confs, return_std) + \
-                   self.gp_3b.predict_energy(glob_confs, return_std)
-
-    @ray.remote
-    def predict_energy_3b_ray(self, glob_confs):
-        """ Predict the local energies of the central atoms of confs using a GP 
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-        """
-
-        return self.gp_3b.predict_energy(glob_confs)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores) + \
+                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
 
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """ Build the mapped 2- and 3-body potentials. 
@@ -267,7 +252,7 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 0, 0] = dists_2b
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
 
-        grid_data = self.gp_2b.predict_energy(confs)
+        grid_data = self.gp_2b.predict_energy(confs, ncores = ncores)
         grid_2b = interpolation.Spline1D(dists_2b, grid_data)
 
         # Mapping 3 body part
@@ -286,26 +271,7 @@ class CombinedSingleSpeciesModel(Model):
 
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
 
-        if ncores > 1:
-            n = len(confs)
-            import sys
-            sys.setrecursionlimit(100000)
-            print('Using %i cores for the mapping' % (ncores))
-            splitind = np.zeros(ncores + 1)
-            factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
-            splitind[-1] = n
-            splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            ray.init()
-            # Using the dummy function that has a single argument
-            result = np.array(ray.get([self.predict_energy_3b_ray.remote(self, clist[i]) for i in range(ncores)]))
-            ray.shutdown()            
-            result = np.concatenate(result).flatten()
-            grid_3b[inds] = result
-
-        else:
-            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(confs, ncores = ncores).flatten()
 
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
@@ -576,12 +542,12 @@ class CombinedManySpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit(confs, forces, ncores = 1)
+        self.gp_2b.fit(confs, forces, ncores = ncores)
 
         ntr = len(confs)
-        two_body_forces = self.gp_2b.predict(confs)
+        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores)
+        self.gp_3b.fit(confs, forces - two_body_forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -600,14 +566,14 @@ class CombinedManySpeciesModel(Model):
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            energies -= self.rep_forces
+            energies -= self.rep_energies
 
         self.gp_2b.fit_energy(glob_confs, energies, ncores = 1)
 
         ntr = len(glob_confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores)
+        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -634,14 +600,14 @@ class CombinedManySpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = 1)
+        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
 
-        two_body_forces = self.gp_2b.predict(confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs)
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
+        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
+        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores = ncores)
 
         
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores = 1):
         """ Predict the forces acting on the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -660,22 +626,22 @@ class CombinedManySpeciesModel(Model):
         if return_std:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std)
+                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores)
                 force_2b += rep_forces
             else:
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std)
-            force_3b, std_3b = self.gp_2b.predict(confs, return_std)
+                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores)
+            force_3b, std_3b = self.gp_2b.predict(confs, return_std, ncores)
             return force_2b + force_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                return self.gp_2b.predict(confs, return_std) + rep_forces + \
-                   self.gp_3b.predict(confs, return_std)
+                return self.gp_2b.predict(confs, return_std, ncores) + rep_forces + \
+                   self.gp_3b.predict(confs, return_std, ncores)
             else:
-               return self.gp_2b.predict(confs, return_std) + \
-                   self.gp_3b.predict(confs, return_std)
+               return self.gp_2b.predict(confs, return_std, ncores) + \
+                   self.gp_3b.predict(confs, return_std, ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the local energies of the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -694,34 +660,20 @@ class CombinedManySpeciesModel(Model):
         if return_std:
             if self.rep_sig:
                 rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std)
+                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores)
                 energy_2b += rep_energies
             else:
-                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std)
-            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std)
+                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores)
+            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std, ncores)
             return energy_2b + energy_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                return self.gp_2b.predict_energy(glob_confs, return_std) + rep_energies +\
-                   self.gp_3b.predict_energy(glob_confs, return_std)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores) + rep_energies +\
+                   self.gp_3b.predict_energy(glob_confs, return_std, ncores)
             else:
-                return self.gp_2b.predict_energy(glob_confs, return_std) + \
-                   self.gp_3b.predict_energy(glob_confs, return_std)
-
-    @ray.remote
-    def predict_energy_3b_ray(self, glob_confs):
-        """ Predict the local energies of the central atoms of confs using a GP 
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-        """
-
-        return self.gp_3b.predict_energy(glob_confs)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores) + \
+                   self.gp_3b.predict_energy(glob_confs, return_std, ncores)
 
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """Function used to create the three different 2-body energy grids for 
@@ -754,7 +706,7 @@ class CombinedManySpeciesModel(Model):
             ind1 = pair[0]
             ind2 = pair[1]
             confs_2b[:, 0, 3], confs_2b[:, 0, 4] = self.elements[ind1], self.elements[ind2]
-            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(dists_2b, self.gp_2b.predict_energy(confs_2b))
+            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(dists_2b, self.gp_2b.predict_energy(confs_2b, ncores = ncores))
 
         dists_3b= np.linspace(start, self.r_cut, num_3b)
 
@@ -810,26 +762,7 @@ class CombinedManySpeciesModel(Model):
 
         grid_3b = np.zeros((num, num, num))
 
-        if ncores > 1:
-            n = len(confs)
-            import sys
-            sys.setrecursionlimit(100000)
-            print('Using %i cores for the mapping' % (ncores))
-            splitind = np.zeros(ncores + 1)
-            factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
-            splitind[-1] = n
-            splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            ray.init()
-            # Using the dummy function that has a single argument
-            result = np.array(ray.get([self.predict_energy_3b_ray.remote(self, clist[i]) for i in range(ncores)]))
-            ray.shutdown()            
-            result = np.concatenate(result).flatten()
-            grid_3b[inds] = result
-
-        else:
-            grid_3b[inds] = self.gp_3b.predict_energy(confs).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(confs, ncores = ncores).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 

@@ -444,7 +444,7 @@ def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001, rep_s
         elif ker == 'combined':
             m = models.CombinedSingleSpeciesModel(element = elements, r_cut = r_cut, sigma_2b = sigma, sigma_3b = sigma*2, 
                 noise = noise, theta_2b = theta, theta_3b = theta,  rep_sig = rep_sig)
-       elif ker == 'mb':
+        elif ker == 'mb':
             m = models.ManyBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
         else:
             print("Kernel Type not understood, available options are 2b, 3b, mb or combined.")

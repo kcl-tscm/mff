@@ -67,7 +67,7 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -81,7 +81,7 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -97,9 +97,9 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
    
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores = 1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -114,9 +114,9 @@ class ThreeBodySingleSpeciesModel(Model):
                 returned only if return_std is True
         """
 
-        return self.gp.predict(confs, return_std)
+        return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, confs, return_std=False):
+    def predict_energy(self, confs, return_std=False, ncores = 1):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
@@ -131,21 +131,7 @@ class ThreeBodySingleSpeciesModel(Model):
                 returned only if return_std is True
         """
 
-        return self.gp.predict_energy(confs, return_std)
-
-    @ray.remote
-    def predict_energy_ray(self, confs):
-        """ Predict the global energies of the central atoms of confs using a GP 
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-        """
-
-        return self.gp.predict_energy(confs)
+        return self.gp.predict_energy(confs, return_std, ncores = ncores)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -203,26 +189,7 @@ class ThreeBodySingleSpeciesModel(Model):
 
         grid_data = np.zeros((num, num, num))
 
-        if ncores > 1:
-            n = len(confs)
-            import sys
-            sys.setrecursionlimit(100000)
-            print('Using %i cores for the mapping' % (ncores))
-            splitind = np.zeros(ncores + 1)
-            factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
-            splitind[-1] = n
-            splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            ray.init()
-            # Using the dummy function that has a single argument
-            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
-            ray.shutdown()            
-            result = np.concatenate(result).flatten()
-            grid_data[inds] = result
-
-        else:
-            grid_data[inds] = self.predict_energy(confs).flatten()
+        grid_data[inds] = self.predict_energy(confs, ncores = ncores).flatten()
 
         for ind_i in range(num):
             for ind_j in range(ind_i + 1):
@@ -414,7 +381,7 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -428,7 +395,7 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -444,7 +411,7 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
 
     def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
@@ -459,7 +426,7 @@ class ThreeBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_update(confs, forces, ncores)
+        self.gp.fit_update(confs, forces, ncores = ncores)
         
     def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
@@ -474,9 +441,9 @@ class ThreeBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
+        self.gp.fit_update_energy(glob_confs, energies, ncores = ncores)
         
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores = 1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -491,9 +458,9 @@ class ThreeBodyManySpeciesModel(Model):
                 returned only if return_std is True
         """
 
-        return self.gp.predict(confs, return_std)
+        return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the local energies of the central atoms of confs using a GP 
 
         Args:
@@ -508,21 +475,7 @@ class ThreeBodyManySpeciesModel(Model):
                 returned only if return_std is True
         """
 
-        return self.gp.predict_energy(glob_confs, return_std)
-
-    @ray.remote
-    def predict_energy_ray(self, glob_confs):
-        """ Predict the local energies of the central atoms of confs using a GP 
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            
-        Returns:
-            energies (array): array of force vectors predicted by the GP
-        """
-
-        return self.gp.predict_energy(glob_confs)
+        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -608,26 +561,7 @@ class ThreeBodyManySpeciesModel(Model):
 
         grid_3b = np.zeros((num, num, num))
 
-        if ncores > 1:
-            n = len(confs)
-            import sys
-            sys.setrecursionlimit(100000)
-            print('Using %i cores for the mapping' % (ncores))
-            splitind = np.zeros(ncores + 1)
-            factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
-            splitind[-1] = n
-            splitind = splitind.astype(int)
-            clist = [confs[splitind[i]:splitind[i + 1]] for i in np.arange(ncores)]
-            ray.init()
-            # Using the dummy function that has a single argument
-            result = np.array(ray.get([self.predict_energy_ray.remote(self, clist[i]) for i in range(ncores)]))
-            ray.shutdown()            
-            result = np.concatenate(result).flatten()
-            grid_3b[inds] = result
-
-        else:
-            grid_3b[inds] = self.gp.predict_energy(confs).flatten()
+        grid_3b[inds] = self.gp.predict_energy(confs, ncores = ncores).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 

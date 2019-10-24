@@ -6,7 +6,6 @@ import numpy as np
 import json
 from mff import models
 from mff.gp import GaussianProcess
-from mff import load_model
 from mff import configurations
 from scipy.spatial.distance import cdist
 from pathlib import Path
@@ -47,7 +46,6 @@ def get_repulsive_forces(confs, sig):
         v = c[:,:3]/d_[:,None]
         f = 12*(sig/d_)**12/d_
         forces[i] = np.sum(f[:, None]*v, axis = 0)
-
     return forces
 
 def get_repulsive_energies(confs, sig, mapping = False):
@@ -441,6 +439,9 @@ def get_training_set(c, f, el, ntr, method, cutoff, nbins = None, traj = None, c
 
 
 def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001, rep_sig = 1):
+    """ Load the correct model based on the specifications of kernel and number of elements
+
+    """
     if len(elements) == 1:
         if ker == '2b':
             m = models.TwoBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta, rep_sig = rep_sig)
@@ -503,14 +504,16 @@ def train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder,
 
 
 def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e = None, Y_e = None, train_mode = "force", ncores=1, rep_sig=1):
+    """ Try to load the specified model if it exists, otherwise train it.
     
+    """
     try:
         if not isinstance(train_folder, Path):
             train_folder = Path(train_folder)
 
         gp_name = get_model_name(elements_1, kernel, training_points)
         full_path = train_folder / "models" / gp_name
-        m = load_model.load(full_path)
+        m = load_model(full_path)
 
     except FileNotFoundError:
         m = train_right_gp(X, Y, elements_1, kernel, sigma, noise, cutoff, train_folder, X_e, Y_e, train_mode = train_mode, ncores = ncores, rep_sig = rep_sig)
@@ -519,6 +522,9 @@ def get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, trainin
     
 
 def get_model_name(elements, kernel, ntr):
+    """ Set the name of the model file
+    
+    """
     if kernel == "2b":
         first_name = "TwoBody"
     elif kernel == "3b":
@@ -534,12 +540,12 @@ def get_model_name(elements, kernel, ntr):
     full_name = "MODEL_ker_" + name + "_ntr" + str(ntr) + ".json"
     return full_name
 
-def test_forces(m, x, y, plot = False):   
+def test_forces(m, x, y, plot = False, ncores = 1):   
     """ Test forces and report significant statystics on the errors incurred by the GP.
     """
 
     print("Testing the force prediction on %i configurations" %(len(x)))
-    y_pred= m.predict(x)   # Predict forces on test configurations
+    y_pred= m.predict(x, ncores = ncores)   # Predict forces on test configurations
     y_err = y_pred - y  # Calculate error
 
     MAEC = np.mean(abs(y_err))     # Mean average error on force components
@@ -559,12 +565,12 @@ def test_forces(m, x, y, plot = False):
     return MAEC, MAEF, SMAEF, MF, RMSEF
 
 
-def test_energies(m, x_e, y_e, plot = False):   
+def test_energies(m, x_e, y_e, plot = False, ncores = 1):   
     """ Test forces and report significant statystics on the errors incurred by the GP.
     """
 
     print("Testing the energy prediction on %i configurations" %(len(x_e)))
-    y_pred= m.predict_energy(x_e)   # Predict forces on test configurations
+    y_pred= m.predict_energy(x_e, ncores = ncores)   # Predict forces on test configurations
     y_pred /= len(x_e[0])
     y_e /= len(x_e[0])
     y_err = y_pred - y_e  # Calculate error
@@ -589,7 +595,6 @@ def save_gp(m, folder, kernel, cutoff, sigma, noise, ntr):
         folder = Path(folder)
     if not os.path.exists(folder / "models"):
         os.makedirs(folder / "models")
-    # filename = "%s_%.2f_%.2f_%.4f_%i.json" %(kernel, cutoff, sigma, noise, ntr)
     m.save(folder / "models")
 
 
@@ -628,7 +633,9 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
             training_points = 100, test_points = 100,
             kernel = '2b', sigma = 0.5, noise = 0.001, sampling = "random", nbins = None,
              ncores = 1, train_mode = "force", test_mode = "force", f_e_ratio = 100, plot = True, cna_cut = None):
-
+    """ Wrapper function that handles everything startng from a .xyz file and details on the kernel.
+        Extracts data, creates model, trains GP model and then tests it.
+    """
     # Get data, and create training and test sets
     elements_1, confs_1, forces_1, energies_1, global_confs_1 = get_data(train_folder, cutoff, traj_filename)
     if test_folder is not None and test_folder != "None":
@@ -645,29 +652,62 @@ def train_and_test_gp(train_folder, traj_filename, cutoff = 5.0, test_folder = N
     m = get_gp(train_folder, X, Y, elements_1, kernel, sigma, noise, cutoff, training_points, X_e, Y_e, train_mode, ncores)
 
     # Test the GP
-    MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, MAE_e, SMAE_e, RMSE_e = test_gp(m, x, y, x_e, y_e, plot, test_mode)
+    MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, MAE_e, SMAE_e, RMSE_e = test_gp(m, x, y, x_e, y_e, plot, test_mode, ncores)
 
     # Save a report of the errors
     save_report(MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, train_folder, kernel, cutoff, sigma, noise, len(X), sampling, MAE_e, SMAE_e, RMSE_e)
     return m
 
 
-def test_gp(m, x = None, y = None, x_e = None, y_e = None, plot = False, test_mode = "forces"):
+def test_gp(m, x = None, y = None, x_e = None, y_e = None, plot = False, test_mode = "forces", ncores = 1):
+    """ Wrapper function that tests a GP on a test set and returns error metrics.
+
+    """
     if test_mode == "force":
-        MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = test_forces(m, x, y, plot)
+        MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = test_forces(m, x, y, plot, ncores)
         MAE_e, SMAE_e, RMSE_e = None, None, None
     elif test_mode == "energy":
         MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = None, None, None, None
-        MAE_e, SMAE_e, RMSE_e = test_energies(m, x_e, y_e, plot)
+        MAE_e, SMAE_e, RMSE_e = test_energies(m, x_e, y_e, plot, ncores)
     elif test_mode == "force_and_energy":
-        MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = test_forces(m, x, y, plot)
-        MAE_e, SMAE_e, RMSE_e = test_energies(m, x_e, y_e, plot)
+        MAE_c, MAE_f, SMAE_f, M_f, RMSE_f = test_forces(m, x, y, plot, ncores)
+        MAE_e, SMAE_e, RMSE_e = test_energies(m, x_e, y_e, plot, ncores)
     else:
         print("Test mode not understood, use either force, energy or force_and_energy")
     return MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, MAE_e, SMAE_e, RMSE_e
 
 
+
+def load_model(filename):
+    """ Load GP module based on train mode, kernel and number of atomic species.
+    """
+    
+    with open(filename) as json_file:  
+        metadata = json.load(json_file)
+        
+    model = metadata['model']
+    if model == "TwoBodySingleSpeciesModel":
+        m = models.TwoBodySingleSpeciesModel.from_json(filename)
+    elif model == "ThreeBodySingleSpeciesModel":
+        m = models.ThreeBodySingleSpeciesModel.from_json(filename)
+    elif model == "CombinedSingleSpeciesModel":
+        m = models.CombinedSingleSpeciesModel.from_json(filename)
+    elif model == "TwoBodyManySpeciesModel":
+        m = models.TwoBodyManySpeciesModel.from_json(filename)
+    elif model == "ThreeBodyManySpeciesModel":
+        m = models.ThreeBodyManySpeciesModel.from_json(filename)
+    elif model == "CombinedManySpeciesModel":
+        m = models.CombinedManySpeciesModel.from_json(filename)
+    else:
+        print("Json file does contain unexpected model name")
+        return 0
+    return m
+
 def density_plot(x, y, mode):
+    """ Plot a scatter plot where a gaussian kde has been superimposed in order to
+    highlight areas where points are more dense.
+
+    """
     from matplotlib import pyplot as plt
     from scipy.stats import gaussian_kde
     # Calculate the point density

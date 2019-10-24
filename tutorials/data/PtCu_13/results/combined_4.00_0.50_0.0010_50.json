@@ -1,0 +1,16 @@
+{
+    "kernel": "combined",
+    "sampling": "random",
+    "ntr": 50,
+    "cutoff": 4.0,
+    "sigma": 0.5,
+    "noise": 0.001,
+    "MAE_c": 0.16954482515500088,
+    "MAE_f": 0.33504915869142543,
+    "SMAE_f": 0.18704199077755115,
+    "M_f": 0.6386532143805632,
+    "RMSE_f": 0.22154205398664273,
+    "MAE_e": null,
+    "SMAE_e": null,
+    "RMSE_e": null
+}

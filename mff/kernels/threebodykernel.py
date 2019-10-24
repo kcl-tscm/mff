@@ -257,13 +257,13 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                     for j, x2 in enumerate(X2):
                         for conf1 in x1:
                             for conf2 in x2:
-                                ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                                ker[i, j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
             else:
                 ker = np.zeros((len(X1), len(X2)))
                 for i, conf1 in enumerate(X1):
                     for j, x2 in enumerate(X2): 
                         for conf2 in x2:
-                            ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                            ker[i, j] += self.k3_ee(conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
                   
         return ker
 

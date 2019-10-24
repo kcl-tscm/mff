@@ -64,7 +64,7 @@ class ManyBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -77,7 +77,7 @@ class ManyBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -95,38 +95,9 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
-        
-    def update_force(self, confs, forces, ncores=1):
-        """ Update a fitted GP with a set of forces and using 
-        many-body single species force-force kernels
-
-        Args:
-            confs (list): List of M x 5 arrays containing coordinates and
-                atomic numbers of atoms within a cutoff from the central one
-            forces (array) : Array containing the vector forces on 
-                the central atoms of the training configurations
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update(confs, forces, ncores)
-        
-    def update_energy(self, glob_confs, energies, ncores=1):
-        """ Update a fitted GP with a set of energies and using 
-        many-body single species energy-energy kernels
-
-        Args:
-            glob_confs (list of lists): List of configurations arranged so that
-                grouped configurations belong to the same snapshot
-            energies (array) : Array containing the total energy of each snapshot
-            ncores (int): number of CPUs to use for the gram matrix evaluation
-
-        """
-
-        self.gp.fit_update_energy(glob_confs, energies, ncores)
-        
-    def predict(self, confs, return_std=False):
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
+      
+    def predict(self, confs, return_std=False, ncores = 1):
         """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
@@ -142,9 +113,9 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std)
+        return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
@@ -160,8 +131,9 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        return self.gp.predict_energy(glob_confs, return_std)
+        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
     
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -306,7 +278,7 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training energies using a two 
@@ -320,7 +292,7 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_energy(glob_confs, energy, ncores)
+        self.gp.fit_energy(glob_confs, energy, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training forces and energies using two 
@@ -338,9 +310,9 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores = ncores)
 
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores =1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -356,9 +328,9 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std)
+        return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
@@ -374,7 +346,7 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        return self.gp.predict_energy(glob_confs, return_std)
+        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
     
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete

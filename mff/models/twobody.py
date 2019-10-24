@@ -72,7 +72,7 @@ class TwoBodySingleSpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -88,9 +88,9 @@ class TwoBodySingleSpeciesModel(Model):
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            energies -= self.rep_forces
+            energies -= self.rep_energies
 
-        self.gp.fit_energy(glob_confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -114,9 +114,9 @@ class TwoBodySingleSpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
         
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores =1):
         """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
@@ -134,12 +134,12 @@ class TwoBodySingleSpeciesModel(Model):
 
         if self.rep_sig:
             rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            return self.gp.predict(confs, return_std) + rep_forces
+            return self.gp.predict(confs, return_std, ncores = ncores) + rep_forces
 
         else:
-            return self.gp.predict(confs, return_std)
+            return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores =1):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
@@ -156,9 +156,9 @@ class TwoBodySingleSpeciesModel(Model):
         """
         if self.rep_sig:
             rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            return self.gp.predict_energy(glob_confs, return_std) + rep_energies
+            return self.gp.predict_energy(glob_confs, return_std, ncores = ncores) + rep_energies
         else:
-            return self.gp.predict_energy(glob_confs, return_std)
+            return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
 
     
     def save_gp(self, filename):
@@ -175,7 +175,7 @@ class TwoBodySingleSpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, num):
+    def build_grid(self, start, num, ncores=1):
         """ Build the mapped 2-body potential. 
         Calculates the energy predicted by the GP for two atoms at distances that range from
         start to r_cut, for a total of num points. These energies are stored and a 1D spline
@@ -201,8 +201,11 @@ class TwoBodySingleSpeciesModel(Model):
         confs = np.zeros((num, 1, 5))
         confs[:, 0, 0] = dists
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
+        confs = list(confs)
 
-        grid_data = self.gp.predict_energy(confs)
+        grid_data = self.gp.predict_energy(confs, ncores = ncores, mapping = True)
+        if self.rep_sig:
+            grid_data += utility.get_repulsive_energies(confs, self.rep_sig, mapping = True)
         self.grid = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
@@ -343,7 +346,7 @@ class TwoBodyManySpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp.fit(confs, forces, ncores)
+        self.gp.fit(confs, forces, ncores = ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -361,7 +364,7 @@ class TwoBodyManySpeciesModel(Model):
             self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
             energies -= self.rep_energies
 
-        self.gp.fit_energy(glob_confs, energies, ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -385,9 +388,9 @@ class TwoBodyManySpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores)
+        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
         
-    def predict(self, confs, return_std=False):
+    def predict(self, confs, return_std=False, ncores = 1):
         """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
@@ -405,12 +408,12 @@ class TwoBodyManySpeciesModel(Model):
 
         if self.rep_sig:
             rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            return self.gp.predict(confs, return_std) + rep_forces
+            return self.gp.predict(confs, return_std, ncores = ncores) + rep_forces
 
         else:
-            return self.gp.predict(confs, return_std)
+            return self.gp.predict(confs, return_std, ncores = ncores)
 
-    def predict_energy(self, glob_confs, return_std=False):
+    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
@@ -427,9 +430,9 @@ class TwoBodyManySpeciesModel(Model):
         """
         if self.rep_sig:
             rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-            return self.gp.predict_energy(glob_confs, return_std) + rep_energies
+            return self.gp.predict_energy(glob_confs, return_std, ncores = ncores) + rep_energies
         else:
-            return self.gp.predict_energy(glob_confs, return_std)
+            return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -445,7 +448,7 @@ class TwoBodyManySpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, num):
+    def build_grid(self, start, num, ncores=1):
         """ Build the mapped 2-body potential. 
         Calculates the energy predicted by the GP for two atoms at distances that range from
         start to r_cut, for a total of num points. These energies are stored and a 1D spline
@@ -487,7 +490,10 @@ class TwoBodyManySpeciesModel(Model):
             ind1 = pair[0]
             ind2 = pair[1]
             confs[:, 0, 3], confs[:, 0, 4] = self.elements[ind1], self.elements[ind2]
-            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, self.gp.predict_energy(confs))
+            grid_data = self.gp.predict_energy(list(confs), ncores = ncores, mapping = True)
+            if self.rep_sig:
+                grid_data += utility.get_repulsive_energies(confs, self.rep_sig, mapping = True)
+            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
         """ Save the model.

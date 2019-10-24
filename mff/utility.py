@@ -49,13 +49,17 @@ def get_repulsive_forces(confs, sig):
 
     return forces
 
-def get_repulsive_energies(confs, sig):
+def get_repulsive_energies(confs, sig, mapping = False):
     energies = np.zeros(len(confs))
-    for i, c in enumerate(confs):
-        for c1 in c:
+    if not mapping:
+        for i, c in enumerate(confs):
+            for c1 in c:
+                d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
+                energies[i] += np.sum((sig/d_)**12)
+    else:
+        for i, c1 in enumerate(confs):
             d_ = np.sum(c1[:,:3]**2, axis = 1)**0.5
             energies[i] += np.sum((sig/d_)**12)
-
     return energies
 
 def open_data(folder, cutoff):
@@ -444,7 +448,7 @@ def get_model(elements, r_cut, ker, sigma = 0.5, theta = 0.5, noise=0.001, rep_s
         elif ker == 'combined':
             m = models.CombinedSingleSpeciesModel(element = elements, r_cut = r_cut, sigma_2b = sigma, sigma_3b = sigma*2, 
                 noise = noise, theta_2b = theta, theta_3b = theta,  rep_sig = rep_sig)
-       elif ker == 'mb':
+        elif ker == 'mb':
             m = models.ManyBodySingleSpeciesModel(element = elements, r_cut = r_cut, sigma = sigma, noise = noise, theta = theta)
         else:
             print("Kernel Type not understood, available options are 2b, 3b, mb or combined.")

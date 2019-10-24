@@ -330,38 +330,7 @@ class GaussianProcess(object):
 
         return self
 
-    def predict(self, X, return_std=False):
-        """Predict forces using the Gaussian process regression model
-
-        We can also predict based on an unfitted model by using the GP prior.
-        In addition to the mean of the predictive distribution, also its
-        standard deviation (return_std=True)
-
-        Args:
-            X (list): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
-
-        Returns:
-            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
-                
-        """
-        
-        y_mean = np.zeros((len(X), 3))
-        if return_std:
-            y_std = np.zeros((len(X), 3))
-            for i in np.arange(len(X)):
-                y_mean[i], y_std[i] = self.predict_single(X[i], return_std)
-            return y_mean, y_std
-        else:
-            for i in np.arange(len(X)):
-                y_mean[i] = self.predict_single(X[i], return_std)
-            return y_mean
-        
-    def predict_single(self, X, return_std=False):
+    def predict(self, X, return_std=False, ncores =1):
         """Predict forces using the Gaussian process regression model
 
         We can also predict based on an unfitted model by using the GP prior.
@@ -380,7 +349,6 @@ class GaussianProcess(object):
                 configurations. Only returned when return_std is True.
                 
         """
-        X = np.reshape(X, (1, len(X), 5))
         
         if not hasattr(self, "X_glob_train_") and not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
@@ -394,18 +362,18 @@ class GaussianProcess(object):
 
         else:  # Predict based on GP posterior
             if self.fitted == ['force', None]:  # Predict using force data
-                K_trans = self.kernel_.calc(X, self.X_train_)
-                y_mean = K_trans.dot(self.alpha_)
+                K_trans = self.kernel_.calc(X, self.X_train_, ncores)
+                y_mean = K_trans.dot(self.alpha_[:,0])
 
             elif self.fitted == [None, 'energy']:  # Predict using energy data
-                K_force_energy = self.kernel_.calc_ef(self.X_glob_train_, X).T
-                y_mean = K_force_energy.dot(self.energy_alpha_)
+                K_force_energy = self.kernel_.calc_ef(self.X_glob_train_, X, ncores).T
+                y_mean = K_force_energy.dot(self.energy_alpha_[:,0])
 
             else:  # Predict using both force and energy data
-                K_trans = self.kernel_.calc(X, self.X_train_)
-                K_force_energy = self.kernel_.calc_ef(self.X_glob_train_, X).T
+                K_trans = self.kernel_.calc(X, self.X_train_, ncores)
+                K_force_energy = self.kernel_.calc_ef(self.X_glob_train_, X, ncores).T
                 K = np.hstack((K_force_energy, K_trans))
-                y_mean = K.dot(self.alpha_)
+                y_mean = K.dot(self.alpha_[:,0])
 
             if return_std: ## TODO CHECK FOR ENERGY, FORCE and FORCE +ENERGY FIT
                 # compute inverse K_inv of K based on its Cholesky
@@ -430,39 +398,8 @@ class GaussianProcess(object):
             else:
                 return np.reshape(y_mean, (int(y_mean.shape[0] / 3), 3))
 
-            
-    def predict_energy(self, X, return_std=False):
-        """Predict energies using the Gaussian process regression model
-
-        We can also predict based on an unfitted model by using the GP prior.
-        In addition to the mean of the predictive distribution, also its
-        standard deviation (return_std=True)
-
-        Args:
-            X (list): Target configurations where the GP is evaluated
-            return_std (bool): If True, the standard-deviation of the
-                predictive distribution of the target configurations is
-                returned along with the mean.
-
-        Returns:
-            y_mean (np.ndarray): Mean of predictive distribution at target configurations.
-            y_std (np.ndarray): Standard deviation of predictive distribution at target
-                configurations. Only returned when return_std is True.
-                
-        """
         
-        y_mean = np.zeros(len(X))
-        if return_std:
-            y_std = np.zeros(len(X))
-            for i in np.arange(len(X)):
-                y_mean[i], y_std[i] = self.predict_energy_single(X[i], return_std)
-            return y_mean, y_std
-        else:
-            for i in np.arange(len(X)):
-                y_mean[i] = self.predict_energy_single(X[i], return_std)
-            return y_mean
-        
-    def predict_energy_single(self, X, return_std=False):
+    def predict_energy(self, X, return_std=False, ncores = 1, mapping = False):
         """Predict energies from forces only using the Gaussian process regression model
 
         This function evaluates the GP energies for a set of test configurations.
@@ -479,14 +416,10 @@ class GaussianProcess(object):
                 configurations. Only returned when return_std is True.
                 
         """
-        try:
-            X = np.reshape(X, (1, len(X), 5))
-        except ValueError:
-            pass
 
         if not hasattr(self, "X_glob_train_") and not hasattr(self, "X_train_"):  # Unfitted; predict based on GP prior
             kernel = self.kernel
-            e_mean = np.zeros(X.shape[0])
+            e_mean = np.zeros(len(X))
             logger.warning("No training data, predicting based on prior")
             if return_std:
                 y_var = kernel.calc_diag_e(X)
@@ -497,18 +430,18 @@ class GaussianProcess(object):
         else:  # Predict based on GP posterior
 
             if self.fitted == ['force', None]:  # Predict using force data
-                K_trans = self.kernel_.calc_ef_reverse(X, self.X_train_)
-                e_mean = K_trans.dot(self.alpha_)  # Line 4 (y_mean = f_star)
+                K_trans = self.kernel_.calc_ef(X, self.X_train_, ncores, mapping)
+                e_mean = K_trans.dot(self.alpha_[:,0])  # Line 4 (y_mean = f_star)
 
             elif self.fitted == [None, 'energy']:  # Predict using energy data
-                K_energy = self.kernel_.calc_ee_single(X, self.X_glob_train_)
-                e_mean = K_energy.dot(self.energy_alpha_)
+                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores, mapping)
+                e_mean = K_energy.dot(self.energy_alpha_[:,0])
 
             else:  # Predict using both force and energy data
-                K_energy = self.kernel_.calc_ee_single(X, self.X_glob_train_)
-                K_energy_force = self.kernel_.calc_ef_reverse(X, self.X_train_)
+                K_energy = self.kernel_.calc_ee(X, self.X_glob_train_, ncores, mapping)
+                K_energy_force = self.kernel_.calc_ef(X, self.X_train_, ncores, mapping)
                 K = np.hstack((K_energy, K_energy_force))
-                e_mean = K.dot(self.alpha_)
+                e_mean = K.dot(self.alpha_[:,0])
 
             if return_std: ## TODO CHECK FOR ENERGY, FORCE and FORCE +ENERGY FIT
                 # compute inverse K_inv of K based on its Cholesky
@@ -539,6 +472,7 @@ class GaussianProcess(object):
                                    "Setting those variances to 0.")
                     e_var[e_var_negative] = 0.0
                 return e_mean, np.sqrt(e_var)
+
             else:
                 return e_mean
             

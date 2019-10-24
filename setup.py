@@ -16,7 +16,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='0.9.0',
+    version='0.9.5',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
     description='This is a demo package',
     long_description=long_description,
@@ -29,8 +29,6 @@ setup(
     'asap3', 
     'ase', 
     'theano >= 1.0.4', 
-    'scipy', 
-    'ray', 
-    'psutil'
+    'scipy'
     ]
 )

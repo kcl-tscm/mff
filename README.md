@@ -1,5 +1,6 @@
 # Machine learning nonparametric force fields (MFF)
-
+[![Build Status](https://travis-ci.com/kcl-tscm/mff.svg?branch=master)](https://travis-ci.com/kcl-tscm/mff)
+[![Doc](https://img.shields.io/badge/docs-master-blue.svg)](https://kcl-tscm.github.io/mff/)
 [![DOI](https://zenodo.org/badge/123019663.svg)](https://zenodo.org/badge/latestdoi/123019663)
 
 To read the full documentation check https://mff.readthedocs.io/en/latest/

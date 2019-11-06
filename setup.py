@@ -16,19 +16,26 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='1,0',
+    version='0.2.0',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
-    description='This is a demo package',
+    author_email='claudio.zeni@kcl.ac.uk',
+    description='Gaussian process regression to extract non-parametric 2- and 3- body force fields.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/kcl-tscm/mff",
     packages=find_packages(),
     ext_modules=[tricube_cpp_module, tricube_fortran_module],
     install_requires=[
-    'numpy', 
-    'asap3', 
-    'ase', 
-    'theano >= 1.0.4', 
-    'scipy'
-    ]
+        'numpy',
+        'asap3',
+        'ase',
+        'theano >= 1.0.4',
+        'scipy'
+    ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: Apache Software License',
+        'Topic :: Scientific/Engineering :: Physics'
+    ],
 )

@@ -12,7 +12,8 @@ from mff.models.base import Model
 import ray
 from itertools import combinations_with_replacement
 import sys
-sys.setrecursionlimit(100000)       
+sys.setrecursionlimit(100000)
+
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -50,7 +51,8 @@ class ThreeBodySingleSpeciesModel(Model):
         self.element = element
         self.r_cut = r_cut
 
-        kernel = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ThreeBodySingleSpeciesKernel(
+            theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = None, None, None
@@ -67,7 +69,7 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores = ncores)
+        self.gp.fit(confs, forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -81,7 +83,7 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -97,9 +99,10 @@ class ThreeBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
-   
-    def predict(self, confs, return_std=False, ncores = 1):
+        self.gp.fit_force_and_energy(
+            confs, forces, glob_confs, energies, ncores=ncores)
+
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -107,16 +110,16 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
         """
 
-        return self.gp.predict(confs, return_std, ncores = ncores)
+        return self.gp.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, confs, return_std=False, ncores = 1):
+    def predict_energy(self, confs, return_std=False, ncores=1):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
@@ -124,15 +127,15 @@ class ThreeBodySingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array): array of force vectors predicted by the GP
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
         """
 
-        return self.gp.predict_energy(confs, return_std, ncores = ncores)
-    
+        return self.gp.predict_energy(confs, return_std, ncores=ncores)
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -161,7 +164,7 @@ class ThreeBodySingleSpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 3-body mapped potential
@@ -183,22 +186,30 @@ class ThreeBodySingleSpeciesModel(Model):
 
         # Permutations of elements
         confs[:, :, 3] = self.element  # Central element is always element 1
-        confs[:, 0, 4] = self.element  # Element on the x axis is always element 2
-        confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
+        # Element on the x axis is always element 2
+        confs[:, 0, 4] = self.element
+        # Element on the xy plane is always element 3
+        confs[:, 1, 4] = self.element
         confs = np.nan_to_num(confs)  # Avoid nans to ruin everything
         confs = list(confs)
         grid_data = np.zeros((num, num, num))
 
-        grid_data[inds] = self.gp.predict_energy(confs, ncores = ncores, mapping = True).flatten()
+        grid_data[inds] = self.gp.predict_energy(
+            confs, ncores=ncores, mapping=True).flatten()
 
         for ind_i in range(num):
             for ind_j in range(ind_i + 1):
                 for ind_k in range(ind_j + 1):
-                    grid_data[ind_i, ind_k, ind_j] = grid_data[ind_i, ind_j, ind_k]
-                    grid_data[ind_j, ind_i, ind_k] = grid_data[ind_i, ind_j, ind_k]
-                    grid_data[ind_j, ind_k, ind_i] = grid_data[ind_i, ind_j, ind_k]
-                    grid_data[ind_k, ind_i, ind_j] = grid_data[ind_i, ind_j, ind_k]
-                    grid_data[ind_k, ind_j, ind_i] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_i, ind_k,
+                              ind_j] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_j, ind_i,
+                              ind_k] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_j, ind_k,
+                              ind_i] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_k, ind_i,
+                              ind_j] = grid_data[ind_i, ind_j, ind_k]
+                    grid_data[ind_k, ind_j,
+                              ind_i] = grid_data[ind_i, ind_j, ind_k]
 
         self.grid = interpolation.Spline3D(dists, dists, dists, grid_data)
 
@@ -217,7 +228,7 @@ class ThreeBodySingleSpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -231,10 +242,12 @@ class ThreeBodySingleSpeciesModel(Model):
 
         """
 
-        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+        d_ij, d_jk, d_ki = np.meshgrid(
+            dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
-        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(
+            d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Utilizing permutation invariance
         inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
@@ -243,7 +256,8 @@ class ThreeBodySingleSpeciesModel(Model):
         r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 +
+                  d_ki[inds] ** 2) / (2 * d_ij[inds])
 
         # using abs to avoid numerical error near to 0
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
@@ -255,7 +269,7 @@ class ThreeBodySingleSpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potential, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
         """
@@ -277,18 +291,20 @@ class ThreeBodySingleSpeciesModel(Model):
             },
             'grid': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num, 
-                'filename':None
+                'r_num': self.grid_num,
+                'filename': None
             } if self.grid else {}
         }
 
-        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(
+            p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
         if self.grid:
-            grid_filename = 'GRID_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz'.format(p=params)
+            grid_filename = 'GRID_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz'.format(
+                p=params)
 
             params['grid']['filename'] = grid_filename
             self.grid.save(path / grid_filename)
@@ -300,10 +316,10 @@ class ThreeBodySingleSpeciesModel(Model):
     def from_json(cls, path):
         """ Load the model.
         Loads the model, the associated GP and the mapped potential, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
 
@@ -335,7 +351,7 @@ class ThreeBodySingleSpeciesModel(Model):
 
             model.grid_start = params['grid']['r_min']
             model.grid_num = params['grid']['r_num']
-            
+
         return model
 
 
@@ -364,7 +380,8 @@ class ThreeBodyManySpeciesModel(Model):
         self.elements = elements
         self.r_cut = r_cut
 
-        kernel = kernels.ThreeBodyManySpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ThreeBodyManySpeciesKernel(
+            theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = {}, None, None
@@ -381,7 +398,7 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores = ncores)
+        self.gp.fit(confs, forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -395,7 +412,7 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -411,7 +428,8 @@ class ThreeBodyManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
+        self.gp.fit_force_and_energy(
+            confs, forces, glob_confs, energies, ncores=ncores)
 
     def update_force(self, confs, forces, ncores=1):
         """ Update a fitted GP with a set of forces and using 
@@ -426,8 +444,8 @@ class ThreeBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_update(confs, forces, ncores = ncores)
-        
+        self.gp.fit_update(confs, forces, ncores=ncores)
+
     def update_energy(self, glob_confs, energies, ncores=1):
         """ Update a fitted GP with a set of energies and using 
         3-body two species energy-energy kernels
@@ -441,9 +459,9 @@ class ThreeBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_update_energy(glob_confs, energies, ncores = ncores)
-        
-    def predict(self, confs, return_std=False, ncores = 1):
+        self.gp.fit_update_energy(glob_confs, energies, ncores=ncores)
+
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -451,16 +469,16 @@ class ThreeBodyManySpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
                 returned only if return_std is True
         """
 
-        return self.gp.predict(confs, return_std, ncores = ncores)
+        return self.gp.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
+    def predict_energy(self, glob_confs, return_std=False, ncores=1):
         """ Predict the local energies of the central atoms of confs using a GP 
 
         Args:
@@ -468,14 +486,14 @@ class ThreeBodyManySpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array): array of force vectors predicted by the GP
             energies_errors (array): errors associated to the energies predictions,
                 returned only if return_std is True
         """
 
-        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
+        return self.gp.predict_energy(glob_confs, return_std, ncores=ncores)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -493,7 +511,7 @@ class ThreeBodyManySpeciesModel(Model):
         """Function used to create the four different 3-body energy grids for 
         atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
         ``build_grid_3b`` function for each of those combinations of elements.
-        
+
         Args:
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 3-body mapped potential
@@ -514,8 +532,8 @@ class ThreeBodyManySpeciesModel(Model):
             ind2 = trip[1]
             ind3 = trip[2]
 
-            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
-
+            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(
+                dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
 
     def build_grid_3b(self, dists, element_i, element_j, element_k, ncores):
         """ Build a mapped 3-body potential. 
@@ -531,7 +549,7 @@ class ThreeBodyManySpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -539,7 +557,7 @@ class ThreeBodyManySpeciesModel(Model):
             element_j (int): atomic number of the second atom j in a triplet
             element_k (int): atomic number of the third atom k in a triplet
             ncores (int): number of CPUs to use when computing the triplet local energies
-            
+
         Returns:
             spline3D (obj): a 3D spline object that can be used to predict the energy and the force associated
                 to the central atom of a triplet.
@@ -556,13 +574,15 @@ class ThreeBodyManySpeciesModel(Model):
 
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
-        confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
+        # Element on the xy plane is always element 3
+        confs[:, 1, 4] = element_k
         confs = np.nan_to_num(confs)  # Avoid nans to ruin everything
         confs = list(confs)
 
         grid_3b = np.zeros((num, num, num))
 
-        grid_3b[inds] = self.gp.predict_energy(confs, ncores = ncores, mapping = True).flatten()
+        grid_3b[inds] = self.gp.predict_energy(
+            confs, ncores=ncores, mapping=True).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
@@ -581,7 +601,7 @@ class ThreeBodyManySpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -594,10 +614,12 @@ class ThreeBodyManySpeciesModel(Model):
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
 
-        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+        d_ij, d_jk, d_ki = np.meshgrid(
+            dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
-        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(
+            d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Utilizing permutation invariance
         inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
@@ -606,7 +628,8 @@ class ThreeBodyManySpeciesModel(Model):
         r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 +
+                  d_ki[inds] ** 2) / (2 * d_ij[inds])
 
         # using abs to avoid numerical error near to 0
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
@@ -627,7 +650,7 @@ class ThreeBodyManySpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -640,16 +663,19 @@ class ThreeBodyManySpeciesModel(Model):
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
 
-        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+        d_ij, d_jk, d_ki = np.meshgrid(
+            dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
-        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(
+            d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Element on the x axis
         r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 +
+                  d_ki[inds] ** 2) / (2 * d_ij[inds])
 
         # using abs to avoid numerical error near to 0
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
@@ -661,7 +687,7 @@ class ThreeBodyManySpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
         """
@@ -684,34 +710,37 @@ class ThreeBodyManySpeciesModel(Model):
             'grid': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num,
-                'filename' : None
+                'filename': None
             } if self.grid else {}
         }
 
-        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(
+            p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
         for k, grid in self.grid.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(key, p=params)
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(
+                key, p=params)
             params['grid']['filename'][key] = grid_filename
             grid.save(path / grid_filename)
 
         with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
-        print('Saved model with name:', str(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params)))
+        print('Saved model with name:', str(
+            path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params)))
 
     @classmethod
     def from_json(cls, path):
         """ Load the model.
         Loads the model, the associated GP and the mapped potential, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
         """
@@ -740,12 +769,14 @@ class ThreeBodyManySpeciesModel(Model):
 
             for key, grid_filename in params['grid']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))
-                model.grid[k] = interpolation.Spline3D.load(directory / grid_filename)
+                model.grid[k] = interpolation.Spline3D.load(
+                    directory / grid_filename)
 
             model.grid_start = params['grid']['r_min']
             model.grid_num = params['grid']['r_num']
 
         return model
+
 
 if __name__ == '__main__':
     def test_three_body_single_species_model():
@@ -771,12 +802,13 @@ if __name__ == '__main__':
 
         m.save(filename)
 
-
     def test_three_body_two_species_model():
         elements = [2, 4]
         confs = np.array([
-            np.hstack([np.random.randn(4, 3), np.random.choice(elements, size=(4, 2))]),
-            np.hstack([np.random.randn(5, 3), np.random.choice(elements, size=(5, 2))])
+            np.hstack([np.random.randn(4, 3),
+                       np.random.choice(elements, size=(4, 2))]),
+            np.hstack([np.random.randn(5, 3),
+                       np.random.choice(elements, size=(5, 2))])
         ])
 
         forces = np.random.randn(2, 3)
@@ -794,7 +826,6 @@ if __name__ == '__main__':
         print(m)
 
         m.save(filename)
-
 
     test_three_body_single_species_model()
     # test_three_body_two_species_model()

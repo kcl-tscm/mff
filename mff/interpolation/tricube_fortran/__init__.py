@@ -15,9 +15,12 @@ class Spline3D(object):
         self._ylim = np.array([y.min(), y.max()])
         self._zlim = np.array([z.min(), z.max()])
 
-        self._x = np.pad(x, pad_width=1, mode='constant', constant_values=(2 * x[0] - x[1], 2 * x[-1] - x[-2]))
-        self._y = np.pad(y, pad_width=1, mode='constant', constant_values=(2 * y[0] - y[1], 2 * y[-1] - y[-2]))
-        self._z = np.pad(z, pad_width=1, mode='constant', constant_values=(2 * z[0] - z[1], 2 * z[-1] - z[-2]))
+        self._x = np.pad(x, pad_width=1, mode='constant',
+                         constant_values=(2 * x[0] - x[1], 2 * x[-1] - x[-2]))
+        self._y = np.pad(y, pad_width=1, mode='constant',
+                         constant_values=(2 * y[0] - y[1], 2 * y[-1] - y[-2]))
+        self._z = np.pad(z, pad_width=1, mode='constant',
+                         constant_values=(2 * z[0] - z[1], 2 * z[-1] - z[-2]))
 
         # boundary = 'clamped'
         self._f = np.pad(f, pad_width=1, mode='edge')
@@ -60,7 +63,8 @@ class Spline3D(object):
 
     def ev_energy_fast(self, x, y, z):
 
-        val = _tricube.reg_ev_energy(z, y, x, self._f, self._z, self._y, self._x)
+        val = _tricube.reg_ev_energy(
+            z, y, x, self._f, self._z, self._y, self._x)
 
         return val[:, np.newaxis]
 
@@ -76,7 +80,8 @@ class Spline3D(object):
 
     def ev_forces_fast(self, x, y, z):
 
-        val_dx2, val_dx1, val_dx0 = _tricube.reg_ev_forces(z, y, x, self._f, self._z, self._y, self._x)
+        val_dx2, val_dx1, val_dx0 = _tricube.reg_ev_forces(
+            z, y, x, self._f, self._z, self._y, self._x)
 
         return val_dx0[:, np.newaxis], val_dx1[:, np.newaxis], val_dx2[:, np.newaxis]
 
@@ -92,7 +97,8 @@ class Spline3D(object):
 
     def ev_all_fast(self, x, y, z):
 
-        val, val_dx2, val_dx1, val_dx0 = _tricube.reg_ev_all(z, y, x, self._f, self._z, self._y, self._x)
+        val, val_dx2, val_dx1, val_dx0 = _tricube.reg_ev_all(
+            z, y, x, self._f, self._z, self._y, self._x)
 
         return val[:, np.newaxis], val_dx0[:, np.newaxis], val_dx1[:, np.newaxis], val_dx2[:, np.newaxis]
 

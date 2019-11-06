@@ -23,7 +23,7 @@ def dummy_calc_ff(data):
     result = np.zeros((len(array), 3, 3))
     for i in np.arange(len(array)):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0],
-                        array[i][1],  theta0, theta1, theta2, theta3, theta3)
+                        array[i][1],  theta0, theta1, theta2, theta3)
     return result
 
 
@@ -42,12 +42,12 @@ def dummy_calc_ee(data):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
                     result[i] += fun(np.zeros(3), np.zeros(3), conf1,
-                                     conf2, theta0, theta1, theta2, theta3, theta3)
+                                     conf2, theta0, theta1, theta2, theta3)
     else:
         for i in np.arange(len(array)):
             for conf2 in array[i][1]:
                 result[i] += fun(np.zeros(3), np.zeros(3), array[i]
-                                 [0], conf2, theta0, theta1, theta2, theta3, theta3)
+                                 [0], conf2, theta0, theta1, theta2, theta3)
 
     return result
 
@@ -67,13 +67,13 @@ def dummy_calc_ef(data):
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
                 result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
-                                  conf2,  theta0, theta1, theta2, theta3, theta3)
+                                  conf2,  theta0, theta1, theta2, theta3)
     else:
         for i in np.arange(len(array)):
             conf2 = np.array(array[i][1], dtype='float')
             conf1 = np.array(array[i][0], dtype='float')
             result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
-                              conf2, theta0, theta1, theta2, theta3, theta3)
+                              conf2, theta0, theta1, theta2, theta3)
     return result
 
 
@@ -134,7 +134,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                       self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp

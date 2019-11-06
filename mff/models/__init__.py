@@ -3,6 +3,7 @@ from .threebody import ThreeBodySingleSpeciesModel, ThreeBodyManySpeciesModel
 from .manybody import ManyBodySingleSpeciesModel, ManyBodyManySpeciesModel
 from .combined import CombinedSingleSpeciesModel, CombinedManySpeciesModel
 from .eam import EamSingleSpeciesModel
+from .twothreeeam import TwoThreeEamSingleSpeciesModel
 
 
 __all__ = [TwoBodySingleSpeciesModel,
@@ -13,4 +14,5 @@ __all__ = [TwoBodySingleSpeciesModel,
            ManyBodyManySpeciesModel,
            CombinedSingleSpeciesModel,
            CombinedManySpeciesModel,
-           EamSingleSpeciesModel]
+           EamSingleSpeciesModel,
+           TwoThreeEamSingleSpeciesModel]

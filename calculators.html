@@ -241,6 +241,347 @@ To do so, simply run the following line of code on the <code class="docutils lit
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
 </pre></div>
 </div>
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">grids_3b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">grid_3b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">ManySpeciesMappedPotential</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+<dl class="simple">
+<dt>properties: list of str</dt><dd><p>List of what needs to be calculated.  Can be any combination
+of ‘energy’, ‘forces’, ‘stress’, ‘dipole’, ‘charges’, ‘magmom’
+and ‘magmoms’.</p>
+</dd>
+<dt>system_changes: list of str</dt><dd><p>List of what has changed since last calculation.  Can be
+any combination of these six: ‘positions’, ‘numbers’, ‘cell’,
+‘pbc’, ‘initial_charges’ and ‘initial_magmoms’.</p>
+</dd>
+</dl>
+<p>Subclasses need to implement this, but can ignore properties
+and system_changes if they want.  Calculated properties should
+be inserted into results dictionary like shown in this dummy
+example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;energy&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s1">&#39;forces&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="mi">3</span><span class="p">)),</span>
+                <span class="s1">&#39;stress&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span>
+                <span class="s1">&#39;dipole&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                <span class="s1">&#39;charges&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)),</span>
+                <span class="s1">&#39;magmom&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s1">&#39;magmoms&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">))}</span>
+</pre></div>
+</div>
+<p>The subclass implementation should first call this
+implementation to set the atoms attribute.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">set</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Set parameters like set(key1=value1, key2=value2, …).</p>
+<p>A dictionary containing the parameters that have been changed
+is returned.</p>
+<p>Subclasses must implement a set() method that will look at the
+chaneged parameters and decide if a call to reset() is needed.
+If the changed parameters are harmless, like a change in
+verbosity, then there is no need to call reset().</p>
+<p>The special keyword ‘parameters’ can be used to read
+parameters from a file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">MappedPotential</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+<dl class="simple">
+<dt>properties: list of str</dt><dd><p>List of what needs to be calculated.  Can be any combination
+of ‘energy’, ‘forces’, ‘stress’, ‘dipole’, ‘charges’, ‘magmom’
+and ‘magmoms’.</p>
+</dd>
+<dt>system_changes: list of str</dt><dd><p>List of what has changed since last calculation.  Can be
+any combination of these six: ‘positions’, ‘numbers’, ‘cell’,
+‘pbc’, ‘initial_charges’ and ‘initial_magmoms’.</p>
+</dd>
+</dl>
+<p>Subclasses need to implement this, but can ignore properties
+and system_changes if they want.  Calculated properties should
+be inserted into results dictionary like shown in this dummy
+example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;energy&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s1">&#39;forces&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="mi">3</span><span class="p">)),</span>
+                <span class="s1">&#39;stress&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span>
+                <span class="s1">&#39;dipole&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                <span class="s1">&#39;charges&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)),</span>
+                <span class="s1">&#39;magmom&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s1">&#39;magmoms&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">))}</span>
+</pre></div>
+</div>
+<p>The subclass implementation should first call this
+implementation to set the atoms attribute.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">set</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Set parameters like set(key1=value1, key2=value2, …).</p>
+<p>A dictionary containing the parameters that have been changed
+is returned.</p>
+<p>Subclasses must implement a set() method that will look at the
+chaneged parameters and decide if a call to reset() is needed.
+If the changed parameters are harmless, like a change in
+verbosity, then there is no need to call reset().</p>
+<p>The special keyword ‘parameters’ can be used to read
+parameters from a file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">ThreeBodyManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_3b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped 3-body 2-species calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.ThreeBodyManySpecies.elements">
+<code class="sig-name descname">elements</code><a class="headerlink" href="#mff.calculators.ThreeBodyManySpecies.elements" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of ordered atomic numbers of the mapped two species system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.ThreeBodyManySpecies.grids_3b">
+<code class="sig-name descname">grids_3b</code><a class="headerlink" href="#mff.calculators.ThreeBodyManySpecies.grids_3b" title="Permalink to this definition">¶</a></dt>
+<dd><p>contains the four 3D Spline interpolators relative to the 3-body
+mapped grids for element0-element0-element0, element0-element0-element1,
+element0-element1-element1 and element1-element1-element1 interactions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.ThreeBodyManySpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.ThreeBodyManySpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">find_triplets</code><span class="sig-paren">(</span><em class="sig-param">atoms</em><span class="sig-paren">)</span></dt>
+<dd><p>Function that efficiently finds all of the valid triplets of atoms in the atoms object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>array containing the indices of atoms belonging to any valid triplet.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+<dt>distances (array): array containing the relative distances of every triplet of atoms.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+<dt>positions (dictionary): versor of position w.r.t. the central atom of every atom indexed in indices.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>indices (array)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">ThreeBodySingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_3b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped 3-body calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.ThreeBodySingleSpecies.grid_3b">
+<code class="sig-name descname">grid_3b</code><a class="headerlink" href="#mff.calculators.ThreeBodySingleSpecies.grid_3b" title="Permalink to this definition">¶</a></dt>
+<dd><p>3D Spline interpolator for the 3-body mapped grid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.ThreeBodySingleSpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.ThreeBodySingleSpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">find_triplets</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Function that efficiently finds all of the valid triplets of atoms in the atoms object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>array containing the indices of atoms belonging to any valid triplet.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+<dt>distances (array): array containing the relative distances of every triplet of atoms.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+<dt>positions (dictionary): versor of position w.r.t. the central atom of every atom indexed in indices.</dt><dd><p>Has shape T by 3 where T is the number of valid triplets in the atoms object</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>indices (array)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodyManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped 2-body 2-species calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodyManySpecies.elements">
+<code class="sig-name descname">elements</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.elements" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of ordered atomic numbers of the mapped two species system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodyManySpecies.grids_2b">
+<code class="sig-name descname">grids_2b</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.grids_2b" title="Permalink to this definition">¶</a></dt>
+<dd><p>contains the three 1D Spline interpolators relative to the 2-body
+mapped grids for element0-element0, element0-element1 and element1-element1 interactions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodyManySpecies.rep_alpha">
+<code class="sig-name descname">rep_alpha</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.rep_alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repulsion parameter, used when no data for very
+close atoms are available in order to avoid collisions during MD.
+The parameter governs a repulsion force added to the computed one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodyManySpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodySingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped 2-body calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodySingleSpecies.grid_2b">
+<code class="sig-name descname">grid_2b</code><a class="headerlink" href="#mff.calculators.TwoBodySingleSpecies.grid_2b" title="Permalink to this definition">¶</a></dt>
+<dd><p>1D Spline interpolator for the 2-body mapped grid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodySingleSpecies.rep_alpha">
+<code class="sig-name descname">rep_alpha</code><a class="headerlink" href="#mff.calculators.TwoBodySingleSpecies.rep_alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repulsion parameter, used when no data for very
+close atoms are available in order to avoid collisions during MD.
+The parameter governs a repulsion force added to the computed one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.TwoBodySingleSpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.TwoBodySingleSpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 </div>
 

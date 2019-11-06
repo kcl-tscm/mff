@@ -205,6 +205,311 @@ predict energies and forces</p>
 <span class="n">gp</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
 </pre></div>
 </div>
+<span class="target" id="module-mff.gp"></span><dl class="class">
+<dt id="mff.gp.GaussianProcess">
+<em class="property">class </em><code class="sig-prename descclassname">mff.gp.</code><code class="sig-name descname">GaussianProcess</code><span class="sig-paren">(</span><em class="sig-param">kernel=None</em>, <em class="sig-param">noise=1e-10</em>, <em class="sig-param">optimizer=None</em>, <em class="sig-param">n_restarts_optimizer=0</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gaussian process class
+Class of GP regression of QM energies and forces</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kernel</strong> (<em>obj</em>) – A kernel object (typically a two or three body)</p></li>
+<li><p><strong>noise</strong> (<em>float</em>) – The regularising noise level (typically named sigma_n^2)</p></li>
+<li><p><strong>optimizer</strong> (<em>str</em>) – The kind of optimization of marginal likelihood (not implemented yet)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="mff.gp.GaussianProcess.X_train_">
+<code class="sig-name descname">X_train_</code><a class="headerlink" href="#mff.gp.GaussianProcess.X_train_" title="Permalink to this definition">¶</a></dt>
+<dd><p>The configurations used for training</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.gp.GaussianProcess.alpha_">
+<code class="sig-name descname">alpha_</code><a class="headerlink" href="#mff.gp.GaussianProcess.alpha_" title="Permalink to this definition">¶</a></dt>
+<dd><p>The coefficients obtained during training</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.gp.GaussianProcess.L_">
+<code class="sig-name descname">L_</code><a class="headerlink" href="#mff.gp.GaussianProcess.L_" title="Permalink to this definition">¶</a></dt>
+<dd><p>The lower triangular matrix from cholesky decomposition of gram matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.gp.GaussianProcess.K">
+<code class="sig-name descname">K</code><a class="headerlink" href="#mff.gp.GaussianProcess.K" title="Permalink to this definition">¶</a></dt>
+<dd><p>The kernel gram matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.calc_gram_ee">
+<code class="sig-name descname">calc_gram_ee</code><span class="sig-paren">(</span><em class="sig-param">X</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.calc_gram_ee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the force-force kernel gram matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>list</em>) – list of N training configurations, which are M x 5 matrices</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The energy energy gram matrix, has dimensions N x N</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.calc_gram_ff">
+<code class="sig-name descname">calc_gram_ff</code><span class="sig-paren">(</span><em class="sig-param">X</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.calc_gram_ff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the force-force kernel gram matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>list</em>) – list of N training configurations, which are M x 5 matrices</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The force-force gram matrix, has dimensions 3N x 3N</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">y</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a Gaussian process regression model on training forces</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – training configurations</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – training forces</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPU workers to use, default is 1</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.fit_energy">
+<code class="sig-name descname">fit_energy</code><span class="sig-paren">(</span><em class="sig-param">X_glob</em>, <em class="sig-param">y</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.fit_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a Gaussian process regression model using local energies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_glob</strong> (<em>list of lists of arrays</em>) – list of grouped training configurations</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – training total energies</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPU workers to use, default is 1</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.fit_force_and_energy">
+<code class="sig-name descname">fit_force_and_energy</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">y_force</em>, <em class="sig-param">X_glob</em>, <em class="sig-param">y_energy</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.fit_force_and_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a Gaussian process regression model using forces and energies</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list of arrays</em>) – training configurations</p></li>
+<li><p><strong>y_force</strong> (<em>np.ndarray</em>) – training forces</p></li>
+<li><p><strong>X_glob</strong> (<em>list of lists of arrays</em>) – list of grouped training configurations</p></li>
+<li><p><strong>y_energy</strong> (<em>np.ndarray</em>) – training total energies</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPU workers to use, default is 1</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a saved GP model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – name of the file where the GP is saved</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.log_marginal_likelihood">
+<code class="sig-name descname">log_marginal_likelihood</code><span class="sig-paren">(</span><em class="sig-param">theta=None</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.log_marginal_likelihood" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns log-marginal likelihood of theta for training data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong> – array-like, shape = (n_kernel_params,) or None
+Kernel hyperparameters for which the log-marginal likelihood is
+evaluated. If None, the precomputed log_marginal_likelihood
+of <code class="docutils literal notranslate"><span class="pre">self.kernel_.theta</span></code> is returned.</p></li>
+<li><p><strong>eval_gradient</strong> – bool, default: False
+If True, the gradient of the log-marginal likelihood with respect
+to the kernel hyperparameters at position theta is returned
+additionally. If True, theta must not be None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>float</dt><dd><p>Log-marginal likelihood of theta for training data.</p>
+</dd>
+<dt>log_likelihood_gradient<span class="classifier">array, shape = (n_kernel_params,), optional</span></dt><dd><p>Gradient of the log-marginal likelihood with respect to the kernel
+hyperparameters at position theta.
+Only returned when eval_gradient is True.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>log_likelihood</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.predict">
+<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Predict forces using the Gaussian process regression model</p>
+<p>We can also predict based on an unfitted model by using the GP prior.
+In addition to the mean of the predictive distribution, also its
+standard deviation (return_std=True)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>np.ndarray</em>) – Target configuration where the GP is evaluated</p></li>
+<li><p><strong>return_std</strong> (<em>bool</em>) – If True, the standard-deviation of the
+predictive distribution of the target configurations is
+returned along with the mean.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Mean of predictive distribution at target configurations.
+y_std (np.ndarray): Standard deviation of predictive distribution at target</p>
+<blockquote>
+<div><p>configurations. Only returned when return_std is True.</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>y_mean (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.predict_energy">
+<code class="sig-name descname">predict_energy</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">mapping=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.predict_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Predict energies from forces only using the Gaussian process regression model</p>
+<p>This function evaluates the GP energies for a set of test configurations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>np.ndarray</em>) – Target configurations where the GP is evaluated</p></li>
+<li><p><strong>return_std</strong> (<em>bool</em>) – If True, the standard-deviation of the
+predictive distribution of the target configurations is
+returned along with the mean.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Mean of predictive distribution at target configurations.
+y_std (np.ndarray): Standard deviation of predictive distribution at target</p>
+<blockquote>
+<div><p>configurations. Only returned when return_std is True.</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>y_mean (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.pseudo_log_likelihood">
+<code class="sig-name descname">pseudo_log_likelihood</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.pseudo_log_likelihood" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns pseudo log-likelihood of the training data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong> – array-like, shape = (n_kernel_params,) or None
+Kernel hyperparameters for which the log-marginal likelihood is
+evaluated. If None, the precomputed log_marginal_likelihood
+of <code class="docutils literal notranslate"><span class="pre">self.kernel_.theta</span></code> is returned.</p></li>
+<li><p><strong>eval_gradient</strong> – bool, default: False
+If True, the gradient of the log-marginal likelihood with respect
+to the kernel hyperparameters at position theta is returned
+additionally. If True, theta must not be None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>float</dt><dd><p>Log-marginal likelihood of theta for training data.</p>
+</dd>
+<dt>log_likelihood_gradient<span class="classifier">array, shape = (n_kernel_params,), optional</span></dt><dd><p>Gradient of the log-marginal likelihood with respect to the kernel
+hyperparameters at position theta.
+Only returned when eval_gradient is True.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>log_likelihood</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.gp.GaussianProcess.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.GaussianProcess.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dump the current GP model for later use</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – name of the file where to save the GP</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.gp.ThreeBodySingleSpeciesGP">
+<em class="property">class </em><code class="sig-prename descclassname">mff.gp.</code><code class="sig-name descname">ThreeBodySingleSpeciesGP</code><span class="sig-paren">(</span><em class="sig-param">theta</em>, <em class="sig-param">noise=1e-10</em>, <em class="sig-param">optimizer=None</em>, <em class="sig-param">n_restarts_optimizer=0</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.ThreeBodySingleSpeciesGP" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="mff.gp.ThreeBodySingleSpeciesGP.build_grid">
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">dists</em>, <em class="sig-param">element1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.ThreeBodySingleSpeciesGP.build_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that builds and predicts energies on a cube of values</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.gp.TwoBodySingleSpeciesGP">
+<em class="property">class </em><code class="sig-prename descclassname">mff.gp.</code><code class="sig-name descname">TwoBodySingleSpeciesGP</code><span class="sig-paren">(</span><em class="sig-param">theta</em>, <em class="sig-param">noise=1e-10</em>, <em class="sig-param">optimizer=None</em>, <em class="sig-param">n_restarts_optimizer=0</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.gp.TwoBodySingleSpeciesGP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <div class="section" id="two-body-kernel">
 <h2>Two Body Kernel<a class="headerlink" href="#two-body-kernel" title="Permalink to this headline">¶</a></h2>
 <p>Module that contains the expressions for the 2-body single-species and
@@ -221,6 +526,250 @@ The module is called by the gp.py script.</p>
 <span class="n">ee_gram_matrix</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">calc_gram_e</span><span class="p">(</span><span class="n">training_configurations</span><span class="p">,</span> <span class="n">number_nodes</span><span class="p">)</span>
 </pre></div>
 </div>
+<span class="target" id="module-mff.kernels.twobodykernel"></span><dl class="class">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.twobodykernel.</code><code class="sig-name descname">BaseTwoBody</code><span class="sig-paren">(</span><em class="sig-param">kernel_name</em>, <em class="sig-param">theta</em>, <em class="sig-param">bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody" title="Permalink to this definition">¶</a></dt>
+<dd><p>Two body kernel class
+Handles the functions common to the single-species and
+multi-species two-body kernels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kernel_name</strong> (<em>str</em>) – To choose between single- and two-species kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+<li><p><strong>bounds</strong> (<em>list</em>) – bounds of the kernel function.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.k2_ee">
+<code class="sig-name descname">k2_ee</code><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.k2_ee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy-energy kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.k2_ef">
+<code class="sig-name descname">k2_ef</code><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.k2_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy-force kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.k2_ff">
+<code class="sig-name descname">k2_ff</code><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.k2_ff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force-force kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc">
+<code class="sig-name descname">calc</code><span class="sig-paren">(</span><em class="sig-param">X1</em>, <em class="sig-param">X2</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force kernel between two sets of configurations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2*3 matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc_ee">
+<code class="sig-name descname">calc_ee</code><span class="sig-paren">(</span><em class="sig-param">X1</em>, <em class="sig-param">X2</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">mapping=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc_ee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-energy kernel between two global environments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N1 x N2 matrix of the scalar-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc_ef">
+<code class="sig-name descname">calc_ef</code><span class="sig-paren">(</span><em class="sig-param">X_glob</em>, <em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">mapping=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force kernel between two sets of configurations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2*3 matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc_gram">
+<code class="sig-name descname">calc_gram</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc_gram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the force-force gram matrix for a set of configurations X.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N*3 x N*3 gram matrix of the matrix-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc_gram_e">
+<code class="sig-name descname">calc_gram_e</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc_gram_e" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-energy gram matrix for a set of configurations X.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N x N gram matrix of the scalar-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.BaseTwoBody.calc_gram_ef">
+<code class="sig-name descname">calc_gram_ef</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">X_glob</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.BaseTwoBody.calc_gram_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force gram matrix for a set of configurations X.
+This returns a non-symmetric matrix which is equal to the transpose of
+the force-energy gram matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N1 M1x5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X_glob</strong> (<em>list</em>) – list of N2 M2x5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2 x N1*3 gram matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.kernels.twobodykernel.TwoBodyManySpeciesKernel">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.twobodykernel.</code><code class="sig-name descname">TwoBodyManySpeciesKernel</code><span class="sig-paren">(</span><em class="sig-param">theta=(1.0</em>, <em class="sig-param">1.0</em>, <em class="sig-param">1.0)</em>, <em class="sig-param">bounds=((0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0))</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.TwoBodyManySpeciesKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Two body many species kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.TwoBodyManySpeciesKernel.compile_theano">
+<em class="property">static </em><code class="sig-name descname">compile_theano</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.TwoBodyManySpeciesKernel.compile_theano" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function generates theano compiled kernels for global energy and force learning</p>
+<p>The position of the atoms relative to the central one, and their chemical species
+are defined by a matrix of dimension Mx5 here called r1 and r2.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>energy-energy kernel
+k2_ef (func): energy-force kernel
+k2_ff (func): force-force kernel</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>k2_ee (func)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.twobodykernel.</code><code class="sig-name descname">TwoBodySingleSpeciesKernel</code><span class="sig-paren">(</span><em class="sig-param">theta=(1.0</em>, <em class="sig-param">1.0</em>, <em class="sig-param">1.0)</em>, <em class="sig-param">bounds=((0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0))</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Two body single species kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel.compile_theano">
+<em class="property">static </em><code class="sig-name descname">compile_theano</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel.compile_theano" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function generates theano compiled kernels for global energy and force learning</p>
+<p>The position of the atoms relative to the central one, and their chemical species
+are defined by a matrix of dimension Mx5 here called r1 and r2.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>energy-energy kernel
+k2_ef (func): energy-force kernel
+k2_ff (func): force-force kernel</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>k2_ee (func)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="three-body-kernel">
 <h2>Three Body Kernel<a class="headerlink" href="#three-body-kernel" title="Permalink to this headline">¶</a></h2>
@@ -238,6 +787,263 @@ The module is called by the gp.py script.</p>
 <span class="n">ee_gram_matrix</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">calc_gram_e</span><span class="p">(</span><span class="n">training_configurations</span><span class="p">,</span> <span class="n">number_nodes</span><span class="p">)</span>
 </pre></div>
 </div>
+<span class="target" id="module-mff.kernels.threebodykernel"></span><dl class="class">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.threebodykernel.</code><code class="sig-name descname">BaseThreeBody</code><span class="sig-paren">(</span><em class="sig-param">kernel_name</em>, <em class="sig-param">theta</em>, <em class="sig-param">bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody" title="Permalink to this definition">¶</a></dt>
+<dd><p>Three body kernel class
+Handles the functions common to the single-species and
+multi-species three-body kernels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kernel_name</strong> (<em>str</em>) – To choose between single- and two-species kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+<li><p><strong>bounds</strong> (<em>list</em>) – bounds of the kernel function.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.k3_ee">
+<code class="sig-name descname">k3_ee</code><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.k3_ee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy-energy kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.k3_ef">
+<code class="sig-name descname">k3_ef</code><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.k3_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy-force kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.k3_ef_loc">
+<code class="sig-name descname">k3_ef_loc</code><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.k3_ef_loc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Local Energy-force kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.k3_ff">
+<code class="sig-name descname">k3_ff</code><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.k3_ff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force-force kernel function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc">
+<code class="sig-name descname">calc</code><span class="sig-paren">(</span><em class="sig-param">X1</em>, <em class="sig-param">X2</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force kernel between two sets of configurations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2*3 matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc_ee">
+<code class="sig-name descname">calc_ee</code><span class="sig-paren">(</span><em class="sig-param">X1</em>, <em class="sig-param">X2</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">mapping=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc_ee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-energy kernel between two global environments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N1 x N2 matrix of the scalar-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc_ef">
+<code class="sig-name descname">calc_ef</code><span class="sig-paren">(</span><em class="sig-param">X_glob</em>, <em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">mapping=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force kernel between two sets of configurations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X1</strong> (<em>list</em>) – list of N1 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X2</strong> (<em>list</em>) – list of N2 Mx5 arrays containing xyz coordinates and atomic species</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2*3 matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>K (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc_gram">
+<code class="sig-name descname">calc_gram</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc_gram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the force-force gram matrix for a set of configurations X.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N*3 x N*3 gram matrix of the matrix-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc_gram_e">
+<code class="sig-name descname">calc_gram_e</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc_gram_e" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-energy gram matrix for a set of configurations X.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N Mx5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N x N gram matrix of the scalar-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.BaseThreeBody.calc_gram_ef">
+<code class="sig-name descname">calc_gram_ef</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">X_glob</em>, <em class="sig-param">ncores=1</em>, <em class="sig-param">eval_gradient=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.BaseThreeBody.calc_gram_ef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the energy-force gram matrix for a set of configurations X.
+This returns a non-symmetric matrix which is equal to the transpose of
+the force-energy gram matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>list</em>) – list of N1 M1x5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>X_glob</strong> (<em>list</em>) – list of N2 M2x5 arrays containing xyz coordinates and atomic species</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – Number of CPU nodes to use for multiprocessing (default is 1)</p></li>
+<li><p><strong>eval_gradient</strong> (<em>bool</em>) – if True, evaluate the gradient of the gram matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>N2 x N1*3 gram matrix of the vector-valued kernels</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>gram (matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.threebodykernel.</code><code class="sig-name descname">ThreeBodyManySpeciesKernel</code><span class="sig-paren">(</span><em class="sig-param">theta=(1.0</em>, <em class="sig-param">1.0</em>, <em class="sig-param">1.0)</em>, <em class="sig-param">bounds=((0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0))</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Three body many species kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel.compile_theano">
+<em class="property">static </em><code class="sig-name descname">compile_theano</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel.compile_theano" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function generates theano compiled kernels for energy and force learning
+ker_jkmn_withcutoff = ker_jkmn #* cutoff_ikmn</p>
+<p>The position of the atoms relative to the centrla one, and their chemical species
+are defined by a matrix of dimension Mx5</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>energy-energy kernel
+k3_ef (func): energy-force kernel
+k3_ff (func): force-force kernel</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>k3_ee (func)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel">
+<em class="property">class </em><code class="sig-prename descclassname">mff.kernels.threebodykernel.</code><code class="sig-name descname">ThreeBodySingleSpeciesKernel</code><span class="sig-paren">(</span><em class="sig-param">theta=(1.0</em>, <em class="sig-param">1.0</em>, <em class="sig-param">1.0)</em>, <em class="sig-param">bounds=((0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0)</em>, <em class="sig-param">(0.01</em>, <em class="sig-param">100.0))</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Three body two species kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta</strong><strong>[</strong><strong>0</strong><strong>]</strong> (<em>float</em>) – lengthscale of the kernel</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>1</strong><strong>]</strong> (<em>float</em>) – decay rate of the cutoff function</p></li>
+<li><p><strong>theta</strong><strong>[</strong><strong>2</strong><strong>]</strong> (<em>float</em>) – cutoff radius</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel.compile_theano">
+<em class="property">static </em><code class="sig-name descname">compile_theano</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel.compile_theano" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function generates theano compiled kernels for energy and force learning
+ker_jkmn_withcutoff = ker_jkmn #* cutoff_ikmn</p>
+<p>The position of the atoms relative to the centrla one, and their chemical species
+are defined by a matrix of dimension Mx5</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>energy-energy kernel
+k3_ef (func): energy-force kernel
+k3_ff (func): force-force kernel</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>k3_ee (func)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 </div>
 

@@ -206,6 +206,209 @@ To extract local atomic environments, forces, energies and a list of all the ele
 </pre></div>
 </div>
 <p>where <code class="docutils literal notranslate"><span class="pre">r_cut</span></code> specifies the cutoff radius that will be applied to extract local atomic environments containing all atomis within r_cut from the central one, and n_data specifies the total number of local atomic environments to extract.</p>
+<span class="target" id="module-mff.configurations"></span><dl class="exception">
+<dt id="mff.configurations.MissingData">
+<em class="property">exception </em><code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">MissingData</code><a class="headerlink" href="#mff.configurations.MissingData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.carve_from_snapshot">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">carve_from_snapshot</code><span class="sig-paren">(</span><em class="sig-param">atoms</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">forces_label=None</em>, <em class="sig-param">energy_label=None</em>, <em class="sig-param">atoms_ind=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.carve_from_snapshot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract atomic configurations, the forces acting on the central atoms
+os said configurations, and the local energy values associated to a single atoms object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atoms</strong> (<em>ase atoms object</em>) – Ase atoms file, opened with ase.io.read</p></li>
+<li><p><strong>atoms_ind</strong> (<em>list</em>) – indexes of the atoms for which a conf is created</p></li>
+<li><p><strong>r_cut</strong> (<em>float</em>) – Cutoff to use when carving out atomic environments</p></li>
+<li><p><strong>forces_label</strong> (<em>str</em>) – Name of the force label in the trajectory file, if None default is “forces”</p></li>
+<li><p><strong>energy_label</strong> (<em>str</em>) – Name of the energy label in the trajectory file, if None default is “energy”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of M by 5 numpy arrays, where M is the number of atoms within</dt><dd><p>r_cut from the central one. The first 3 components are positions w.r.t
+the central atom in Angstroms, the fourth is the atomic number of the
+central atom, the fifth the atomic number of each atom.</p>
+</dd>
+</dl>
+<p>forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
+energies (array): value of the local atomic energy in eV</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>confs (list of arrays)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.generate">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">generate</code><span class="sig-paren">(</span><em class="sig-param">traj</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">forces_label=None</em>, <em class="sig-param">energy_label=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.generate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract atomic configurations, the forces acting on the central atoms
+os said configurations, and the local energy values associeated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>traj</strong> (<em>ase atoms object</em>) – Ase trajectory file, opened with ase.io.read</p></li>
+<li><p><strong>r_cut</strong> (<em>float</em>) – Cutoff to use when carving out atomic environments</p></li>
+<li><p><strong>forces_label</strong> (<em>str</em>) – Name of the force label in the trajectory file, if None default is “forces”</p></li>
+<li><p><strong>energy_label</strong> (<em>str</em>) – Name of the energy label in the trajectory file, if None default is “energy”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Structure containing, for each snapshot in the trajectory,</dt><dd><p>the forces, energy, and local atomic configurations for that snapshot’s atoms</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>data (dictionary)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.generate_and_save">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">generate_and_save</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">forces_label=None</em>, <em class="sig-param">energy_label=None</em>, <em class="sig-param">index=':'</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.generate_and_save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the data dictionary and save it to the same location.
+:param path: Name and position of trajectory file
+:type path: Path or string
+:param r_cut: Cutoff used
+:type r_cut: float
+:param forces_label: Name of the force label in the trajectory file, if None default is “forces”
+:type forces_label: str
+:param energy_label: Name of the energy label in the trajectory file, if None default is “energy”
+:type energy_label: str
+:param index: Indexes indicating which snapshots to use from the traj file
+:type index: str</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>Structure containing, for each snapshot in the trajectory,</dt><dd><p>the forces, energy, and local atomic configurations for that snapshot’s atoms.
+Obtained from <code class="docutils literal notranslate"><span class="pre">generate</span></code></p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>data (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.load">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">r_cut</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data saved with <code class="docutils literal notranslate"><span class="pre">save</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>Path</em><em> or </em><em>string</em>) – Name and position of file to load data from</p></li>
+<li><p><strong>r_cut</strong> (<em>float</em>) – Cutoff used</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Structure containing, for each snapshot in the trajectory,</dt><dd><p>the forces, energy, and local atomic configurations for that snapshot’s atoms.
+Obtained from <code class="docutils literal notranslate"><span class="pre">generate</span></code></p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>data (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.load_and_unpack">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">load_and_unpack</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">r_cut</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.load_and_unpack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data saved with <code class="docutils literal notranslate"><span class="pre">save</span></code> and unpack it with <code class="docutils literal notranslate"><span class="pre">unpak</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>Path</em><em> or </em><em>string</em>) – Name and position of file to load data from</p></li>
+<li><p><strong>r_cut</strong> (<em>float</em>) – Cutoff used</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Atomic numbers of all atomic species present in the dataset
+confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within</p>
+<blockquote>
+<div><p>r_cut from the central one. The first 3 components are positions w.r.t
+the central atom in Angstroms, the fourth is the atomic number of the
+central atom, the fifth the atomic number of each atom.</p>
+</div></blockquote>
+<p>forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
+energies (array): value of the total energy in eV
+global_confs (list of lists of arrays): list containing lists of configurations, grouped together</p>
+<blockquote>
+<div><p>so that local atomic environments taken from the same snapshot are in the same group.</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>elements (list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.save">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">data</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save data extracted with <code class="docutils literal notranslate"><span class="pre">generate</span></code> to a file with a iven cutoff</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>Path</em><em> or </em><em>string</em>) – Name and position of file to save data to</p></li>
+<li><p><strong>r_cut</strong> (<em>float</em>) – Cutoff used</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – Structure containing, for each snapshot in the trajectory,
+the forces, energy, and local atomic configurations for that snapshot’s atoms.
+Obtained from <code class="docutils literal notranslate"><span class="pre">generate</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mff.configurations.unpack">
+<code class="sig-prename descclassname">mff.configurations.</code><code class="sig-name descname">unpack</code><span class="sig-paren">(</span><em class="sig-param">data</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.configurations.unpack" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>From a data dictionary, generate elements, configurations, forces, energies and</dt><dd><p>global configurations to be used by the GP module.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>dict</em>) – Structure containing, for each snapshot in the trajectory,
+the forces, energy, and local atomic configurations for that snapshot’s atoms.
+Obtained from <code class="docutils literal notranslate"><span class="pre">generate</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Atomic numbers of all atomic species present in the dataset
+confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within</p>
+<blockquote>
+<div><p>r_cut from the central one. The first 3 components are positions w.r.t
+the central atom in Angstroms, the fourth is the atomic number of the
+central atom, the fifth the atomic number of each atom.</p>
+</div></blockquote>
+<p>forces (array): x,y,z components of the force acting on the central atom in eV/Angstrom
+energies (array): value of the total energy in eV
+global_confs (list of lists of arrays): list containing lists of configurations, grouped together</p>
+<blockquote>
+<div><p>so that local atomic environments taken from the same snapshot are in the same group.</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>elements (list)</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 
 

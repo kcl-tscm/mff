@@ -7,6 +7,14 @@ m_ff/interpolation/tricube_fortran/*.c
 # Pycharm
 .idea/
 
+# VisualStudioCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

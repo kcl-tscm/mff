@@ -4,7 +4,7 @@ import numpy
 tricube_cpp_module = Extension(
     'mff.interpolation.tricube_cpp._tricube',
     sources=["mff/interpolation/tricube_cpp/tricube_module.c", "mff/interpolation/tricube_cpp/_tricube.c"],
-    include_dirs=[numpy.get_include()]
+    include_dirs=[numpy.get_include(), "mff/interpolation/tricube_cpp/"]
 )
 
 with open("README.md", "r") as fh:

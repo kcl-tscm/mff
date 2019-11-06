@@ -1,14 +1,10 @@
-from setuptools import find_packages
-from numpy.distutils.core import setup, Extension
+from setuptools import find_packages, setup, Extension
+import numpy
 
 tricube_cpp_module = Extension(
     'mff.interpolation.tricube_cpp._tricube',
     sources=["mff/interpolation/tricube_cpp/tricube_module.c", "mff/interpolation/tricube_cpp/_tricube.c"],
-)
-
-tricube_fortran_module = Extension(
-    'mff.interpolation.tricube_fortran._tricube',
-    sources=['mff/interpolation/tricube_fortran/_tricube.pyf', 'mff/interpolation/tricube_fortran/_tricube.c'],
+    include_dirs=[numpy.get_include()]
 )
 
 with open("README.md", "r") as fh:
@@ -16,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='0.2.0',
+    version='0.2.1',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
     author_email='claudio.zeni@kcl.ac.uk',
     description='Gaussian process regression to extract non-parametric 2- and 3- body force fields.',
@@ -24,7 +20,8 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/kcl-tscm/mff",
     packages=find_packages(),
-    ext_modules=[tricube_cpp_module, tricube_fortran_module],
+    ext_modules=[tricube_cpp_module],
+    python_requires='>=3.6',
     install_requires=[
         'numpy',
         'asap3',

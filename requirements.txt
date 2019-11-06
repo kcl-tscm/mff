@@ -1,3 +1,0 @@
-ase
-asap3
-theano

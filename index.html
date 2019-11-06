@@ -1,0 +1,323 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>MFF’s documentation &mdash; MFF 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> MFF
+          
+
+          
+            
+            <img src="_static/mff_logo_2.svg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Table of Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-model">Building a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#fitting-the-model">Fitting the model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#predicting-forces-and-energies-with-the-gp">Predicting forces and energies with the GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-mapped-potential">Building a mapped potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#saving-and-loading-a-model">Saving and loading a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-s-complete-reference">Model’s complete reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#two-body-model">Two Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#three-body-model">Three Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#combined-model">Combined Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#two-body-kernel">Two Body Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#three-body-kernel">Three Body Kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">MFF</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>MFF’s documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="mff-s-documentation">
+<h1>MFF’s documentation<a class="headerlink" href="#mff-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>MFF (Mapped Force Fields) is a package built to apply machine learning to atomistic simulation within an ASE environment.
+MFF uses Gaussian process regression to build non-parametric 2- and 3- body force fields from a small dataset of ab-initio simulations. These Gaussian processes are then mapped onto a non-parametric tabulated 2- or 3-body force field that can be used within the ASE environment to run atomistic simulation with the computational speed of a tabulated potential and the chemical accuracy offered by machine learning on ab-initio data.
+Trajectories or snapshots of the system of interest are used to train the potential, these must contain atomic positions, atomic numbers and forces (and/or total energies), preferrabily calculated via ab-initio methods.</p>
+<p>At the moment the package supports single- and two-element atomic environments; we aim to support three-element atomic environments in future versions.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Table of Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-model">Building a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#fitting-the-model">Fitting the model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#predicting-forces-and-energies-with-the-gp">Predicting forces and energies with the GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-mapped-potential">Building a mapped potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#saving-and-loading-a-model">Saving and loading a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-s-complete-reference">Model’s complete reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#two-body-model">Two Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#three-body-model">Three Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#combined-model">Combined Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#two-body-kernel">Two Body Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#three-body-kernel">Three Body Kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+</div>
+<div class="section" id="maintainers">
+<h2>Maintainers<a class="headerlink" href="#maintainers" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Claudio Zeni (<a class="reference external" href="mailto:claudio&#46;zeni&#37;&#52;&#48;kcl&#46;ac&#46;uk">claudio<span>&#46;</span>zeni<span>&#64;</span>kcl<span>&#46;</span>ac<span>&#46;</span>uk</a>),</p></li>
+<li><p>Aldo Glielmo (<a class="reference external" href="mailto:aldo&#46;glielmo&#37;&#52;&#48;kcl&#46;ac&#46;uk">aldo<span>&#46;</span>glielmo<span>&#64;</span>kcl<span>&#46;</span>ac<span>&#46;</span>uk</a>),</p></li>
+<li><p>Ádám Fekete (<a class="reference external" href="mailto:adam&#46;fekete&#37;&#52;&#48;kcl&#46;ac&#46;uk">adam<span>&#46;</span>fekete<span>&#64;</span>kcl<span>&#46;</span>ac<span>&#46;</span>uk</a>).</p></li>
+</ul>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>[1] A. Glielmo, C. Zeni, A. De Vita, <em>Efficient non-parametric n-body force fields from machine learning</em> (<a class="reference external" href="https://arxiv.org/abs/1801.04823">https://arxiv.org/abs/1801.04823</a>)</p>
+<p>[2] C .Zeni, K. Rossi, A. Glielmo, N. Gaston, F. Baletto, A. De Vita <em>Building machine learning force fields for nanoclusters</em> (<a class="reference external" href="https://arxiv.org/abs/1802.01417">https://arxiv.org/abs/1802.01417</a>)</p>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><span class="xref std std-ref">Index</span></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+</ul>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="install.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

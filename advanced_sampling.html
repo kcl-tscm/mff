@@ -1,0 +1,283 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Advanced Sampling &mdash; MFF 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Calculators" href="calculators.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> MFF
+          
+
+          
+            
+            <img src="_static/mff_logo_2.svg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Table of Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-model">Building a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#fitting-the-model">Fitting the model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#predicting-forces-and-energies-with-the-gp">Predicting forces and energies with the GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-mapped-potential">Building a mapped potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#saving-and-loading-a-model">Saving and loading a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-s-complete-reference">Model’s complete reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#two-body-model">Two Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#three-body-model">Three Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#combined-model">Combined Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#two-body-kernel">Two Body Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#three-body-kernel">Three Body Kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Advanced Sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MFF</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Advanced Sampling</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/advanced_sampling.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="advanced-sampling">
+<h1>Advanced Sampling<a class="headerlink" href="#advanced-sampling" title="Permalink to this headline">¶</a></h1>
+<p>This module contains functions that can be used in order to subsample from very large datasets.</p>
+<div class="section" id="theory-introduction">
+<h2>Theory/Introduction<a class="headerlink" href="#theory-introduction" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Assuming we already extracted all of the configurations, forces (and possibly local energies) from a .xyz file, we can apply one of the methods contained in advanced_sampling in order to subsample a meaningful and representative training set.</p>
+<p>We first load the configurations and forces previously extracted from the .xyz file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">confs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">configurations_file</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">configurations_file</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We then initialize the sampling class and separate ntest configurations for the test set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">Sampling</span><span class="p">(</span><span class="n">confs</span><span class="o">=</span><span class="n">confs</span><span class="p">,</span><span class="n">forces</span><span class="o">=</span><span class="n">forces</span><span class="p">,</span> <span class="n">sigma_2b</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="n">sigma_3b</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">sigma_mb</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">noise</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">,</span> <span class="n">r_cut</span> <span class="o">=</span> <span class="mf">8.5</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">train_test_split</span><span class="p">(</span><span class="n">confs</span><span class="o">=</span><span class="n">confs</span><span class="p">,</span> <span class="n">forces</span> <span class="o">=</span> <span class="n">forces</span><span class="p">,</span> <span class="n">ntest</span> <span class="o">=</span> <span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now we can subsample a training set using our preferred method, for example importance vector machine sampling on the variance of force predicion:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MAE</span><span class="p">,</span> <span class="n">STD</span><span class="p">,</span> <span class="n">RMSE</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">time</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">ivm_f</span><span class="p">(</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;2b&#39;</span><span class="p">,</span> <span class="n">ntrain</span> <span class="o">=</span> <span class="n">ntr</span><span class="p">,</span> <span class="n">batchsize</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or importance vector machine sampling on the measured error of force predicion for a 3-body kernel:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MAE</span><span class="p">,</span> <span class="n">STD</span><span class="p">,</span> <span class="n">RMSE</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">time</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">ivm_f</span><span class="p">(</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;3b&#39;</span><span class="p">,</span> <span class="n">ntrain</span> <span class="o">=</span> <span class="n">ntr</span><span class="p">,</span> <span class="n">batchsize</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">use_pred_error</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Other methods include a sampling based on the interatomic distance values present in every configuration:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MAE</span><span class="p">,</span> <span class="n">STD</span><span class="p">,</span> <span class="n">RMSE</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">time</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;2b&#39;</span><span class="p">,</span> <span class="n">nbins</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or  a sampling based on the interatomic distance values present in every configuration:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MAE</span><span class="p">,</span> <span class="n">STD</span><span class="p">,</span> <span class="n">RMSE</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">time</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;2b&#39;</span><span class="p">,</span> <span class="n">nbins</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="calculators.html" class="btn btn-neutral float-left" title="Calculators" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,419 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Models &mdash; MFF 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configurations" href="confs.html" />
+    <link rel="prev" title="Installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> MFF
+          
+
+          
+            
+            <img src="_static/mff_logo_2.svg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Table of Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-a-model">Building a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fitting-the-model">Fitting the model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#predicting-forces-and-energies-with-the-gp">Predicting forces and energies with the GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-a-mapped-potential">Building a mapped potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#saving-and-loading-a-model">Saving and loading a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-s-complete-reference">Model’s complete reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#two-body-model">Two Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#three-body-model">Three Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#combined-model">Combined Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#two-body-kernel">Two Body Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#three-body-kernel">Three Body Kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MFF</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/models.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="models">
+<h1>Models<a class="headerlink" href="#models" title="Permalink to this headline">¶</a></h1>
+<p>The models are the classes used to build, train and test a Gaussian process, and to then build the relative mapped potential.
+There are six types of models at the moment, each one is used to handle 2-, 3-, or 2+3-body kernels in the case of one or two atomic species.
+When creating a model, it is therefore necessary to decide a priori the type of Gaussian process and, therefore, the type of mapped potential we want to obtain.</p>
+<div class="section" id="building-a-model">
+<h2>Building a model<a class="headerlink" href="#building-a-model" title="Permalink to this headline">¶</a></h2>
+<p>To create a model based on a 2-body kernel for a monoatomic system:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where the parameters refer to the atomic number of the species we are training the GP on, the cutoff radius we want to use, the lengthscale hyperparameter of the Gaussian Process, the hyperparameter governing the exponential decay of the cutoff function, and the noise associated with the output training data.
+In the case of a 2+3-body kernel for a monoatomic system:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where we have two additional hyperparameters since the lengthscale value and the cutoff decay ratio of the 2- and 3-body kernels contained inside the combined Gaussian Process are be independent.</p>
+<p>When dealing with a two-element system, the syntax is very similar, but the <code class="docutils literal notranslate"><span class="pre">atomic_number</span></code> is instead a list containing the atomic numbers of the two species, in increasing order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedTwoSpecies</span><span class="p">(</span><span class="n">atomic_numbers</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fitting-the-model">
+<h2>Fitting the model<a class="headerlink" href="#fitting-the-model" title="Permalink to this headline">¶</a></h2>
+<p>Once a model has been built, we can train it using a dataset of forces, energies, or energies and forces, that has been created using the <code class="docutils literal notranslate"><span class="pre">configurations</span></code> module. If we are training only on forces:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>training only on energies:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit_energy</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_energies</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>training on both forces and energies:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit_force_and_energy</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">training_energies</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">nnodes</span></code> can be passed to any fit function in order to run the process on multiple processors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">nnodes</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="predicting-forces-and-energies-with-the-gp">
+<h2>Predicting forces and energies with the GP<a class="headerlink" href="#predicting-forces-and-energies-with-the-gp" title="Permalink to this headline">¶</a></h2>
+<p>Once the Gaussian process has been fitted, it can be used to directly predict forces and energies on test configurations. To predict the force and the energy for a single test configuration:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">)</span>
+<span class="n">energy</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict_energy</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>the boolean variable <code class="docutils literal notranslate"><span class="pre">return_std</span></code> can be passed to the force and energy predict functions in order to obtain also the standard deviation associated with the prediction, default is False:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mean_force</span><span class="p">,</span> <span class="n">std_force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">,</span> <span class="n">return_std</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="building-a-mapped-potential">
+<span id="model-map"></span><h2>Building a mapped potential<a class="headerlink" href="#building-a-mapped-potential" title="Permalink to this headline">¶</a></h2>
+<p>Once the Gaussian process has been fitted, either via force, energy or joint force/energy fit, it can be mapped onto a non-parametric 2- and/or 3-body potential using the <code class="docutils literal notranslate"><span class="pre">build_grid</span></code> function. The <code class="docutils literal notranslate"><span class="pre">build_grid</span></code> function takes as arguments the minimum grid distance (smallest distance between atoms for which the potential will be defined), the number of grid points to use while building the 2-body mapped potential, and the number of points per dimension to use while building the 3-body mapped potential.
+For a 2-body model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a 3-body model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a combined model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">nnodes</span></code> can be passed to the <code class="docutils literal notranslate"><span class="pre">build_grid</span></code> function for any model in order to run the process on multiple processors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">,</span> <span class="n">nnodes</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-and-loading-a-model">
+<h2>Saving and loading a model<a class="headerlink" href="#saving-and-loading-a-model" title="Permalink to this headline">¶</a></h2>
+<p>At any stage, a model can be saved using the <code class="docutils literal notranslate"><span class="pre">save</span></code> function that takes a .json filename as the only input:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>the save function will create a .json file containing all of the parameters and hyperparameters of the model, and the paths to the .npy and .npz files containing, respectively, the saved GPs and the saved mapped potentials, which are also created by the save funtion.</p>
+<p>To load a previously saved model of a known type (here for example a CombinedSingleSpecies model) simply run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model-s-complete-reference">
+<h2>Model’s complete reference<a class="headerlink" href="#model-s-complete-reference" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="two-body-model">
+<h2>Two Body Model<a class="headerlink" href="#two-body-model" title="Permalink to this headline">¶</a></h2>
+<p>Module containing the TwoBodySingleSpecies and
+TwoBodyTwoSpecies classes, which are used to handle
+the Gaussian process and the mapping algorithm used to build M-FFs.
+The model has to be first defined, then the Gaussian process must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 2-body
+potential via the <code class="docutils literal notranslate"><span class="pre">build</span> <span class="pre">grid</span></code> function call. A mapped model can be then
+saved, loaded and used to run molecular dynamics simulations via the
+calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
+
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
+
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="three-body-model">
+<h2>Three Body Model<a class="headerlink" href="#three-body-model" title="Permalink to this headline">¶</a></h2>
+<p>Module containing the ThreeBodySingleSpecies and
+ThreeBodyTwoSpecies classes, which are used to handle the Gaussian
+process regression and the mapping algorithm used to build M-FFs.
+The model has to be first defined, then the Gaussian process must be
+trained using training configurations and forces (and/or local energies).
+Once a model has been trained, it can be used to predict forces
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 3-body
+potential via the <code class="docutils literal notranslate"><span class="pre">build</span> <span class="pre">grid</span></code> function call. A mapped model can be then
+saved, loaded and used to run molecular dynamics simulations via the
+calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ThreeBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="combined-model">
+<h2>Combined Model<a class="headerlink" href="#combined-model" title="Permalink to this headline">¶</a></h2>
+<p>Module that uses 2- and 3-body kernels to do Guassian process regression,
+and to build 2- and 3-body mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated 2-body
+potential  and a tabultaed 3-body potential via the <code class="docutils literal notranslate"><span class="pre">build</span> <span class="pre">grid</span></code> function call.
+A mapped model can be thensaved, loaded and used to run molecular
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span>
+                       <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="confs.html" class="btn btn-neutral float-right" title="Configurations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

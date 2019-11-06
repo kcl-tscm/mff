@@ -1,0 +1,294 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Calculators &mdash; MFF 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Advanced Sampling" href="advanced_sampling.html" />
+    <link rel="prev" title="Gaussian Processes" href="gp.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> MFF
+          
+
+          
+            
+            <img src="_static/mff_logo_2.svg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Table of Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-model">Building a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#fitting-the-model">Fitting the model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#predicting-forces-and-energies-with-the-gp">Predicting forces and energies with the GP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#building-a-mapped-potential">Building a mapped potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#saving-and-loading-a-model">Saving and loading a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-s-complete-reference">Model’s complete reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#two-body-model">Two Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#three-body-model">Three Body Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#combined-model">Combined Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gp.html">Gaussian Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#two-body-kernel">Two Body Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gp.html#three-body-kernel">Three Body Kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Calculators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MFF</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Calculators</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/calculators.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="calculators">
+<h1>Calculators<a class="headerlink" href="#calculators" title="Permalink to this headline">¶</a></h1>
+<p>A mapped potential is a tabulated 2- or 3-body interatomic potential created using Gaussian process regresssion and a 2- or 3-body kernel.
+To use a mapped potential created with this python package within the ASE environment, it is necessary to setup a calculator using the <code class="docutils literal notranslate"><span class="pre">mff.calculators</span></code> class.</p>
+<div class="section" id="theory-introduction">
+<h2>Theory/Introduction<a class="headerlink" href="#theory-introduction" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">model.build_grid()</span></code> function builds a taulated 2- or 3- body potential. The calculator method allows to exploit the ASE functionalities to
+run molecular dynamics simulations.
+For a 2-body potential, the calculator class computes the energy and force contributions to a central atom for each other atom in its neighbourhood.
+These contributions depend only on the interatomic pairwise distance, and are computed trhough 1D spline interpolation of the stored values of the pairwise energy. The magnitude and verse of the pairwise force contributions are computed using the analytic derivitive of this 1D spline, while the direction of the force contribution must be the line that connects the central atom and its neighbour, for symmetry.
+When a 3-body potential is used, the local energy and force acting on an atom are a sum of triplet contributions which contain the central atom and two other atoms within a cutoff distance. The triplet energy contributions are computed using a 3D spline interpolation on the stored values of triplet energy which have been calculated using  <code class="docutils literal notranslate"><span class="pre">model.build_grid()</span></code>. The local force contributions are obtained through analytic derivative of the 3D spline interpolation used to calculate triplet energies.
+The calculator behaves like a tabulated potential, and its speed scales linearly (2-body) or quadratically (3-body) with the number of atoms within a cutoff distance, and is completely independent of the number of training points used for the Gaussian process regression.
+The force field obtained is also analytically energy conserving, since the force is the opposite of the analytic derivative of the local energy.
+When using a 2- or 2+3-body force field, the <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> parameter allows the user to include a Lennard-Jones like repulsive term that adds a 2-body repulsion: $$E_{rep}(r) =  0.5 ( text{rep_alpha}/r )^{12}. $$
+This introduces a repulsive term that impedes atomic collisions when the interatomic distances fall under the region where data is available. This is especially useful for high tempoerature simulations. Default <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> is zero.
+In the case of a multi-species force field, the <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> parameter is common to every pair of elements in the current version of the code.</p>
+<p>WARNING: The atoms in the <code class="docutils literal notranslate"><span class="pre">atoms</span></code> object must be ordered in increasing atomic number for the calculator to work correctly.
+To do so, simply run the following line of code on the <code class="docutils literal notranslate"><span class="pre">atoms</span></code> object before the calculator is assigned:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Assuming we already trained a model named <code class="docutils literal notranslate"><span class="pre">model</span></code> and built the relative mapped force field, we can assign an ASE calculator based on such force field to an ASE atoms object.</p>
+<p>For a 2-body single species model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">TwoBodySingleSpecies</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">rep_alpha</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">)</span>
+<span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
+<span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a 3-body model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">ThreeBodySingleSpecies</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">ThreeBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
+<span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
+<span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a combined (2+3-body) model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">CombinedSingleSpecies</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_2b</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_3b</span><span class="p">,</span> <span class="n">rep_alpha</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">)</span>
+<span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
+<span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="advanced_sampling.html" class="btn btn-neutral float-right" title="Advanced Sampling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="gp.html" class="btn btn-neutral float-left" title="Gaussian Processes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

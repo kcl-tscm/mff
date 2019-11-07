@@ -4,6 +4,7 @@ import numpy
 tricube_cpp_module = Extension(
     'mff.interpolation.tricube_cpp._tricube',
     sources=["mff/interpolation/tricube_cpp/tricube_module.c", "mff/interpolation/tricube_cpp/_tricube.c"],
+    depends=["mff/interpolation/tricube_cpp/_tricube.h"],
     include_dirs=[numpy.get_include(), "mff/interpolation/tricube_cpp/"]
 )
 
@@ -12,9 +13,9 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='0.3',
+    version='0.4',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
-    author_email='claudio.zeni@kcl.ac.uk',
+    author_email='',
     description='Gaussian process regression to extract non-parametric 2-, 3- and many-body force fields.',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -31,8 +32,10 @@ setup(
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved',
         'Topic :: Scientific/Engineering :: Physics'
     ],
 )

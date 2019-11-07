@@ -3,8 +3,6 @@
 [![Doc](https://img.shields.io/badge/docs-master-blue.svg)](https://kcl-tscm.github.io/mff/)
 [![DOI](https://zenodo.org/badge/123019663.svg)](https://zenodo.org/badge/latestdoi/123019663)
 
-To read the full documentation check https://mff.readthedocs.io/en/latest/
-
 An example tutorial jupyter notebook can be found in the `tutorials` folder.
 
 ![alt text](https://kcl-tscm.github.io/mff/_static/mff_logo_2.svg)

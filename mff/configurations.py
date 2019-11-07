@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import logging
-import numpy as np
-
-from scipy.spatial.distance import cdist
-from abc import ABCMeta, abstractmethod
-from asap3 import FullNeighborList
-from random import shuffle
-from ase.io import read
-from pathlib import Path
 import json
+import logging
+from abc import ABCMeta, abstractmethod
+from pathlib import Path
+from random import shuffle
+
+import numpy as np
+from scipy.spatial.distance import cdist
+
+from asap3 import FullNeighborList
+from ase.io import read
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def carve_from_snapshot(atoms, r_cut, forces_label=None, energy_label=None, atom
         r_cut (float): Cutoff to use when carving out atomic environments
         forces_label (str): Name of the force label in the trajectory file, if None default is "forces"
         energy_label (str): Name of the energy label in the trajectory file, if None default is "energy"
-        
+
     Returns:
         confs (list of arrays): List of M by 5 numpy arrays, where M is the number of atoms within
             r_cut from the central one. The first 3 components are positions w.r.t
@@ -57,30 +58,35 @@ def carve_from_snapshot(atoms, r_cut, forces_label=None, energy_label=None, atom
             energy = None
 
     if forces is None and energy is None:
-        raise MissingData('Cannot find energy or force values in the xyz file, shutting down')
+        raise MissingData(
+            'Cannot find energy or force values in the xyz file, shutting down')
 
     if forces is not None:
         forces = forces[atoms_ind]
     else:
-        logger.info('Forces in the xyz file are not present, or are not called %s' % (forces_label))
+        logger.info(
+            'Forces in the xyz file are not present, or are not called %s' % (forces_label))
 
     if energy is None:
-        logger.info('Energy in the xyz file is not present, or is not called %s' % (energy_label))
+        logger.info(
+            'Energy in the xyz file is not present, or is not called %s' % (energy_label))
 
     # See if there are forces and energies, get them for the chosen atoms
     if (atoms.get_cell() == np.zeros((3, 3))).all():
         atoms.set_cell(100.0 * np.identity(3))
         logger.info('No cell values found, setting to a 100 x 100 x 100 cube')
-        
+
     # Build local configurations for every indexed atom
     nl = FullNeighborList(r_cut, atoms=atoms)
     confs = []
     for i in atoms_ind:
         indices, positions, distances = nl.get_neighbors(i)
 
-        atomic_numbers_i = np.ones((len(indices), 1)) * atoms.get_atomic_numbers()[i]
+        atomic_numbers_i = np.ones(
+            (len(indices), 1)) * atoms.get_atomic_numbers()[i]
         atomic_numbers_j = atoms.get_atomic_numbers()[indices].reshape(-1, 1)
-        confs.append(np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
+        confs.append(
+            np.hstack([positions, atomic_numbers_i, atomic_numbers_j]))
 
     return confs, forces, energy
 
@@ -115,9 +121,10 @@ def generate(traj, r_cut, forces_label=None, energy_label=None):
 
     for i, atoms in enumerate(traj):
         this_conf, this_force, this_energy = \
-            carve_from_snapshot(atoms, r_cut, forces_label=forces_label, energy_label=energy_label)
+            carve_from_snapshot(
+                atoms, r_cut, forces_label=forces_label, energy_label=energy_label)
         this_step = {}
-        this_step['confs']  = this_conf
+        this_step['confs'] = this_conf
         this_step['forces'] = this_force
         this_step['energy'] = this_energy
 
@@ -138,7 +145,6 @@ def save(path, r_cut, data):
 
     """
 
-
     if not isinstance(path, Path):
         path = Path(path)
 
@@ -146,7 +152,6 @@ def save(path, r_cut, data):
 
 
 def generate_and_save(path, r_cut, forces_label=None, energy_label=None, index=':'):
-
     """ Generate the data dictionary and save it to the same location.
     Args:
         path (Path or string): Name and position of trajectory file
@@ -170,11 +175,13 @@ def generate_and_save(path, r_cut, forces_label=None, energy_label=None, index='
     if str(suffix) == "out":
         traj = read(path, index=index, format='aims-output')
     elif str(suffix) == ".xyz":
-        traj = read(path, index=index, format='extxyz') # Get the ASE traj from xyz
+        # Get the ASE traj from xyz
+        traj = read(path, index=index, format='extxyz')
     else:
         traj = read(path, index=index)
 
-    data = generate(traj, r_cut, forces_label=forces_label, energy_label=energy_label)
+    data = generate(traj, r_cut, forces_label=forces_label,
+                    energy_label=energy_label)
 
     save(path.parent, r_cut, data)
 
@@ -187,7 +194,7 @@ def load(path, r_cut):
     Args:
         path (Path or string): Name and position of file to load data from
         r_cut (float): Cutoff used
-    
+
     Returns:
         data (dict): Structure containing, for each snapshot in the trajectory, 
             the forces, energy, and local atomic configurations for that snapshot's atoms.
@@ -198,7 +205,8 @@ def load(path, r_cut):
     if not isinstance(path, Path):
         path = Path(path)
 
-    data = np.load('{}/data_cut={:.2f}.npy'.format(path, r_cut), allow_pickle= True)
+    data = np.load('{}/data_cut={:.2f}.npy'.format(path, r_cut),
+                   allow_pickle=True)
 
     return data.item()
 
@@ -265,8 +273,3 @@ def load_and_unpack(path, r_cut):
     elements, confs, forces, energies, global_confs = unpack(data)
 
     return elements, confs, forces, energies, global_confs
-
-
-
-
-

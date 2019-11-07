@@ -2,14 +2,14 @@
 
 
 import json
-import numpy as np
 import warnings
-
 from pathlib import Path
-from mff import gp
-from mff import kernels
-from mff import interpolation
+
+import numpy as np
+
+from mff import gp, interpolation, kernels
 from mff.models.base import Model
+
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -21,6 +21,7 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
+
 
 class ManyBodySingleSpeciesModel(Model):
     """ many-body single species model class
@@ -47,7 +48,8 @@ class ManyBodySingleSpeciesModel(Model):
         self.element = element
         self.r_cut = r_cut
 
-        kernel = kernels.ManyBodySingleSpeciesKernel(theta=[sigma, theta, r_cut])
+        kernel = kernels.ManyBodySingleSpeciesKernel(
+            theta=[sigma, theta, r_cut])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_num = None, None, None
@@ -64,7 +66,7 @@ class ManyBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit(confs, forces, ncores = ncores)
+        self.gp.fit(confs, forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 
@@ -77,7 +79,7 @@ class ManyBodySingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.gp.fit_energy(glob_confs, energies, ncores = ncores)
+        self.gp.fit_energy(glob_confs, energies, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training forces and energies using 
@@ -95,9 +97,10 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
-      
-    def predict(self, confs, return_std=False, ncores = 1):
+        self.gp.fit_force_and_energy(
+            confs, forces, glob_confs, energies, ncores=ncores)
+
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using a GP
 
         Args:
@@ -113,9 +116,9 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std, ncores = ncores)
+        return self.gp.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
+    def predict_energy(self, glob_confs, return_std=False, ncores=1):
         """ Predict the global energies of the central atoms of confs using a GP
 
         Args:
@@ -131,8 +134,7 @@ class ManyBodySingleSpeciesModel(Model):
 
         """
 
-        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
-    
+        return self.gp.predict_energy(glob_confs, return_std, ncores=ncores)
 
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
@@ -153,7 +155,7 @@ class ManyBodySingleSpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potential, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
 
@@ -182,13 +184,15 @@ class ManyBodySingleSpeciesModel(Model):
             } if self.grid else {}
         }
 
-        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(
+            prefix, p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
 
         if self.grid:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(prefix, p=params)
+            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(
+                prefix, p=params)
 
             params['grid']['filename'] = grid_filename
             self.grid.save(directory / grid_filename)
@@ -200,10 +204,10 @@ class ManyBodySingleSpeciesModel(Model):
     def from_json(cls, path):
         """ Load the model.
         Loads the model, the associated GP and the mapped potential, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
 
@@ -278,7 +282,7 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit(confs, forces, ncores = ncores)
+        self.gp.fit(confs, forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training energies using a two 
@@ -292,7 +296,7 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_energy(glob_confs, energy, ncores = ncores)
+        self.gp.fit_energy(glob_confs, energy, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energy, ncores=1):
         """ Fit the GP to a set of training forces and energies using two 
@@ -310,9 +314,10 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        self.gp.fit_force_and_energy(confs, forces, glob_confs, energy, ncores = ncores)
+        self.gp.fit_force_and_energy(
+            confs, forces, glob_confs, energy, ncores=ncores)
 
-    def predict(self, confs, return_std=False, ncores =1):
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using a GP 
 
         Args:
@@ -320,7 +325,7 @@ class ManyBodyManySpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GP
             forces_errors (array): errors associated to the force predictions,
@@ -328,9 +333,9 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        return self.gp.predict(confs, return_std, ncores = ncores)
+        return self.gp.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
+    def predict_energy(self, glob_confs, return_std=False, ncores=1):
         """ Predict the global energies of the central atoms of confs using a GP 
 
         Args:
@@ -338,7 +343,7 @@ class ManyBodyManySpeciesModel(Model):
                 grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
@@ -346,8 +351,8 @@ class ManyBodyManySpeciesModel(Model):
 
         """
 
-        return self.gp.predict_energy(glob_confs, return_std, ncores = ncores)
-    
+        return self.gp.predict_energy(glob_confs, return_std, ncores=ncores)
+
     def save_gp(self, filename):
         """ Saves the GP object, now obsolete
         """
@@ -367,7 +372,7 @@ class ManyBodyManySpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
 
@@ -393,7 +398,8 @@ class ManyBodyManySpeciesModel(Model):
             'grid': {}
         }
 
-        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(prefix, p=params)
+        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(
+            prefix, p=params)
 
         params['gp']['filename'] = gp_filename
         self.gp.save(directory / gp_filename)
@@ -405,10 +411,10 @@ class ManyBodyManySpeciesModel(Model):
     def from_json(cls, path):
         """ Load the models.
         Loads the model, the associated GP and the mapped potential, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
 

@@ -13,27 +13,27 @@ logger = logging.getLogger(__name__)
 
 
 def dummy_calc_ff(data):
-    array, theta0, theta1, theta2, kertype = data
+    array, theta0, theta1, theta2, theta3, kertype = data
     if kertype == "single":
-        with open(Mffpath / "k3_ff_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ff_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open(Mffpath / "k3_ff_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ff_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3, 3))
     for i in np.arange(len(array)):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0],
-                        array[i][1],  theta0, theta1, theta2)
+                        array[i][1],  theta0, theta1, theta2, theta3)
     return result
 
 
 def dummy_calc_ee(data):
-    array, theta0, theta1, theta2, kertype, mapping = data
+    array, theta0, theta1, theta2, theta3, kertype, mapping = data
     if kertype == "single":
-        with open(Mffpath / "k3_ee_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open(Mffpath / "k3_ee_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros(len(array))
 
@@ -41,24 +41,24 @@ def dummy_calc_ee(data):
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
-                    result[i] += fun(np.zeros(3), np.zeros(3),
-                                     conf1, conf2, theta0, theta1, theta2)
+                    result[i] += fun(np.zeros(3), np.zeros(3), conf1,
+                                     conf2, theta0, theta1, theta2, theta3)
     else:
         for i in np.arange(len(array)):
             for conf2 in array[i][1]:
-                result[i] += fun(np.zeros(3), np.zeros(3),
-                                 array[i][0], conf2, theta0, theta1, theta2)
+                result[i] += fun(np.zeros(3), np.zeros(3), array[i]
+                                 [0], conf2, theta0, theta1, theta2, theta3)
 
     return result
 
 
 def dummy_calc_ef(data):
-    array, theta0, theta1, theta2, kertype, mapping = data
+    array, theta0, theta1, theta2, theta3, kertype, mapping = data
     if kertype == "single":
-        with open(Mffpath / "k3_ef_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open(Mffpath / "k3_ef_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3))
     if not mapping:
@@ -66,21 +66,21 @@ def dummy_calc_ef(data):
             conf2 = np.array(array[i][1], dtype='float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
-                result[i] += -fun(np.zeros(3), np.zeros(3),
-                                  conf1, conf2,  theta0, theta1, theta2)
+                result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
+                                  conf2,  theta0, theta1, theta2, theta3)
     else:
         for i in np.arange(len(array)):
             conf2 = np.array(array[i][1], dtype='float')
             conf1 = np.array(array[i][0], dtype='float')
             result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
-                              conf2,  theta0, theta1, theta2)
+                              conf2, theta0, theta1, theta2, theta3)
     return result
 
 
-class BaseThreeBody(Kernel, metaclass=ABCMeta):
-    """ Three body kernel class
+class BaseEam(Kernel, metaclass=ABCMeta):
+    """ Eam kernel class
     Handles the functions common to the single-species and
-    multi-species three-body kernels.
+    multi-species two-body kernels.
 
     Args:
         kernel_name (str): To choose between single- and two-species kernel
@@ -90,10 +90,9 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         bounds (list) : bounds of the kernel function.
 
     Attributes:
-        k3_ee (object): Energy-energy kernel function
-        k3_ef (object): Energy-force kernel function
-        k3_ef_loc (object): Local Energy-force kernel function
-        k3_ff (object): Force-force kernel function
+        k2_ee (object): Energy-energy kernel function
+        k2_ef (object): Energy-force kernel function
+        k2_ff (object): Force-force kernel function
 
     """
 
@@ -102,7 +101,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         super().__init__(kernel_name)
         self.theta = theta
         self.bounds = bounds
-        self.k3_ee, self.k3_ef, self.k3_ff = self.compile_theano()
+        self.k2_ee, self.k2_ef, self.k2_ff, self.k2_ee_d, self.k2_ef_d = self.compile_theano()
 
     def calc(self, X1, X2, ncores=1):
         """
@@ -127,7 +126,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             import sys
             sys.setrecursionlimit(100000)
             logger.info(
-                'Using %i cores for the 3-body force-force kernel calculation' % (ncores))
+                'Using %i cores for the eam force-force kernel calculation' % (ncores))
 
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
@@ -135,7 +134,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                       self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -153,8 +152,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         else:
             for i, conf1 in enumerate(X1):
                 for j, conf2 in enumerate(X2):
-                    ker[i * 3:i * 3 + 3, 3 * j:3 * j + 3] += self.k3_ff(
-                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                    ker[i * 3:i * 3 + 3, 3 * j:3 * j + 3] += self.k2_ff(
+                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
         return ker
 
@@ -181,7 +180,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             import sys
             sys.setrecursionlimit(100000)
             logger.info(
-                'Using %i cores for the 3-body energy-force kernel calculation' % (ncores))
+                'Using %i cores for the eam energy-force kernel calculation' % (ncores))
 
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
@@ -189,7 +188,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                       self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -208,13 +207,13 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 for i, x1 in enumerate(X_glob):
                     for j, conf2 in enumerate(X):
                         for conf1 in x1:
-                            ker[i, 3 * j:3 * j + 3] += self.k3_ef(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                            ker[i, 3 * j:3 * j + 3] += self.k2_ef(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
             else:
                 for i, conf1 in enumerate(X_glob):
                     for j, conf2 in enumerate(X):
-                        ker[i, 3 * j:3 * j + 3] += self.k3_ef(
-                            conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                        ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
+                            conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
         return ker
 
@@ -241,7 +240,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             import sys
             sys.setrecursionlimit(100000)
             logger.info(
-                'Using %i cores for the 3-body energy-energy kernel calculation' % (ncores))
+                'Using %i cores for the eam energy-energy kernel calculation' % (ncores))
 
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
@@ -249,7 +248,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                       self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -271,15 +270,15 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                     for j, x2 in enumerate(X2):
                         for conf1 in x1:
                             for conf2 in x2:
-                                ker[i, j] += self.k3_ee(conf1, conf2,
-                                                        self.theta[0], self.theta[1], self.theta[2])
+                                ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0],
+                                                        self.theta[1], self.theta[2], self.theta[3])
             else:
                 ker = np.zeros((len(X1), len(X2)))
                 for i, conf1 in enumerate(X1):
                     for j, x2 in enumerate(X2):
                         for conf2 in x2:
-                            ker[i, j] += self.k3_ee(conf1, conf2,
-                                                    self.theta[0], self.theta[1], self.theta[2])
+                            ker[i, j] += self.k2_ee_d(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
         return ker
 
@@ -295,22 +294,23 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N*3 x N*3 gram matrix of the matrix-valued kernels 
 
-        """
+       """
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if ncores > 1:
+            if ncores > 1:  # Used for multiprocessing
                 confs = []
+
+                # Build a list of all input pairs which matrix needs to be computed
                 for i in np.arange(len(X)):
                     for j in np.arange(i + 1):
                         thislist = np.asarray([X[i], X[j]])
                         confs.append(thislist)
                 n = len(confs)
-                logger.info(
-                    'Using %i cores for the 3-body force-force gram matrix calculation' % (ncores))
-
                 import sys
                 sys.setrecursionlimit(100000)
+                logger.info(
+                    'Using %i cores for the eam force-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(ncores + 1)
@@ -319,7 +319,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                           self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -343,17 +343,17 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 off_diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
                 for i in np.arange(X.shape[0]):
                     diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = \
-                        self.k3_ff(X[i], X[i], self.theta[0],
-                                   self.theta[1], self.theta[2])
+                        self.k2_ff(X[i], X[i], self.theta[0],
+                                   self.theta[1], self.theta[2], self.theta[3])
                     for j in np.arange(i):
                         off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
-                            self.k3_ff(X[i], X[j], self.theta[0],
-                                       self.theta[1], self.theta[2])
+                            self.k2_ff(X[i], X[j], self.theta[0],
+                                       self.theta[1], self.theta[2], self.theta[3])
 
-            gram = diag + off_diag + off_diag.T
+            gram = diag + off_diag + off_diag.T  # The gram matrix is symmetric
             return gram
 
-    def calc_gram_e(self, X, ncores=1, eval_gradient=False):  # Untested
+    def calc_gram_e(self, X, ncores=1, eval_gradient=False):
         """
         Calculate the energy-energy gram matrix for a set of configurations X.
 
@@ -365,11 +365,11 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         Returns:
             gram (matrix): N x N gram matrix of the scalar-valued kernels 
 
-        """
+       """
         if eval_gradient:
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
-            if ncores > 1:
+            if ncores > 1:  # Used for multiprocessing
                 confs = []
 
                 # Build a list of all input pairs which matrix needs to be computed
@@ -382,7 +382,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(100000)
                 logger.info(
-                    'Using %i cores for the 3-body energy-energy gram matrix calculation' % (ncores))
+                    'Using %i cores for the eam energy-energy gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(ncores + 1)
@@ -391,7 +391,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                           self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -413,19 +413,20 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
                 for i in np.arange(X.shape[0]):
                     for k, conf1 in enumerate(X[i]):
-                        diag[i, i] += self.k3_ee(conf1, conf1,
-                                                 self.theta[0], self.theta[1], self.theta[2])
+                        diag[i, i] += self.k2_ee(conf1, conf1, self.theta[0],
+                                                 self.theta[1], self.theta[2], self.theta[3])
                         for conf2 in X[i][:k]:
                             # *2 here to speed up the loop
-                            diag[i, i] += 2.0*self.k3_ee(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                            diag[i, i] += 2.0*self.k2_ee(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
                     for j in np.arange(i):
                         for conf1 in X[i]:
                             for conf2 in X[j]:
-                                off_diag[i, j] += self.k3_ee(
-                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
+                                off_diag[i, j] += self.k2_ee(
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
             gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
+
             return gram
 
     def calc_gram_ef(self, X, X_glob, ncores=1, eval_gradient=False):
@@ -459,7 +460,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 import sys
                 sys.setrecursionlimit(100000)
                 logger.info(
-                    'Using %i cores for the 3-body energy-force gram matrix calculation' % (ncores))
+                    'Using %i cores for the eam energy-force gram matrix calculation' % (ncores))
 
                 # Way to split the kernels functions to compute evenly across the nodes
                 splitind = np.zeros(ncores + 1)
@@ -468,7 +469,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
                           self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -476,86 +477,69 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 result = pool.map(dummy_calc_ef, clist)
                 pool.close()
                 pool.join()
+                result = np.vstack(np.asarray(result))
 
-                result = np.concatenate(result).ravel()
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
-                        gram[i, 3 * j:3 * j + 3] = result[3 *
-                                                          (j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]
+                        gram[i, 3 * j:3 * j + 3] = result[(j + i * X.shape[0])]
 
             else:
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         for k in X_glob[i]:
-                            gram[i, 3 * j:3 * j + 3] += self.k3_ef(
-                                k, X[j], self.theta[0], self.theta[1], self.theta[2])
+                            gram[i, 3 * j:3 * j + 3] += self.k2_ef(
+                                k, X[j], self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
             self.gram_ef = gram
 
             return gram
 
-    def calc_diag(self, X):
-
-        diag = np.zeros((X.shape[0] * 3))
-
-        for i in np.arange(X.shape[0]):
-            diag[i * 3:(i + 1) * 3] = np.diag(self.k3_ff(X[i], X[i],
-                                                         self.theta[0], self.theta[1], self.theta[2]))
-
-        return diag
-
-    def calc_diag_e(self, X):
-
-        diag = np.zeros((X.shape[0]))
-
-        for i in np.arange(X.shape[0]):
-            diag[i] = self.k3_ee(X[i], X[i], self.theta[0],
-                                 self.theta[1], self.theta[2])
-
-        return diag
-
     @staticmethod
     @abstractmethod
     def compile_theano():
-        return None, None, None
+        return None, None, None, None, None
 
 
-class ThreeBodySingleSpeciesKernel(BaseThreeBody):
-    """Three body two species kernel.
+class EamSingleSpeciesKernel(BaseEam):
+    """Eam single species kernel.
 
     Args:
         theta[0] (float): lengthscale of the kernel
-        theta[1] (float): decay rate of the cutoff function
-        theta[2] (float): cutoff radius
-
+        theta[1] (float): cutoff radius
+        theta[2] (float): factor in the exponent of the many-body decriptor
+        theta[3] (float): radius in the descriptor's exponent
     """
 
-    def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
-        super().__init__(kernel_name='ThreeBodySingleSpecies', theta=theta, bounds=bounds)
+    def __init__(self, theta=(1., 1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+        super().__init__(kernel_name='EamSingleSpecies', theta=theta, bounds=bounds)
         self.type = "single"
 
     @staticmethod
     def compile_theano():
         """
-        This function generates theano compiled kernels for energy and force learning
-        ker_jkmn_withcutoff = ker_jkmn #* cutoff_ikmn
+        This function generates theano compiled kernels for global energy and force learning
 
-        The position of the atoms relative to the centrla one, and their chemical species
-        are defined by a matrix of dimension Mx5
+        The position of the atoms relative to the central one, and their chemical species
+        are defined by a matrix of dimension Mx5 here called r1 and r2.
 
         Returns:
-            k3_ee (func): energy-energy kernel
-            k3_ef (func): energy-force kernel
-            k3_ff (func): force-force kernel
+            k2_ee (func): energy-energy kernel
+            k2_ef (func): energy-force kernel
+            k2_ff (func): force-force kernel
+            k2_ee_map (func): energy-energy kernel that takes descriptor as one argument
+            k2_ef_map (func): energy-force kernel that takes descriptor as one argument
         """
-        if not (os.path.exists(Mffpath / 'k3_ee_s.pickle') and
-                os.path.exists(Mffpath / 'k3_ef_s.pickle') and os.path.exists(Mffpath / 'k3_ff_s.pickle')):
+
+        if not (os.path.exists(Mffpath / 'keam_ee_s.pickle') and
+                os.path.exists(Mffpath / 'keam_ef_s.pickle') and os.path.exists(
+                    Mffpath / 'keam_ff_s.pickle')
+                and os.path.exists(Mffpath / 'keam_eed_s.pickle') and os.path.exists(Mffpath / 'keam_efd_s.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
             from theano import function, scan
-            logger.info("Started compilation of theano three body kernels")
-
+            logger.info(
+                "Started compilation of theano eam single species kernels")
             # --------------------------------------------------
             # INITIAL DEFINITIONS
             # --------------------------------------------------
@@ -564,218 +548,224 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
             r1, r2 = T.dvectors('r1d', 'r2d')
             # positions of neighbours
             rho1, rho2 = T.dmatrices('rho1', 'rho2')
-            # hyperparameter
+            # lengthscale hyperparameter
             sig = T.dscalar('sig')
+            # Prefactor to the exponent of the descriptor
+            alpha = T.dscalar('alpha')
             # cutoff hyperparameters
-            theta = T.dscalar('theta')
             rc = T.dscalar('rc')
+            # Descriptor as a given input, used to map
+            q1_descr = T.dscalar('q1_descr')
+            # Radius to use at denominator in the descriptor
+            r0 = T.dscalar('r0')
 
-            # positions of neighbours without chemical species
-
+            # positions of neighbours without chemical species (3D space assumed)
             rho1s = rho1[:, 0:3]
             rho2s = rho2[:, 0:3]
 
-            # --------------------------------------------------
-            # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
-            # --------------------------------------------------
-
-            # first and second configuration
+            # distances of atoms wrt to the central one and wrt each other in 1 and 2
             r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
             r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-            rjk = T.sqrt(
-                T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-            rmn = T.sqrt(
-                T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
 
-            # --------------------------------------------------
-            # BUILD THE KERNEL
-            # --------------------------------------------------
+            esp_term_1 = 2*alpha*(r1j/r0 - 1)
+            esp_term_2 = 2*alpha*(r2m/r0 - 1)
 
-            # Squared exp of differences
-            se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :])
-                            ** 2 / (2 * sig ** 2))
-            se_jkmn = T.exp(-(rjk[:, :, None, None] -
-                              rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-            se_jk2m = T.exp(-(rjk[:, :, None] -
-                              r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-            se_1jmn = T.exp(-(r1j[:, None, None] -
-                              rmn[None, :, :]) ** 2 / (2 * sig ** 2))
+            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
+            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
 
-            # Kernel not summed (cyclic permutations)
-            k1n = (se_1j2m[:, None, :, None] *
-                   se_1j2m[None, :, None, :] * se_jkmn)
-            k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :,
-                                                    None, :] * se_1j2m[None, :, :, None])
-            k3n = (se_1j2m[:, None, None, :] *
-                   se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
+            q1 = -T.sqrt(T.sum(T.exp(-esp_term_1)*cut_1))
+            q2 = -T.sqrt(T.sum(T.exp(-esp_term_2)*cut_2))
 
-            # final shape is M1 M1 M2 M2
-            ker = k1n + k2n + k3n
+            k = T.exp(-(q1-q2)**2/(2*sig**2))
 
-            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * \
-                (0.5 * (T.sgn(rc - r1j) + 1))
-            cut_jk = cut_j[:, None] * cut_j[None, :] * (
-                T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
+            k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))
 
-            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * \
-                (0.5 * (T.sgn(rc - r2m) + 1))
-            cut_mn = cut_m[:, None] * cut_m[None, :] * (
-                T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
+            # energy energy kernel
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-            # --------------------------------------------------
-            # REMOVE DIAGONAL ELEMENTS AND ADD CUTOFF
-            # --------------------------------------------------
+            # energy force kernel - Used to predict energies from forces
+            k_ef = T.grad(k, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ef,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-            # remove diagonal elements AND lower triangular ones from first configuration
-            mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
-
-            # remove diagonal elements from second configuration
-            mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
-
-            # Combine masks
-            mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
-
-            # Apply mask and then apply cutoff functions
-            ker = ker * mask_jkmn
-            ker = T.sum(ker * cut_jk[:, :, None, None]
-                        * cut_mn[None, None, :, :])
-
-            # --------------------------------------------------
-            # FINAL FUNCTIONS
-            # --------------------------------------------------
-
-            # global energy energy kernel
-            k_ee_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], ker, on_unused_input='ignore')
-
-            # global energy force kernel
-            k_ef = T.grad(ker, r2)
-            k_ef_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], k_ef, on_unused_input='ignore')
-
-            # local force force kernel
-            k_ff = T.grad(ker, r1)
+            # force force kernel - it uses only local atom pairs to avoid useless computation
+            k_ff = T.grad(k, r1)
             k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
                                      sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
-            k_ff_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], k_ff_der, on_unused_input='ignore')
+
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ff_der,
+                                allow_input_downcast=False, on_unused_input='warn')
+
+            # energy energy descriptor kernel
+            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_descr,
+                                  allow_input_downcast=False, on_unused_input='warn')
+
+            # energy force descriptor kernel
+            k_ef_descr = T.grad(k_descr, r2)
+            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_ef_descr,
+                                  allow_input_downcast=False, on_unused_input='warn')
 
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open(Mffpath / 'k3_ee_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ee_s.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open(Mffpath / 'k3_ef_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ef_s.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open(Mffpath / 'k3_ff_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ff_s.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
+            with open(Mffpath / 'keam_eed_s.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun_d, f)
+            with open(Mffpath / 'keam_efd_s.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun_d, f)
 
         else:
             print("Loading Kernels")
-            with open(Mffpath / "k3_ee_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open(Mffpath / "k3_ef_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open(Mffpath / "k3_ff_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ff_s.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
-
+            with open(Mffpath / 'keam_eed_s.pickle', 'rb') as f:
+                k_ee_fun_d = pickle.load(f)
+            with open(Mffpath / 'keam_efd_s.pickle', 'rb') as f:
+                k_ef_fun_d = pickle.load(f)
+        # --------------------------------------------------
         # WRAPPERS (we don't want to plug the position of the central element every time)
-        def k3_ee(conf1, conf2, sig, theta, rc):
+        # --------------------------------------------------
+
+        def k2_ee(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for global energy-energy correlation
+            Eam kernel for global energy-energy correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (float): scalar valued energy-energy 3-body kernel
+                kernel (float): scalar valued energy-energy Eam kernel
 
             """
-            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        def k3_ef(conf1, conf2, sig, theta, rc):
+        def k2_ef(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for global energy-force correlation
+            Eam kernel for global energy-force correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (array): 3x1 energy-force 3-body kernel
+                kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        def k3_ff(conf1, conf2, sig, theta, rc):
+        def k2_ff(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for local force-force correlation
+            Eam kernel for force-force correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (matrix): 3x3 force-force 3-body kernel
+                kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        logger.info("Ended compilation of theano three body kernels")
+        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0):
+            """
+            Eam kernel for global energy-force correlation
 
-        return k3_ee, k3_ef, k3_ff
+            Args:
+                descr1 (float): descriptor calculated for the first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                alpha (float): exponential prefactor to descriptor theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
+
+            Returns:
+                kernel (array): 3x1 energy-force Eam kernel
+
+            """
+            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+
+        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0):
+            """
+            Eam kernel for force-force correlation
+
+            Args:
+                descr1 (float): descriptor calculated for the first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                alpha (float): exponential prefactor to descriptor theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
+
+            Returns:
+                kernel (matrix): 3x3 force-force Eam kernel
+
+            """
+            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+
+        logger.info("Ended compilation of theano eam single species kernels")
+
+        return k2_ee, k2_ef, k2_ff, k2_ee_d, k2_ef_d
 
 
-class ThreeBodyManySpeciesKernel(BaseThreeBody):
-    """Three body many species kernel.
+class EamMultiSpeciesKernel(BaseEam):
+    """Eam multi species kernel.
 
     Args:
         theta[0] (float): lengthscale of the kernel
-        theta[1] (float): decay rate of the cutoff function
-        theta[2] (float): cutoff radius
-
+        theta[1] (float): cutoff radius
+        theta[2] (float): factor in the exponent of the many-body decriptor
+        theta[3] (float): radius in the descriptor's exponent
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
-        super().__init__(kernel_name='ThreeBody', theta=theta, bounds=bounds)
+        super().__init__(kernel_name='EamMultiSpecies', theta=theta, bounds=bounds)
         self.type = "multi"
 
     @staticmethod
     def compile_theano():
         """
-        This function generates theano compiled kernels for energy and force learning
-        ker_jkmn_withcutoff = ker_jkmn #* cutoff_ikmn
+        This function generates theano compiled kernels for global energy and force learning
 
-        The position of the atoms relative to the centrla one, and their chemical species
-        are defined by a matrix of dimension Mx5
+        The position of the atoms relative to the central one, and their chemical species
+        are defined by a matrix of dimension Mx5 here called r1 and r2.
 
         Returns:
-            k3_ee (func): energy-energy kernel
-            k3_ef (func): energy-force kernel
-            k3_ff (func): force-force kernel
+            k2_ee (func): energy-energy kernel
+            k2_ef (func): energy-force kernel
+            k2_ff (func): force-force kernel
+            k2_ee_map (func): energy-energy kernel that takes descriptor as one argument
+            k2_ef_map (func): energy-force kernel that takes descriptor as one argument
         """
 
-        logger.info("Started compilation of theano three body kernels")
-
-        if not (os.path.exists(Mffpath / 'k3_ee_m.pickle') and
-                os.path.exists(Mffpath / 'k3_ef_m.pickle') and os.path.exists(Mffpath / 'k3_ff_m.pickle')):
+        if not (os.path.exists(Mffpath / 'keam_ee_m.pickle') and
+                os.path.exists(Mffpath / 'keam_ef_m.pickle') and os.path.exists(
+                    Mffpath / 'keam_ff_m.pickle')
+                and os.path.exists(Mffpath / 'keam_eed_m.pickle') and os.path.exists(Mffpath / 'keam_efd_m.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
             from theano import function, scan
-
+            logger.info(
+                "Started compilation of theano eam multi species kernels")
             # --------------------------------------------------
             # INITIAL DEFINITIONS
             # --------------------------------------------------
@@ -784,224 +774,189 @@ class ThreeBodyManySpeciesKernel(BaseThreeBody):
             r1, r2 = T.dvectors('r1d', 'r2d')
             # positions of neighbours
             rho1, rho2 = T.dmatrices('rho1', 'rho2')
-            # hyperparameter
+            # lengthscale hyperparameter
             sig = T.dscalar('sig')
+            # Prefactor to the exponent of the descriptor
+            alpha = T.dscalar('alpha')
             # cutoff hyperparameters
-            theta = T.dscalar('theta')
             rc = T.dscalar('rc')
+            # Descriptor as a given input, used to map
+            q1_descr = T.dscalar('q1_descr')
+            # Radius to use at denominator in the descriptor
+            r0 = T.dscalar('r0')
 
-            # positions of neighbours without chemical species
-
+            # positions of neighbours without chemical species (3D space assumed)
             rho1s = rho1[:, 0:3]
             rho2s = rho2[:, 0:3]
-
-            alpha_1 = rho1[:, 3].flatten()
-            alpha_2 = rho2[:, 3].flatten()
-
-            alpha_j = rho1[:, 4].flatten()
-            alpha_m = rho2[:, 4].flatten()
-
-            alpha_k = rho1[:, 4].flatten()
-            alpha_n = rho2[:, 4].flatten()
-
-            # --------------------------------------------------
-            # RELATIVE DISTANCES TO CENTRAL VECTOR AND BETWEEN NEIGHBOURS
-            # --------------------------------------------------
-
-            # first and second configuration
-            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
-            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-            rjk = T.sqrt(
-                T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-            rmn = T.sqrt(
-                T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
-
-            # --------------------------------------------------
-            # CHEMICAL SPECIES MASK
-            # --------------------------------------------------
+            alpha_1 = rho1[:, 3]  # .flatten()
+            alpha_2 = rho2[:, 3]  # .flatten()
 
             # numerical kronecker
             def delta_alpha2(a1j, a2m):
-                d = np.exp(-(a1j - a2m) ** 2 / (2 * 0.00001 ** 2))
+                d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
                 return d
 
-            # permutation 1
+            # matrices determining whether couples of atoms have the same atomic number
+            delta_alphas12 = delta_alpha2(alpha_1[:, None], alpha_2[None, :])
 
-            delta_alphas12 = delta_alpha2(alpha_1[0], alpha_2[0])
-            delta_alphasjm = delta_alpha2(alpha_j[:, None], alpha_m[None, :])
-            delta_alphas_jmkn = delta_alphasjm[:, None,
-                                               :, None] * delta_alphasjm[None, :, None, :]
+            # distances of atoms wrt to the central one and wrt each other in 1 and 2
+            r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
+            r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
-            delta_perm1 = delta_alphas12 * delta_alphas_jmkn
+            esp_term_1 = 2*alpha*(r1j/r0 - 1)
+            esp_term_2 = 2*alpha*(r2m/r0 - 1)
 
-            # permutation 3
-            delta_alphas1m = delta_alpha2(
-                alpha_1[0, None], alpha_m[None, :]).flatten()
-            delta_alphasjn = delta_alpha2(alpha_j[:, None], alpha_n[None, :])
-            delta_alphask2 = delta_alpha2(
-                alpha_k[:, None], alpha_2[None, 0]).flatten()
+            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
+            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
 
-            delta_perm3 = delta_alphas1m[None, None, :, None] * delta_alphasjn[:, None, None, :] * \
-                delta_alphask2[None, :, None, None]
+            q1 = -T.sqrt(T.sum(T.exp(-esp_term_1)*cut_1))
+            q2 = -T.sqrt(T.sum(T.exp(-esp_term_2)*cut_2))
 
-            # permutation 5
-            delta_alphas1n = delta_alpha2(
-                alpha_1[0, None], alpha_n[None, :]).flatten()
-            delta_alphasj2 = delta_alpha2(
-                alpha_j[:, None], alpha_2[None, 0]).flatten()
-            delta_alphaskm = delta_alpha2(alpha_k[:, None], alpha_m[None, :])
+            k = T.exp(-(q1-q2)**2/(2*sig**2))*delta_alphas12
 
-            delta_perm5 = delta_alphas1n[None, None, None, :] * delta_alphaskm[None, :, :, None] * \
-                delta_alphasj2[:, None, None, None]
-
-            # --------------------------------------------------
-            # BUILD THE KERNEL
-            # --------------------------------------------------
-
-            # Squared exp of differences
-            se_1j2m = T.exp(-(r1j[:, None] - r2m[None, :])
-                            ** 2 / (2 * sig ** 2))
-            se_jkmn = T.exp(-(rjk[:, :, None, None] -
-                              rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-            se_jk2m = T.exp(-(rjk[:, :, None] -
-                              r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-            se_1jmn = T.exp(-(r1j[:, None, None] -
-                              rmn[None, :, :]) ** 2 / (2 * sig ** 2))
-
-            # Kernel not summed (cyclic permutations)
-            k1n = (se_1j2m[:, None, :, None] *
-                   se_1j2m[None, :, None, :] * se_jkmn)
-            k2n = (se_1jmn[:, None, :, :] * se_jk2m[:, :,
-                                                    None, :] * se_1j2m[None, :, :, None])
-            k3n = (se_1j2m[:, None, None, :] *
-                   se_jk2m[:, :, :, None] * se_1jmn[None, :, :, :])
-
-            # final shape is M1 M1 M2 M2
-
-            ker_loc = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
-
-            # Faster version of cutoff (less calculations)
-            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * \
-                (0.5 * (T.sgn(rc - r1j) + 1))
-            cut_jk = cut_j[:, None] * cut_j[None, :] * (
-                T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
-
-            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * \
-                (0.5 * (T.sgn(rc - r2m) + 1))
-            cut_mn = cut_m[:, None] * cut_m[None, :] * (
-                T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
-
-            # --------------------------------------------------
-            # REMOVE DIAGONAL ELEMENTS
-            # --------------------------------------------------
-
-            # remove diagonal elements AND lower triangular ones from first configuration
-            mask_jk = T.triu(T.ones_like(rjk)) - T.identity_like(rjk)
-
-            # remove diagonal elements from second configuration
-            mask_mn = T.ones_like(rmn) - T.identity_like(rmn)
-
-            # Combine masks
-            mask_jkmn = mask_jk[:, :, None, None] * mask_mn[None, None, :, :]
-
-            # Apply mask and then apply cutoff functions
-            ker_loc = ker_loc * mask_jkmn
-            ker_loc = T.sum(
-                ker_loc * cut_jk[:, :, None, None] * cut_mn[None, None, :, :])
-
-            # --------------------------------------------------
-            # FINAL FUNCTIONS
-            # --------------------------------------------------
+            k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))*delta_alphas12
 
             # energy energy kernel
-            k_ee_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], ker_loc, on_unused_input='ignore')
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-            # energy force kernel
-            k_ef_cut = T.grad(ker_loc, r2)
-            k_ef_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], k_ef_cut, on_unused_input='ignore')
+            # energy force kernel - Used to predict energies from forces
+            k_ef = T.grad(k, r2)
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ef,
+                                allow_input_downcast=False, on_unused_input='warn')
 
-            # force force kernel
-            k_ff_cut = T.grad(ker_loc, r1)
-            k_ff_cut_der, updates = scan(lambda j, k_ff_cut, r2: T.grad(k_ff_cut[j], r2),
-                                         sequences=T.arange(k_ff_cut.shape[0]), non_sequences=[k_ff_cut, r2])
-            k_ff_fun = function(
-                [r1, r2, rho1, rho2, sig, theta, rc], k_ff_cut_der, on_unused_input='ignore')
+            # force force kernel - it uses only local atom pairs to avoid useless computation
+            k_ff = T.grad(k, r1)
+            k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
+                                     sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
+
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ff_der,
+                                allow_input_downcast=False, on_unused_input='warn')
+
+            # energy energy descriptor kernel
+            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_descr,
+                                  allow_input_downcast=False, on_unused_input='warn')
+
+            # energy force descriptor kernel
+            k_ef_descr = T.grad(k_descr, r2)
+            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_ef_descr,
+                                  allow_input_downcast=False, on_unused_input='warn')
 
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open(Mffpath / 'k3_ee_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ee_m.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open(Mffpath / 'k3_ef_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ef_m.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open(Mffpath / 'k3_ff_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ff_m.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
+            with open(Mffpath / 'keam_eed_m.pickle', 'wb') as f:
+                pickle.dump(k_ee_fun_d, f)
+            with open(Mffpath / 'keam_efd_m.pickle', 'wb') as f:
+                pickle.dump(k_ef_fun_d, f)
 
         else:
             print("Loading Kernels")
-            with open(Mffpath / "k3_ee_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open(Mffpath / "k3_ef_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open(Mffpath / "k3_ff_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ff_m.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
-
+            with open(Mffpath / 'keam_eed_m.pickle', 'rb') as f:
+                k_ee_fun_d = pickle.load(f)
+            with open(Mffpath / 'keam_efd_m.pickle', 'rb') as f:
+                k_ef_fun_d = pickle.load(f)
+        # --------------------------------------------------
         # WRAPPERS (we don't want to plug the position of the central element every time)
-        def k3_ee(conf1, conf2, sig, theta, rc):
+        # --------------------------------------------------
+
+        def k2_ee(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for energy-energy correlation
+            Eam kernel for global energy-energy correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (float): scalar valued energy-energy 3-body kernel
+                kernel (float): scalar valued energy-energy Eam kernel
 
             """
-            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        def k3_ef(conf1, conf2, sig, theta, rc):
+        def k2_ef(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for energy-force correlation
+            Eam kernel for global energy-force correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (array): 3x1 energy-force 3-body kernel
+                kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        def k3_ff(conf1, conf2, sig, theta, rc):
+        def k2_ff(conf1, conf2, sig, rc, alpha, r0):
             """
-            Three body kernel for force-force correlation
+            Eam kernel for force-force correlation
 
             Args:
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                theta (float): cutoff decay rate hyperparameter theta[1]
+                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
 
             Returns:
-                kernel (matrix): 3x3 force-force 3-body kernel
+                kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, theta, rc)
+            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        logger.info("Ended compilation of theano three body kernels")
+        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0):
+            """
+            Eam kernel for global energy-force correlation
 
-        return k3_ee, k3_ef, k3_ff
+            Args:
+                descr1 (float): descriptor calculated for the first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                alpha (float): exponential prefactor to descriptor theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
+
+            Returns:
+                kernel (array): 3x1 energy-force Eam kernel
+
+            """
+            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+
+        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0):
+            """
+            Eam kernel for force-force correlation
+
+            Args:
+                descr1 (float): descriptor calculated for the first configuration.
+                conf2 (array): second configuration.
+                sig (float): lengthscale hyperparameter theta[0]
+                alpha (float): exponential prefactor to descriptor theta[1]
+                rc (float): cutoff distance hyperparameter theta[2]
+
+            Returns:
+                kernel (matrix): 3x3 force-force Eam kernel
+
+            """
+            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+
+        logger.info("Ended compilation of theano eam multi species kernels")
+
+        return k2_ee, k2_ef, k2_ff, k2_ee_d, k2_ef_d

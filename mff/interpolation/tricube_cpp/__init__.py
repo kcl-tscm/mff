@@ -15,32 +15,43 @@ class Spline3D(object):
         self._ylim = np.array([y.min(), y.max()])
         self._zlim = np.array([z.min(), z.max()])
 
-        self._x = np.pad(x, pad_width=1, mode='constant', constant_values=(2 * x[0] - x[1], 2 * x[-1] - x[-2]))
-        self._y = np.pad(y, pad_width=1, mode='constant', constant_values=(2 * y[0] - y[1], 2 * y[-1] - y[-2]))
-        self._z = np.pad(z, pad_width=1, mode='constant', constant_values=(2 * z[0] - z[1], 2 * z[-1] - z[-2]))
+        self._x = np.pad(x, pad_width=1, mode='constant',
+                         constant_values=(2 * x[0] - x[1], 2 * x[-1] - x[-2]))
+        self._y = np.pad(y, pad_width=1, mode='constant',
+                         constant_values=(2 * y[0] - y[1], 2 * y[-1] - y[-2]))
+        self._z = np.pad(z, pad_width=1, mode='constant',
+                         constant_values=(2 * z[0] - z[1], 2 * z[-1] - z[-2]))
 
         boundary = 'natural'
         # self._f = np.pad(f, pad_width=1, mode='edge')
 
         self._f = np.zeros(np.array(f.shape) + (2, 2, 2))
-        self._f[1:-1, 1:-1, 1:-1] = f  # place f in center, so that it is padded by unfilled values on all sides
+        # place f in center, so that it is padded by unfilled values on all sides
+        self._f[1:-1, 1:-1, 1:-1] = f
         if boundary == 'clamped':
             # faces
             self._f[(0, -1), 1:-1, 1:-1] = f[(0, -1), :, :]
             self._f[1:-1, (0, -1), 1:-1] = f[:, (0, -1), :]
             self._f[1:-1, 1:-1, (0, -1)] = f[:, :, (0, -1)]
             # verticies
-            self._f[(0, 0, -1, -1), (0, -1, 0, -1), 1:-1] = f[(0, 0, -1, -1), (0, -1, 0, -1), :]
-            self._f[(0, 0, -1, -1), 1:-1, (0, -1, 0, -1)] = f[(0, 0, -1, -1), :, (0, -1, 0, -1)]
-            self._f[1:-1, (0, 0, -1, -1), (0, -1, 0, -1)] = f[:, (0, 0, -1, -1), (0, -1, 0, -1)]
+            self._f[(0, 0, -1, -1), (0, -1, 0, -1), 1:-
+                    1] = f[(0, 0, -1, -1), (0, -1, 0, -1), :]
+            self._f[(0, 0, -1, -1), 1:-1, (0, -1, 0, -1)
+                    ] = f[(0, 0, -1, -1), :, (0, -1, 0, -1)]
+            self._f[1:-1, (0, 0, -1, -1), (0, -1, 0, -1)] = f[:,
+                                                              (0, 0, -1, -1), (0, -1, 0, -1)]
             # corners
             self._f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)] = \
-                f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1, 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)]
+                f[(0, 0, 0, 0, -1, -1, -1, -1), (0, 0, -1, -1,
+                                                 0, 0, -1, -1), (0, -1, 0, -1, 0, -1, 0, -1)]
         elif boundary == 'natural':
             # faces
-            self._f[(0, -1), 1:-1, 1:-1] = 2 * f[(0, -1), :, :] - f[(1, -2), :, :]
-            self._f[1:-1, (0, -1), 1:-1] = 2 * f[:, (0, -1), :] - f[:, (1, -2), :]
-            self._f[1:-1, 1:-1, (0, -1)] = 2 * f[:, :, (0, -1)] - f[:, :, (1, -2)]
+            self._f[(0, -1), 1:-1, 1:-1] = 2 * \
+                f[(0, -1), :, :] - f[(1, -2), :, :]
+            self._f[1:-1, (0, -1), 1:-1] = 2 * \
+                f[:, (0, -1), :] - f[:, (1, -2), :]
+            self._f[1:-1, 1:-1, (0, -1)] = 2 * \
+                f[:, :, (0, -1)] - f[:, :, (1, -2)]
             # verticies
             self._f[(0, 0, -1, -1), (0, -1, 0, -1), 1:-1] = \
                 4 * f[(0, 0, -1, -1), (0, -1, 0, -1), :] - \
@@ -66,7 +77,8 @@ class Spline3D(object):
                 f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2, 1, 1, -2, -2), (0, -1, 0, -1, 0, -1, 0, -1)] - \
                 f[(0, 0, 0, 0, -1, -1, -1, -1), (1, 1, -2, -2, 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)] - \
                 f[(1, 1, 1, 1, -2, -2, -2, -2), (0, 0, -1, -1, 0, 0, -1, -1), (1, -2, 1, -2, 1, -2, 1, -2)] - \
-                f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2, 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)]
+                f[(1, 1, 1, 1, -2, -2, -2, -2), (1, 1, -2, -2,
+                                                 1, 1, -2, -2), (1, -2, 1, -2, 1, -2, 1, -2)]
 
     @property
     def data(self):
@@ -110,7 +122,8 @@ class Spline3D(object):
 
     def ev_energy_fast(self, x, y, z):
 
-        val = _tricube.reg_ev_energy(x, y, z, self._f, self._x, self._y, self._z)
+        val = _tricube.reg_ev_energy(
+            x, y, z, self._f, self._x, self._y, self._z)
 
         return val[:, np.newaxis]
 
@@ -126,7 +139,8 @@ class Spline3D(object):
 
     def ev_forces_fast(self, x, y, z):
 
-        val_dx0, val_dx1, val_dx2 = _tricube.reg_ev_forces(x, y, z, self._f, self._x, self._y, self._z)
+        val_dx0, val_dx1, val_dx2 = _tricube.reg_ev_forces(
+            x, y, z, self._f, self._x, self._y, self._z)
 
         return val_dx0[:, np.newaxis], val_dx1[:, np.newaxis], val_dx2[:, np.newaxis]
 
@@ -142,7 +156,8 @@ class Spline3D(object):
 
     def ev_all_fast(self, x, y, z):
 
-        val, val_dx0, val_dx1, val_dx2 = _tricube.reg_ev_all(x, y, z, self._f, self._x, self._y, self._z)
+        val, val_dx0, val_dx1, val_dx2 = _tricube.reg_ev_all(
+            x, y, z, self._f, self._x, self._y, self._z)
 
         return val[:, np.newaxis], val_dx0[:, np.newaxis], val_dx1[:, np.newaxis], val_dx2[:, np.newaxis]
 
@@ -173,14 +188,16 @@ class Spline3D(object):
 
     def save(self, filename):
 
-        np.savez_compressed(filename, x=self._x[1:-1], y=self._y[1:-1], z=self._z[1:-1], f=self._f[1:-1, 1:-1, 1:-1])
+        np.savez_compressed(
+            filename, x=self._x[1:-1], y=self._y[1:-1], z=self._z[1:-1], f=self._f[1:-1, 1:-1, 1:-1])
 
 
 if __name__ == '__main__':
     from pathlib import Path
 
     n = 10
-    x, y, z = np.linspace(0, 10, n), np.linspace(0, 10, n), np.linspace(0, 10, n)
+    x, y, z = np.linspace(0, 10, n), np.linspace(
+        0, 10, n), np.linspace(0, 10, n)
 
     f = np.random.rand(n, n, n)
     g1 = Spline3D(x, y, z, f)

@@ -2,19 +2,16 @@
 
 
 import json
-import numpy as np
-
-from pathlib import Path
-
-from mff import gp
-from mff import kernels
-from mff import interpolation
-from mff import utility
-
-from .base import Model
 import logging
 import warnings
 from itertools import combinations_with_replacement
+from pathlib import Path
+
+import numpy as np
+
+from mff import gp, interpolation, kernels, utility
+
+from .base import Model
 
 logger = logging.getLogger(__name__)
 
@@ -54,17 +51,21 @@ class CombinedSingleSpeciesModel(Model):
             grid is 3-dimensional, therefore its total number of grid points will be grid_num^3    
     """
 
-    def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 1, **kwargs):
+    def __init__(self, element, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig=1, **kwargs):
         super().__init__()
         self.element = element
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel_2b = kernels.TwoBodySingleSpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
-        self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
+        kernel_2b = kernels.TwoBodySingleSpeciesKernel(
+            theta=[sigma_2b, theta_2b, r_cut])
+        self.gp_2b = gp.GaussianProcess(
+            kernel=kernel_2b, noise=noise, **kwargs)
 
-        kernel_3b = kernels.ThreeBodySingleSpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
-        self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
+        kernel_3b = kernels.ThreeBodySingleSpeciesKernel(
+            theta=[sigma_3b, theta_3b, r_cut])
+        self.gp_3b = gp.GaussianProcess(
+            kernel=kernel_3b, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_start, self.grid_num = None, None, None, None
 
@@ -88,12 +89,12 @@ class CombinedSingleSpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit(confs, forces, ncores = ncores)
+        self.gp_2b.fit(confs, forces, ncores=ncores)
 
         ntr = len(confs)
-        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores = ncores)
+        self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -111,15 +112,18 @@ class CombinedSingleSpeciesModel(Model):
 
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            self.rep_energies = utility.get_repulsive_energies(
+                glob_confs, self.rep_sig)
             energies -= self.rep_energies
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores = ncores)
+        self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
 
         ntr = len(glob_confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
+        two_body_energies = self.gp_2b.predict_energy(
+            glob_confs, ncores=ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores = ncores)
+        self.gp_3b.fit_energy(glob_confs, energies -
+                              two_body_energies, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -141,19 +145,22 @@ class CombinedSingleSpeciesModel(Model):
 
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            self.rep_energies = utility.get_repulsive_energies(
+                glob_confs, self.rep_sig)
             energies -= self.rep_energies
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
+        self.gp_2b.fit_force_and_energy(
+            confs, forces, glob_confs, energies, ncores=ncores)
 
-        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores = ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+        two_body_energies = self.gp_2b.predict_energy(
+            glob_confs, ncores=ncores)
+        self.gp_3b.fit_force_and_energy(
+            confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
 
-        
-    def predict(self, confs, return_std=False, ncores = 1):
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -162,7 +169,7 @@ class CombinedSingleSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GPs
             forces_errors (array): errors associated to the force predictions,
@@ -175,19 +182,21 @@ class CombinedSingleSpeciesModel(Model):
                 force_2b, std_2b = self.gp_2b.predict(confs, return_std)
                 force_2b += rep_forces
             else:
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores = ncores)
-            force_3b, std_3b = self.gp_2b.predict(confs, return_std, ncores = ncores)
+                force_2b, std_2b = self.gp_2b.predict(
+                    confs, return_std, ncores=ncores)
+            force_3b, std_3b = self.gp_2b.predict(
+                confs, return_std, ncores=ncores)
             return force_2b + force_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                return self.gp_2b.predict(confs, return_std, ncores = ncores) + rep_forces + \
-                   self.gp_3b.predict(confs, return_std, ncores = ncores)
+                return self.gp_2b.predict(confs, return_std, ncores=ncores) + rep_forces + \
+                    self.gp_3b.predict(confs, return_std, ncores=ncores)
             else:
-               return self.gp_2b.predict(confs, return_std, ncores = ncores) + \
-                   self.gp_3b.predict(confs, return_std, ncores = ncores)
+                return self.gp_2b.predict(confs, return_std, ncores=ncores) + \
+                    self.gp_3b.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
+    def predict_energy(self, glob_confs, return_std=False, ncores=1):
         """ Predict the local energies of the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -196,7 +205,7 @@ class CombinedSingleSpeciesModel(Model):
                 grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
@@ -205,21 +214,28 @@ class CombinedSingleSpeciesModel(Model):
 
         if return_std:
             if self.rep_sig:
-                rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
+                rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                force_2b, std_2b = self.gp_2b.predict_energy(
+                    glob_confs, return_std, ncores=ncores)
                 energy_2b += rep_energies
             else:
-                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncoress)
-            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
+                energy_2b, std_2b = self.gp_2b.predict_energy(
+                    glob_confs, return_std, ncores=ncoress)
+            energy_3b, std_3b = self.gp_2b.predict_energy(
+                glob_confs, return_std, ncores=ncores)
             return energy_2b + energy_3b, std_2b + std_3b
         else:
             if self.rep_sig:
-                rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+                rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
                 return self.gp_2b.predict_energy(glob_confs, return_std) + rep_energies +\
-                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
+                    self.gp_3b.predict_energy(
+                        glob_confs, return_std, ncores=ncores)
             else:
-                return self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores) + \
-                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores=ncores) + \
+                    self.gp_3b.predict_energy(
+                        glob_confs, return_std, ncores=ncores)
 
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """ Build the mapped 2- and 3-body potentials. 
@@ -236,7 +252,7 @@ class CombinedSingleSpeciesModel(Model):
         triplet contributions of every valid couple and triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module, which is built to work within 
         the ase python package.
-        
+
         Args:
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 3-body mapped potential
@@ -252,9 +268,11 @@ class CombinedSingleSpeciesModel(Model):
         confs[:, 0, 0] = dists_2b
         confs[:, 0, 3], confs[:, 0, 4] = self.element, self.element
 
-        grid_data = self.gp_2b.predict_energy(confs, ncores = ncores, mapping = True)
+        grid_data = self.gp_2b.predict_energy(
+            confs, ncores=ncores, mapping=True)
         if self.rep_sig:
-            grid_data += utility.get_repulsive_energies(confs, self.rep_sig, mapping = True)
+            grid_data += utility.get_repulsive_energies(
+                confs, self.rep_sig, mapping=True)
         grid_2b = interpolation.Spline1D(dists_2b, grid_data)
 
         # Mapping 3 body part
@@ -268,12 +286,15 @@ class CombinedSingleSpeciesModel(Model):
 
         # Permutations of elements
         confs[:, :, 3] = self.element  # Central element is always element 1
-        confs[:, 0, 4] = self.element  # Element on the x axis is always element 2
-        confs[:, 1, 4] = self.element  # Element on the xy plane is always element 3
+        # Element on the x axis is always element 2
+        confs[:, 0, 4] = self.element
+        # Element on the xy plane is always element 3
+        confs[:, 1, 4] = self.element
 
         grid_3b = np.zeros((num_3b, num_3b, num_3b))
 
-        grid_3b[inds] = self.gp_3b.predict_energy(confs, ncores = ncores, mapping = True).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(
+            confs, ncores=ncores, mapping=True).flatten()
 
         for ind_i in range(num_3b):
             for ind_j in range(ind_i + 1):
@@ -297,7 +318,7 @@ class CombinedSingleSpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
         """
@@ -311,7 +332,7 @@ class CombinedSingleSpeciesModel(Model):
             'element': self.element,
             'r_cut': self.r_cut,
             'rep_sig': self.rep_sig,
-            'fitted' :self.gp_2b.fitted,
+            'fitted': self.gp_2b.fitted,
             'gp_2b': {
                 'kernel': self.gp_2b.kernel.kernel_name,
                 'n_train': self.gp_2b.n_train,
@@ -329,35 +350,38 @@ class CombinedSingleSpeciesModel(Model):
             'grid_2b': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num_2b,
-                'filename' : {}
-            } if self.grid_2b else {}
-            ,
+                'filename': {}
+            } if self.grid_2b else {},
             'grid_3b': {
                 'r_min': self.grid_start,
-                'r_num': self.grid_num_3b, 
-                'filename' : {}
+                'r_num': self.grid_num_3b,
+                'filename': {}
             } if self.grid_3b else {}
         }
 
-        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(p=params)
+        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(
+            p=params)
 
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(path / gp_filename_2b)
 
         if self.grid_2b:
-            grid_filename_2b = "GRID_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npz".format(p=params)
+            grid_filename_2b = "GRID_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npz".format(
+                p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'] = grid_filename_2b
             self.grid_2b.save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
-        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(p=params)
+        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(
+            p=params)
 
         params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(path / gp_filename_3b)
 
         if self.grid_3b:
-            grid_filename_3b = "GRID_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npz".format(p=params)
+            grid_filename_3b = "GRID_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npz".format(
+                p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'] = grid_filename_3b
             self.grid_3b.save(path / grid_filename_3b)
@@ -369,10 +393,10 @@ class CombinedSingleSpeciesModel(Model):
     def from_json(cls, path):
         """ Load the model.
         Loads the model, the associated GPs and the mapped potentials, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
         """
@@ -409,10 +433,12 @@ class CombinedSingleSpeciesModel(Model):
 
         if params['grid_2b']:
             grid_filename_2b = params['grid_2b']['filename']
-            model.grid_2b = interpolation.Spline1D.load(directory / grid_filename_2b)
+            model.grid_2b = interpolation.Spline1D.load(
+                directory / grid_filename_2b)
 
             grid_filename_3b = params['grid_3b']['filename']
-            model.grid_3b = interpolation.Spline3D.load(directory / grid_filename_3b)
+            model.grid_3b = interpolation.Spline3D.load(
+                directory / grid_filename_3b)
 
             model.grid_start = params['grid_2b']['r_min']
             model.grid_num_2b = params['grid_2b']['r_num']
@@ -451,7 +477,7 @@ class CombinedSingleSpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -464,10 +490,12 @@ class CombinedSingleSpeciesModel(Model):
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
 
-        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+        d_ij, d_jk, d_ki = np.meshgrid(
+            dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
-        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(
+            d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Utilizing permutation invariance
         inds = np.logical_and(np.logical_and(d_ij >= d_jk, d_jk >= d_ki), inds)
@@ -476,7 +504,8 @@ class CombinedSingleSpeciesModel(Model):
         r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 +
+                  d_ki[inds] ** 2) / (2 * d_ij[inds])
 
         # using abs to avoid numerical error near to 0
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))
@@ -510,19 +539,24 @@ class CombinedManySpeciesModel(Model):
                 generate the triplets of atoms for the 2-body mapped potential  
     """
 
-    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig = 1, **kwargs):
+    def __init__(self, elements, r_cut, sigma_2b, sigma_3b, theta_2b, theta_3b, noise, rep_sig=1, **kwargs):
         super().__init__()
         self.elements = elements
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel_2b = kernels.TwoBodyManySpeciesKernel(theta=[sigma_2b, theta_2b, r_cut])
-        self.gp_2b = gp.GaussianProcess(kernel=kernel_2b, noise=noise, **kwargs)
+        kernel_2b = kernels.TwoBodyManySpeciesKernel(
+            theta=[sigma_2b, theta_2b, r_cut])
+        self.gp_2b = gp.GaussianProcess(
+            kernel=kernel_2b, noise=noise, **kwargs)
 
-        kernel_3b = kernels.ThreeBodyManySpeciesKernel(theta=[sigma_3b, theta_3b, r_cut])
-        self.gp_3b = gp.GaussianProcess(kernel=kernel_3b, noise=noise, **kwargs)
+        kernel_3b = kernels.ThreeBodyManySpeciesKernel(
+            theta=[sigma_3b, theta_3b, r_cut])
+        self.gp_3b = gp.GaussianProcess(
+            kernel=kernel_3b, noise=noise, **kwargs)
 
-        self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {}, {}, None, None, None
+        self.grid_2b, self.grid_3b, self.grid_start, self.grid_num_2b, self.grid_num_3b = {
+        }, {}, None, None, None
 
     def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 2- and
@@ -544,12 +578,12 @@ class CombinedManySpeciesModel(Model):
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit(confs, forces, ncores = ncores)
+        self.gp_2b.fit(confs, forces, ncores=ncores)
 
         ntr = len(confs)
-        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores = ncores)
+        self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -567,15 +601,18 @@ class CombinedManySpeciesModel(Model):
 
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            self.rep_energies = utility.get_repulsive_energies(
+                glob_confs, self.rep_sig)
             energies -= self.rep_energies
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores = 1)
+        self.gp_2b.fit_energy(glob_confs, energies, ncores=1)
 
         ntr = len(glob_confs)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
+        two_body_energies = self.gp_2b.predict_energy(
+            glob_confs, ncores=ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies - two_body_energies, ncores = ncores)
+        self.gp_3b.fit_energy(glob_confs, energies -
+                              two_body_energies, ncores=ncores)
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -597,19 +634,22 @@ class CombinedManySpeciesModel(Model):
 
         if self.rep_sig:
             self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+            self.rep_energies = utility.get_repulsive_energies(
+                glob_confs, self.rep_sig)
             energies -= self.rep_energies
             self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
             forces -= self.rep_forces
 
-        self.gp_2b.fit_force_and_energy(confs, forces, glob_confs, energies, ncores = ncores)
+        self.gp_2b.fit_force_and_energy(
+            confs, forces, glob_confs, energies, ncores=ncores)
 
-        two_body_forces = self.gp_2b.predict(confs, ncores = ncores)
-        two_body_energies = self.gp_2b.predict_energy(glob_confs, ncores = ncores)
-        self.gp_3b.fit_force_and_energy(confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores = ncores)
+        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+        two_body_energies = self.gp_2b.predict_energy(
+            glob_confs, ncores=ncores)
+        self.gp_3b.fit_force_and_energy(
+            confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
 
-        
-    def predict(self, confs, return_std=False, ncores = 1):
+    def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -618,7 +658,7 @@ class CombinedManySpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             forces (array): array of force vectors predicted by the GPs
             forces_errors (array): errors associated to the force predictions,
@@ -628,22 +668,25 @@ class CombinedManySpeciesModel(Model):
         if return_std:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores = ncores)
+                force_2b, std_2b = self.gp_2b.predict(
+                    confs, return_std, ncores=ncores)
                 force_2b += rep_forces
             else:
-                force_2b, std_2b = self.gp_2b.predict(confs, return_std, ncores = ncores)
-            force_3b, std_3b = self.gp_2b.predict(confs, return_std, ncores = ncores)
+                force_2b, std_2b = self.gp_2b.predict(
+                    confs, return_std, ncores=ncores)
+            force_3b, std_3b = self.gp_2b.predict(
+                confs, return_std, ncores=ncores)
             return force_2b + force_3b, std_2b + std_3b
         else:
             if self.rep_sig:
                 rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-                return self.gp_2b.predict(confs, return_std, ncores = ncores) + rep_forces + \
-                   self.gp_3b.predict(confs, return_std, ncores = ncores)
+                return self.gp_2b.predict(confs, return_std, ncores=ncores) + rep_forces + \
+                    self.gp_3b.predict(confs, return_std, ncores=ncores)
             else:
-               return self.gp_2b.predict(confs, return_std, ncores = ncores) + \
-                   self.gp_3b.predict(confs, return_std, ncores = ncores)
+                return self.gp_2b.predict(confs, return_std, ncores=ncores) + \
+                    self.gp_3b.predict(confs, return_std, ncores=ncores)
 
-    def predict_energy(self, glob_confs, return_std=False, ncores = 1):
+    def predict_energy(self, glob_confs, return_std=False, ncores=1):
         """ Predict the local energies of the central atoms of confs using the
         2- and 3-body GPs. The total force is the sum of the two predictions.
 
@@ -652,7 +695,7 @@ class CombinedManySpeciesModel(Model):
                 grouped configurations belong to the same snapshot
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            
+
         Returns:
             energies (array) : Array containing the total energy of each snapshot
             energies_errors (array): errors associated to the energies predictions,
@@ -661,28 +704,35 @@ class CombinedManySpeciesModel(Model):
 
         if return_std:
             if self.rep_sig:
-                rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                force_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
+                rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                force_2b, std_2b = self.gp_2b.predict_energy(
+                    glob_confs, return_std, ncores=ncores)
                 energy_2b += rep_energies
             else:
-                energy_2b, std_2b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
-            energy_3b, std_3b = self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores)
+                energy_2b, std_2b = self.gp_2b.predict_energy(
+                    glob_confs, return_std, ncores=ncores)
+            energy_3b, std_3b = self.gp_2b.predict_energy(
+                glob_confs, return_std, ncores=ncores)
             return energy_2b + energy_3b, std_2b + std_3b
         else:
             if self.rep_sig:
-                rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
-                return self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores) + rep_energies +\
-                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
+                rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores=ncores) + rep_energies +\
+                    self.gp_3b.predict_energy(
+                        glob_confs, return_std, ncores=ncores)
             else:
-                return self.gp_2b.predict_energy(glob_confs, return_std, ncores = ncores) + \
-                   self.gp_3b.predict_energy(glob_confs, return_std, ncores = ncores)
+                return self.gp_2b.predict_energy(glob_confs, return_std, ncores=ncores) + \
+                    self.gp_3b.predict_energy(
+                        glob_confs, return_std, ncores=ncores)
 
     def build_grid(self, start, num_2b, num_3b, ncores=1):
         """Function used to create the three different 2-body energy grids for 
         atoms of elements 0-0, 0-1, and 1-1, and the four different 3-body energy grids for 
         atoms of elements 0-0-0, 0-0-1, 0-1-1, and 1-1-1. The function calls the
         ``build_grid_3b`` function for each of the 3-body grids to build.
-        
+
         Args:
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 3-body mapped potential
@@ -702,28 +752,32 @@ class CombinedManySpeciesModel(Model):
 
         dists_2b = np.linspace(start, self.r_cut, num_2b)
         confs_2b = np.zeros((num_2b, 1, 5))
-        confs_2b[:, 0, 0] = dists_2b 
+        confs_2b[:, 0, 0] = dists_2b
 
         for pair in perm_list_2b:  # in this for loop, predicting then save for each individual one
             ind1 = pair[0]
             ind2 = pair[1]
-            confs_2b[:, 0, 3], confs_2b[:, 0, 4] = self.elements[ind1], self.elements[ind2]
-            mapped_energies = self.gp_2b.predict_energy(confs_2b, ncores = ncores, mapping = True)
+            confs_2b[:, 0, 3], confs_2b[:, 0,
+                                        4] = self.elements[ind1], self.elements[ind2]
+            mapped_energies = self.gp_2b.predict_energy(
+                confs_2b, ncores=ncores, mapping=True)
             if self.rep_sig:
-                mapped_energies += utility.get_repulsive_energies(confs_2b, self.rep_sig, mapping = True)
-            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(dists_2b, mapped_energies)
+                mapped_energies += utility.get_repulsive_energies(
+                    confs_2b, self.rep_sig, mapping=True)
+            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(
+                dists_2b, mapped_energies)
 
-        dists_3b= np.linspace(start, self.r_cut, num_3b)
+        dists_3b = np.linspace(start, self.r_cut, num_3b)
 
         for trip in perm_list_3b:
             ind1 = trip[0]
             ind2 = trip[1]
             ind3 = trip[2]
 
-            self.grid_3b[(ind1, ind2, ind3)] = self.build_grid_3b(dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores = ncores)
+            self.grid_3b[(ind1, ind2, ind3)] = self.build_grid_3b(
+                dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores=ncores)
 
-
-    def build_grid_3b(self, dists, element_k, element_i, element_j, ncores = 1):
+    def build_grid_3b(self, dists, element_k, element_i, element_j, ncores=1):
         """ Build a mapped 3-body potential. 
         Calculates the energy predicted by the GP for three atoms of elements element_i, element_j, element_k, 
         at all possible combinations of num distances ranging from start to r_cut. 
@@ -737,7 +791,7 @@ class CombinedManySpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -745,7 +799,7 @@ class CombinedManySpeciesModel(Model):
             element_j (int): atomic number of the second atom j in a triplet
             element_k (int): atomic number of the third atom k in a triplet
             ncores (int): number of CPUs to use when computing the triplet local energies
-            
+
         Returns:
             spline3D (obj): a 3D spline object that can be used to predict the energy and the force associated
                 to the central atom of a triplet.
@@ -763,11 +817,13 @@ class CombinedManySpeciesModel(Model):
 
         confs[:, :, 3] = element_i  # Central element is always element 1
         confs[:, 0, 4] = element_j  # Element on the x axis is always element 2
-        confs[:, 1, 4] = element_k  # Element on the xy plane is always element 3
+        # Element on the xy plane is always element 3
+        confs[:, 1, 4] = element_k
 
         grid_3b = np.zeros((num, num, num))
 
-        grid_3b[inds] = self.gp_3b.predict_energy(confs, ncores = ncores, mapping = True).flatten()
+        grid_3b[inds] = self.gp_3b.predict_energy(
+            confs, ncores=ncores, mapping=True).flatten()
 
         return interpolation.Spline3D(dists, dists, dists, grid_3b)
 
@@ -776,7 +832,7 @@ class CombinedManySpeciesModel(Model):
         This creates a .json file containing the parameters of the model and the
         paths to the GP objects and the mapped potentials, which are saved as 
         separate .gpy and .gpz files, respectively.
-        
+
         Args:
             path (str): path to the file 
         """
@@ -808,37 +864,40 @@ class CombinedManySpeciesModel(Model):
             'grid_2b': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num_2b,
-                'filename' : {}
-            } if self.grid_2b else {}
-            ,
+                'filename': {}
+            } if self.grid_2b else {},
             'grid_3b': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num_3b,
-                'filename' : {}
+                'filename': {}
             } if self.grid_3b else {}
         }
 
-        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(p=params)
+        gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(
+            p=params)
 
         params['gp_2b']['filename'] = gp_filename_2b
         self.gp_2b.save(path / gp_filename_2b)
-        
+
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(key, p=params)
+            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(
+                key, p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
             self.grid_2b[k].save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
-        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(p=params)
+        gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(
+            p=params)
 
         params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(path / gp_filename_3b)
 
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(key, p=params)
+            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(
+                key, p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
             self.grid_3b[k].save(path / grid_filename_3b)
@@ -850,10 +909,10 @@ class CombinedManySpeciesModel(Model):
     def from_json(cls, path):
         """ Load the model.
         Loads the model, the associated GPs and the mapped potentials, if available.
-        
+
         Args:
             path (str): path to the .json model file 
-        
+
         Return:
             model (obj): the model object
         """
@@ -891,11 +950,13 @@ class CombinedManySpeciesModel(Model):
         if params['grid_2b']:
             for key, grid_filename_2b in params['grid_2b']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))
-                model.grid_2b[k] = interpolation.Spline1D.load(directory / grid_filename_2b)
+                model.grid_2b[k] = interpolation.Spline1D.load(
+                    directory / grid_filename_2b)
 
             for key, grid_filename_3b in params['grid_3b']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))
-                model.grid_3b[k] = interpolation.Spline3D.load(directory / grid_filename_3b)
+                model.grid_3b[k] = interpolation.Spline3D.load(
+                    directory / grid_filename_3b)
 
             model.grid_start = params['grid_2b']['r_min']
             model.grid_num_2b = params['grid_2b']['r_num']
@@ -931,7 +992,7 @@ class CombinedManySpeciesModel(Model):
         triplet contributions of every valid triplet of atoms of which one is always the central one.
         The prediction is done by the ``calculator`` module which is built to work within 
         the ase python package.
-        
+
         Args:
             dists (array): array of floats containing all of the distances which can be used to 
                 build triplets of atoms. This array is created by calling np.linspace(start, r_cut, num)
@@ -944,16 +1005,19 @@ class CombinedManySpeciesModel(Model):
             r_ki_y (array): array containing the y coordinate of the third atom k w.r.t. the central atom i
         """
 
-        d_ij, d_jk, d_ki = np.meshgrid(dists, dists, dists, indexing='ij', sparse=False, copy=True)
+        d_ij, d_jk, d_ki = np.meshgrid(
+            dists, dists, dists, indexing='ij', sparse=False, copy=True)
 
         # Valid triangles according to triangle inequality
-        inds = np.logical_and(d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
+        inds = np.logical_and(
+            d_ij <= d_jk + d_ki, np.logical_and(d_jk <= d_ki + d_ij, d_ki <= d_ij + d_jk))
 
         # Element on the x axis
         r_ij_x = d_ij[inds]
 
         # Element on the xy plane
-        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 + d_ki[inds] ** 2) / (2 * d_ij[inds])
+        r_ki_x = (d_ij[inds] ** 2 - d_jk[inds] ** 2 +
+                  d_ki[inds] ** 2) / (2 * d_ij[inds])
 
         # using abs to avoid numerical error near to 0
         r_ki_y = np.sqrt(np.abs(d_ki[inds] ** 2 - r_ki_x ** 2))

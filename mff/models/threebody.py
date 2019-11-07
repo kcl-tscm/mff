@@ -8,7 +8,6 @@ from pathlib import Path
 
 import numpy as np
 
-import ray
 from mff import gp, interpolation, kernels
 from mff.models.base import Model
 

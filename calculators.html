@@ -243,13 +243,52 @@ To do so, simply run the following line of code on the <code class="docutils lit
 </div>
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">grids_3b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedEamSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">grid_3b</em>, <em class="sig-param">grid_eam</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd></dd></dl>
 
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">grid_3b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">grids_3b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd></dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">CombinedSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">grid_3b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">EamSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_eam</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped Eam calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.EamSingleSpecies.grid_eam">
+<code class="sig-name descname">grid_eam</code><a class="headerlink" href="#mff.calculators.EamSingleSpecies.grid_eam" title="Permalink to this definition">¶</a></dt>
+<dd><p>1D Spline interpolator for the eam mapped grid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.EamSingleSpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.EamSingleSpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+</dd></dl>
 
 <dl class="class">
 <dt>
@@ -478,7 +517,7 @@ element0-element1-element1 and element1-element1-element1 interactions.</p>
 
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodyManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodyManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>A mapped 2-body 2-species calculator for ase</p>
 <dl class="attribute">
 <dt id="mff.calculators.TwoBodyManySpecies.elements">
@@ -504,19 +543,6 @@ mapped grids for element0-element0, element0-element1 and element1-element1 inte
 </dd></dl>
 
 <dl class="attribute">
-<dt id="mff.calculators.TwoBodyManySpecies.rep_alpha">
-<code class="sig-name descname">rep_alpha</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.rep_alpha" title="Permalink to this definition">¶</a></dt>
-<dd><p>Repulsion parameter, used when no data for very
-close atoms are available in order to avoid collisions during MD.
-The parameter governs a repulsion force added to the computed one.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="attribute">
 <dt id="mff.calculators.TwoBodyManySpecies.results">
 <code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.TwoBodyManySpecies.results" title="Permalink to this definition">¶</a></dt>
 <dd><p>energy and forces calculated on the atoms object</p>
@@ -537,7 +563,7 @@ The parameter governs a repulsion force added to the computed one.</p>
 
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodySingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">rep_alpha=0.0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoBodySingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_2b</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>A mapped 2-body calculator for ase</p>
 <dl class="attribute">
 <dt id="mff.calculators.TwoBodySingleSpecies.grid_2b">
@@ -546,19 +572,6 @@ The parameter governs a repulsion force added to the computed one.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>object</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="mff.calculators.TwoBodySingleSpecies.rep_alpha">
-<code class="sig-name descname">rep_alpha</code><a class="headerlink" href="#mff.calculators.TwoBodySingleSpecies.rep_alpha" title="Permalink to this definition">¶</a></dt>
-<dd><p>Repulsion parameter, used when no data for very
-close atoms are available in order to avoid collisions during MD.
-The parameter governs a repulsion force added to the computed one.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -580,6 +593,30 @@ The parameter governs a repulsion force added to the computed one.</p>
 <dd><p>Do the calculation.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">eam_descriptor</code><span class="sig-paren">(</span><em class="sig-param">dist</em>, <em class="sig-param">norm</em>, <em class="sig-param">rc</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em><span class="sig-paren">)</span></dt>
+<dd><p>Function used to return the eam descriptor for an atom given
+the descriptor’s hyperparameters and the set of distances of neighbours.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dist</strong> (<em>array</em>) – Array of distances of neighbours</p></li>
+<li><p><strong>norm</strong> (<em>array</em>) – Array of versors of neighbours</p></li>
+<li><p><strong>rc</strong> (<em>float</em>) – cutoff radius</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – exponent prefactor of the descriptor</p></li>
+<li><p><strong>r0</strong> (<em>float</em>) – radius in the descriptor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Eam descriptor</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>t2 (float)</p>
+</dd>
+</dl>
 </dd></dl>
 
 </div>

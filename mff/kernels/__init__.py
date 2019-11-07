@@ -1,7 +1,9 @@
-from .twobodykernel import TwoBodySingleSpeciesKernel, TwoBodyManySpeciesKernel
-from .threebodykernel import ThreeBodySingleSpeciesKernel, ThreeBodyManySpeciesKernel
-from .manybodykernel import ManyBodySingleSpeciesKernel, ManyBodyManySpeciesKernel
 from .eamkernel import EamSingleSpeciesKernel
+from .manybodykernel import (ManyBodyManySpeciesKernel,
+                             ManyBodySingleSpeciesKernel)
+from .threebodykernel import (ThreeBodyManySpeciesKernel,
+                              ThreeBodySingleSpeciesKernel)
+from .twobodykernel import TwoBodyManySpeciesKernel, TwoBodySingleSpeciesKernel
 
 __all__ = [TwoBodySingleSpeciesKernel,
            TwoBodyManySpeciesKernel,

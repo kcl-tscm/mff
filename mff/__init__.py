@@ -1,10 +1,10 @@
-from .gp import GaussianProcess
 import os
 
-global MFFPATH
-MFFPATH = __path__[0] + "/cache/"
+from .gp import GaussianProcess
 
-if not os.path.exists(MFFPATH):
-    os.mkdir(MFFPATH)
+Mffpath = __path__[0] + "/cache/"
+
+if not os.path.exists(Mffpath):
+    os.mkdir(Mffpath)
 
 __all__ = [GaussianProcess]

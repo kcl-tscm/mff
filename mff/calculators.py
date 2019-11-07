@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import logging
-
 from abc import ABCMeta, abstractmethod
+from itertools import combinations_with_replacement, islice
 from pathlib import Path
-from itertools import islice
-from ase.calculators.calculator import Calculator, all_changes
+
+import numpy as np
+
 from asap3 import FullNeighborList
-from itertools import combinations_with_replacement
+from ase.calculators.calculator import Calculator, all_changes
 
 logger = logging.getLogger(__name__)
 

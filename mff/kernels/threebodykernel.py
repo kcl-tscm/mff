@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import numpy as np
+import os.path
+import pickle
 from abc import ABCMeta, abstractmethod
 
-from mff.kernels.base import Kernel
-import pickle
-import os.path
+import numpy as np
+
+from mff.kernels.base import Kernel, Mffpath
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +15,10 @@ logger = logging.getLogger(__name__)
 def dummy_calc_ff(data):
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
-        with open("k3_ff_s.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ff_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("k3_ff_m.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ff_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3, 3))
     for i in np.arange(len(array)):
@@ -29,10 +30,10 @@ def dummy_calc_ff(data):
 def dummy_calc_ee(data):
     array, theta0, theta1, theta2, kertype, mapping = data
     if kertype == "single":
-        with open("k3_ee_s.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ee_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("k3_ee_m.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ee_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros(len(array))
 
@@ -54,10 +55,10 @@ def dummy_calc_ee(data):
 def dummy_calc_ef(data):
     array, theta0, theta1, theta2, kertype, mapping = data
     if kertype == "single":
-        with open("k3_ef_s.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ef_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("k3_ef_m.pickle", 'rb') as f:
+        with open(Mffpath / "k3_ef_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3))
     if not mapping:
@@ -547,8 +548,8 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
             k3_ef (func): energy-force kernel
             k3_ff (func): force-force kernel
         """
-        if not (os.path.exists('k3_ee_s.pickle') and
-                os.path.exists('k3_ef_s.pickle') and os.path.exists('k3_ff_s.pickle')):
+        if not (os.path.exists(Mffpath / 'k3_ee_s.pickle') and
+                os.path.exists(Mffpath / 'k3_ef_s.pickle') and os.path.exists(Mffpath / 'k3_ff_s.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
@@ -664,20 +665,20 @@ class ThreeBodySingleSpeciesKernel(BaseThreeBody):
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open('k3_ee_s.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ee_s.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open('k3_ef_s.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ef_s.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open('k3_ff_s.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ff_s.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
 
         else:
             print("Loading Kernels")
-            with open("k3_ee_s.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ee_s.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open("k3_ef_s.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ef_s.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open("k3_ff_s.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ff_s.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
 
         # WRAPPERS (we don't want to plug the position of the central element every time)
@@ -768,8 +769,8 @@ class ThreeBodyManySpeciesKernel(BaseThreeBody):
 
         logger.info("Started compilation of theano three body kernels")
 
-        if not (os.path.exists('k3_ee_m.pickle') and
-                os.path.exists('k3_ef_m.pickle') and os.path.exists('k3_ff_m.pickle')):
+        if not (os.path.exists(Mffpath / 'k3_ee_m.pickle') and
+                os.path.exists(Mffpath / 'k3_ef_m.pickle') and os.path.exists(Mffpath / 'k3_ff_m.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
@@ -933,20 +934,20 @@ class ThreeBodyManySpeciesKernel(BaseThreeBody):
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open('k3_ee_m.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ee_m.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open('k3_ef_m.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ef_m.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open('k3_ff_m.pickle', 'wb') as f:
+            with open(Mffpath / 'k3_ff_m.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
 
         else:
             print("Loading Kernels")
-            with open("k3_ee_m.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ee_m.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open("k3_ef_m.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ef_m.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open("k3_ff_m.pickle", 'rb') as f:
+            with open(Mffpath / "k3_ff_m.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
 
         # WRAPPERS (we don't want to plug the position of the central element every time)

@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import json
-import numpy as np
-import warnings
-
-from mff import gp
-from mff import kernels
-from mff import interpolation
-from pathlib import Path
-from mff.models.base import Model
-import ray
-from itertools import combinations_with_replacement
 import sys
+import warnings
+from itertools import combinations_with_replacement
+from pathlib import Path
+
+import numpy as np
+
+import ray
+from mff import gp, interpolation, kernels
+from mff.models.base import Model
+
 sys.setrecursionlimit(100000)
 
 

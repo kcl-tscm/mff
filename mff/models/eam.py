@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import json
 import warnings
 from itertools import combinations_with_replacement

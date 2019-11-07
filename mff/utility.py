@@ -1,18 +1,17 @@
-from mff import models
-import numpy as np
-import sys
-import os
-import numpy as np
 import json
-from mff import models
-from mff.gp import GaussianProcess
-from mff import configurations
-from scipy.spatial.distance import cdist
-from pathlib import Path
+import os
+import sys
+import time
 from itertools import combinations_with_replacement
+from pathlib import Path
+
+import numpy as np
+from scipy.spatial.distance import cdist
+
 from asap3.analysis import FullCNA
 from ase.io import read
-import time
+from mff import configurations, models
+from mff.gp import GaussianProcess
 
 # Keep track on whether there are actual energies in your dataset or they have been discarded
 global energydefault
@@ -42,6 +41,9 @@ def find_repulstion_sigma(confs):
 
 
 def get_repulsive_forces(confs, sig):
+    """ Function used to get repulsive forces for a configuration
+    given a sigma value. The repuslion is a LJ repulsion.
+    """
     forces = np.zeros((len(confs), 3))
     for i, c in enumerate(confs):
         d_ = np.sum(c[:, :3]**2, axis=1)**0.5
@@ -52,6 +54,9 @@ def get_repulsive_forces(confs, sig):
 
 
 def get_repulsive_energies(confs, sig, mapping=False):
+    """ Function used to get repulsive energy for a configuration
+    given a sigma value. The repuslion is a LJ repulsion.
+    """
     energies = np.zeros(len(confs))
     if not mapping:
         for i, c in enumerate(confs):

@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import logging
-import numpy as np
-
-from scipy.spatial.distance import cdist
-from abc import ABCMeta, abstractmethod
-from asap3 import FullNeighborList
-from random import shuffle
-from ase.io import read
-from pathlib import Path
 import json
+import logging
+from abc import ABCMeta, abstractmethod
+from pathlib import Path
+from random import shuffle
+
+import numpy as np
+from scipy.spatial.distance import cdist
+
+from asap3 import FullNeighborList
+from ase.io import read
 
 logger = logging.getLogger(__name__)
 

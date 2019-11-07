@@ -2,13 +2,12 @@
 
 
 import json
-import numpy as np
 import warnings
-
 from pathlib import Path
-from mff import gp
-from mff import kernels
-from mff import interpolation
+
+import numpy as np
+
+from mff import gp, interpolation, kernels
 from mff.models.base import Model
 
 

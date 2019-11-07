@@ -2,16 +2,14 @@
 
 
 import json
-import numpy as np
 import warnings
-
-from pathlib import Path
-from mff import gp
-from mff import kernels
-from mff import interpolation
-from mff.models.base import Model
-from mff import utility
 from itertools import combinations_with_replacement
+from pathlib import Path
+
+import numpy as np
+
+from mff import gp, interpolation, kernels, utility
+from mff.models.base import Model
 
 
 class NpEncoder(json.JSONEncoder):

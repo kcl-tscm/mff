@@ -2,19 +2,16 @@
 
 
 import json
-import numpy as np
-
-from pathlib import Path
-
-from mff import gp
-from mff import kernels
-from mff import interpolation
-from mff import utility
-
-from .base import Model
 import logging
 import warnings
 from itertools import combinations_with_replacement
+from pathlib import Path
+
+import numpy as np
+
+from mff import gp, interpolation, kernels, utility
+
+from .base import Model
 
 logger = logging.getLogger(__name__)
 

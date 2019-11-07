@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os.path
+import pickle
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 
-from abc import ABCMeta, abstractmethod
-from mff.kernels.base import Kernel
-
-import pickle
-import os.path
+from mff.kernels.base import Kernel, Mffpath
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 def dummy_calc_ff(data):
     array, theta0, theta1, theta2, theta3, kertype = data
     if kertype == "single":
-        with open("keam_ff_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ff_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("keam_ff_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ff_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3, 3))
     for i in np.arange(len(array)):
@@ -30,10 +30,10 @@ def dummy_calc_ff(data):
 def dummy_calc_ee(data):
     array, theta0, theta1, theta2, theta3, kertype, mapping = data
     if kertype == "single":
-        with open("keam_ee_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("keam_ee_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros(len(array))
 
@@ -55,10 +55,10 @@ def dummy_calc_ee(data):
 def dummy_calc_ef(data):
     array, theta0, theta1, theta2, theta3, kertype, mapping = data
     if kertype == "single":
-        with open("keam_ef_s.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
             fun = pickle.load(f)
     elif kertype == "multi":
-        with open("keam_ef_m.pickle", 'rb') as f:
+        with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3))
     if not mapping:
@@ -530,10 +530,10 @@ class EamSingleSpeciesKernel(BaseEam):
             k2_ef_map (func): energy-force kernel that takes descriptor as one argument
         """
 
-        if not (os.path.exists('keam_ee_s.pickle') and
-                os.path.exists('keam_ef_s.pickle') and os.path.exists(
-                    'keam_ff_s.pickle')
-                and os.path.exists('keam_eed_s.pickle') and os.path.exists('keam_efd_s.pickle')):
+        if not (os.path.exists(Mffpath / 'keam_ee_s.pickle') and
+                os.path.exists(Mffpath / 'keam_ef_s.pickle') and os.path.exists(
+                    Mffpath / 'keam_ff_s.pickle')
+                and os.path.exists(Mffpath / 'keam_eed_s.pickle') and os.path.exists(Mffpath / 'keam_efd_s.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
@@ -609,28 +609,28 @@ class EamSingleSpeciesKernel(BaseEam):
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open('keam_ee_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ee_s.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open('keam_ef_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ef_s.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open('keam_ff_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ff_s.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
-            with open('keam_eed_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_eed_s.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun_d, f)
-            with open('keam_efd_s.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_efd_s.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun_d, f)
 
         else:
             print("Loading Kernels")
-            with open("keam_ee_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open("keam_ef_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open("keam_ff_s.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ff_s.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
-            with open('keam_eed_s.pickle', 'rb') as f:
+            with open(Mffpath / 'keam_eed_s.pickle', 'rb') as f:
                 k_ee_fun_d = pickle.load(f)
-            with open('keam_efd_s.pickle', 'rb') as f:
+            with open(Mffpath / 'keam_efd_s.pickle', 'rb') as f:
                 k_ef_fun_d = pickle.load(f)
         # --------------------------------------------------
         # WRAPPERS (we don't want to plug the position of the central element every time)
@@ -756,10 +756,10 @@ class EamMultiSpeciesKernel(BaseEam):
             k2_ef_map (func): energy-force kernel that takes descriptor as one argument
         """
 
-        if not (os.path.exists('keam_ee_m.pickle') and
-                os.path.exists('keam_ef_m.pickle') and os.path.exists(
-                    'keam_ff_m.pickle')
-                and os.path.exists('keam_eed_m.pickle') and os.path.exists('keam_efd_m.pickle')):
+        if not (os.path.exists(Mffpath / 'keam_ee_m.pickle') and
+                os.path.exists(Mffpath / 'keam_ef_m.pickle') and os.path.exists(
+                    Mffpath / 'keam_ff_m.pickle')
+                and os.path.exists(Mffpath / 'keam_eed_m.pickle') and os.path.exists(Mffpath / 'keam_efd_m.pickle')):
             print("Building Kernels")
 
             import theano.tensor as T
@@ -845,28 +845,28 @@ class EamMultiSpeciesKernel(BaseEam):
             # Save the function that we want to use for multiprocessing
             # This is necessary because theano is a crybaby and does not want to access the
             # Automaticallly stored compiled object from different processes
-            with open('keam_ee_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ee_m.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun, f)
-            with open('keam_ef_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ef_m.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun, f)
-            with open('keam_ff_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_ff_m.pickle', 'wb') as f:
                 pickle.dump(k_ff_fun, f)
-            with open('keam_eed_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_eed_m.pickle', 'wb') as f:
                 pickle.dump(k_ee_fun_d, f)
-            with open('keam_efd_m.pickle', 'wb') as f:
+            with open(Mffpath / 'keam_efd_m.pickle', 'wb') as f:
                 pickle.dump(k_ef_fun_d, f)
 
         else:
             print("Loading Kernels")
-            with open("keam_ee_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
                 k_ee_fun = pickle.load(f)
-            with open("keam_ef_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
                 k_ef_fun = pickle.load(f)
-            with open("keam_ff_m.pickle", 'rb') as f:
+            with open(Mffpath / "keam_ff_m.pickle", 'rb') as f:
                 k_ff_fun = pickle.load(f)
-            with open('keam_eed_m.pickle', 'rb') as f:
+            with open(Mffpath / 'keam_eed_m.pickle', 'rb') as f:
                 k_ee_fun_d = pickle.load(f)
-            with open('keam_efd_m.pickle', 'rb') as f:
+            with open(Mffpath / 'keam_efd_m.pickle', 'rb') as f:
                 k_ef_fun_d = pickle.load(f)
         # --------------------------------------------------
         # WRAPPERS (we don't want to plug the position of the central element every time)

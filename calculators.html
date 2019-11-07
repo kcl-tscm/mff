@@ -197,7 +197,7 @@
             
   <div class="section" id="calculators">
 <h1>Calculators<a class="headerlink" href="#calculators" title="Permalink to this headline">¶</a></h1>
-<p>A mapped potential is a tabulated 2- or 3-body interatomic potential created using Gaussian process regresssion and a 2- or 3-body kernel.
+<p>A mapped potential is a tabulated 2-, 3-body or eam-like interatomic potential created using Gaussian process regresssion and a 2-, 3-body or eam-like kernel.
 To use a mapped potential created with this python package within the ASE environment, it is necessary to setup a calculator using the <code class="docutils literal notranslate"><span class="pre">mff.calculators</span></code> class.</p>
 <div class="section" id="theory-introduction">
 <h2>Theory/Introduction<a class="headerlink" href="#theory-introduction" title="Permalink to this headline">¶</a></h2>
@@ -207,10 +207,7 @@ For a 2-body potential, the calculator class computes the energy and force contr
 These contributions depend only on the interatomic pairwise distance, and are computed trhough 1D spline interpolation of the stored values of the pairwise energy. The magnitude and verse of the pairwise force contributions are computed using the analytic derivitive of this 1D spline, while the direction of the force contribution must be the line that connects the central atom and its neighbour, for symmetry.
 When a 3-body potential is used, the local energy and force acting on an atom are a sum of triplet contributions which contain the central atom and two other atoms within a cutoff distance. The triplet energy contributions are computed using a 3D spline interpolation on the stored values of triplet energy which have been calculated using  <code class="docutils literal notranslate"><span class="pre">model.build_grid()</span></code>. The local force contributions are obtained through analytic derivative of the 3D spline interpolation used to calculate triplet energies.
 The calculator behaves like a tabulated potential, and its speed scales linearly (2-body) or quadratically (3-body) with the number of atoms within a cutoff distance, and is completely independent of the number of training points used for the Gaussian process regression.
-The force field obtained is also analytically energy conserving, since the force is the opposite of the analytic derivative of the local energy.
-When using a 2- or 2+3-body force field, the <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> parameter allows the user to include a Lennard-Jones like repulsive term that adds a 2-body repulsion: $$E_{rep}(r) =  0.5 ( text{rep_alpha}/r )^{12}. $$
-This introduces a repulsive term that impedes atomic collisions when the interatomic distances fall under the region where data is available. This is especially useful for high tempoerature simulations. Default <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> is zero.
-In the case of a multi-species force field, the <code class="docutils literal notranslate"><span class="pre">rep_alpha</span></code> parameter is common to every pair of elements in the current version of the code.</p>
+The force field obtained is also analytically energy conserving, since the force is the opposite of the analytic derivative of the local energy.</p>
 <p>WARNING: The atoms in the <code class="docutils literal notranslate"><span class="pre">atoms</span></code> object must be ordered in increasing atomic number for the calculator to work correctly.
 To do so, simply run the following line of code on the <code class="docutils literal notranslate"><span class="pre">atoms</span></code> object before the calculator is assigned:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
@@ -222,7 +219,7 @@ To do so, simply run the following line of code on the <code class="docutils lit
 <p>Assuming we already trained a model named <code class="docutils literal notranslate"><span class="pre">model</span></code> and built the relative mapped force field, we can assign an ASE calculator based on such force field to an ASE atoms object.</p>
 <p>For a 2-body single species model:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">TwoBodySingleSpecies</span>
-<span class="n">calc</span> <span class="o">=</span> <span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">rep_alpha</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">)</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
 <span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
 </pre></div>
@@ -236,7 +233,7 @@ To do so, simply run the following line of code on the <code class="docutils lit
 </div>
 <p>For a combined (2+3-body) model:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">CombinedSingleSpecies</span>
-<span class="n">calc</span> <span class="o">=</span> <span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_2b</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_3b</span><span class="p">,</span> <span class="n">rep_alpha</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">)</span>
+<span class="n">calc</span> <span class="o">=</span> <span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_2b</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_3b</span><span class="p">)</span>
 <span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
 </pre></div>

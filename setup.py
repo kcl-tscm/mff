@@ -4,8 +4,7 @@ import numpy
 tricube_cpp_module = Extension(
     'mff.interpolation.tricube_cpp._tricube',
     sources=["mff/interpolation/tricube_cpp/tricube_module.c", "mff/interpolation/tricube_cpp/_tricube.c"],
-    depends=["mff/interpolation/tricube_cpp/_tricube.h"],
-    include_dirs=[numpy.get_include(), "mff/interpolation/tricube_cpp/"]
+    include_dirs=[numpy.get_include()]
 )
 
 with open("README.md", "r") as fh:
@@ -22,6 +21,10 @@ setup(
     url="https://github.com/kcl-tscm/mff",
     packages=find_packages(),
     ext_modules=[tricube_cpp_module],
+    package_data={
+        # If any package contains source code files, include them:
+        '': ['*.h', '*.c', '*.pyf']
+    },
     python_requires='>=3.6',
     install_requires=[
         'numpy',

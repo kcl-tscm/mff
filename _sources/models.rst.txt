@@ -44,9 +44,9 @@ training on both forces and energies::
 
     mymodel.fit_force_and_energy(training_confs, training_forces, training_energies)
 
-Additionaly, the argument ``nnodes`` can be passed to any fit function in order to run the process on multiple processors::
+Additionaly, the argument ``ncores`` can be passed to any fit function in order to run the process on multiple processors::
 
-    mymodel.fit(training_confs, training_forces, nnodes = 4)
+    mymodel.fit(training_confs, training_forces, ncores = 4)
 
 
 
@@ -54,14 +54,19 @@ Predicting forces and energies with the GP
 ------------------------------------------
 Once the Gaussian process has been fitted, it can be used to directly predict forces and energies on test configurations. To predict the force and the energy for a single test configuration::
 
-    force = mymodel.predict(test_configuration)
-    energy = mymodel.predict_energy(test_configuration)
+    force = mymodel.predict(test_configuration, ncores)
+    energy = mymodel.predict_energy(test_configuration, ncores)
 
 the boolean variable ``return_std`` can be passed to the force and energy predict functions in order to obtain also the standard deviation associated with the prediction, default is False::
 
     mean_force, std_force = mymodel.predict(test_configuration, return_std = True)
 
+Additionaly, the argument ``ncores`` can be passed to any predict function in order to run the process on multiple processors::
+
+    force = mymodel.predict(test_configuration, ncores = 4)
+	
 .. _model_map:
+
 
 Building a mapped potential
 ---------------------------
@@ -78,9 +83,9 @@ For a combined model::
 
     mymodel.build_grid(grid start, num_2b, num_3b)
 
-Additionaly, the argument ``nnodes`` can be passed to the ``build_grid`` function for any model in order to run the process on multiple processors::
+Additionaly, the argument ``ncores`` can be passed to the ``build_grid`` function for any model in order to run the process on multiple processors::
 
-    mymodel.build_grid(grid start, num_2b, num_3b, nnodes = 4)
+    mymodel.build_grid(grid start, num_2b, num_3b, ncores  = 4)
 
 
 Saving and loading a model
@@ -122,11 +127,11 @@ Example::
 
  from mff import models
  mymodel = models.TwoBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
- mymodel.fit(training_confs, training_forces)
+ mymodel.fit(training_confs, training_forces, ncores)
 
- forces = mymodel.predict(test_configurations)
+ forces = mymodel.predict(test_configurations, ncores)
 
- mymodel.build_grid(grid_start, num_2b)
+ mymodel.build_grid(grid_start, num_2b, ncores)
  mymodel.save("thismodel.json")
 
  mymodel = models.TwoBodySingleSpecies.from_json("thismodel.json")
@@ -157,9 +162,9 @@ Example::
 
     from mff import models
     mymodel = models.ThreeBodySingleSpecies(atomic_number, cutoff_radius, sigma, theta, noise)
-    mymodel.fit(training_confs, training_forces)
-    forces = mymodel.predict(test_configurations)
-    mymodel.build_grid(grid_start, num_3b)
+    mymodel.fit(training_confs, training_forces, ncores)
+    forces = mymodel.predict(test_configurations, ncores)
+    mymodel.build_grid(grid_start, num_3b, ncores)
     mymodel.save("thismodel.json")
     mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
@@ -190,12 +195,76 @@ Example::
  from mff import models
  mymodel = models.CombinedSingleSpecies(atomic_number, cutoff_radius,
                         sigma_2b, sigma_3b, sigma_2b, theta_3b, noise)
- mymodel.fit(training_confs, training_forces)
- forces = mymodel.predict(test_configurations)
- mymodel.build_grid(grid_start, num_2b)
+ mymodel.fit(training_confs, training_forces, ncores)
+ forces = mymodel.predict(test_configurations, ncores)
+ mymodel.build_grid(grid_start, num_2b, ncores)
  mymodel.save("thismodel.json")
  mymodel = models.CombinedSingleSpecies.from_json("thismodel.json")
 
 
 .. automodule:: mff.models.combined
+   :members:
+
+
+Eam Model
+---------
+
+Module that uses an eam-like many-body kernel to do Guassian process regression, 
+and to build eam mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated eam
+potential via the ``build grid`` function call.
+A mapped model can be thensaved, loaded and used to run molecular 
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example::
+
+ from mff import models
+ mymodel = models.EamSingleSpecies(atomic_number, cutoff_radius,
+                         sigma, alpha, r0, noise)
+ mymodel.fit(training_confs, training_forces, ncores)
+ forces = mymodel.predict(test_configurations, ncores)
+ mymodel.build_grid(grid_start, num_2b, ncores)
+ mymodel.save("thismodel.json")
+ mymodel = models.EamSingleSpecies.from_json("thismodel.json")
+
+
+.. automodule:: mff.models.eam
+   :members:
+   
+   
+   TwoThreeEam Model
+--------------------
+
+Module that uses a 2+3+many-body kernel to do Guassian process regression, 
+and to build eam mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces 
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto tabulated 2, 3 and eam
+potentials via the ``build grid`` function call.
+A mapped model can be thensaved, loaded and used to run molecular 
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.
+
+Example::
+
+ from mff import models
+ mymodel = models.TwoThreeEamSingleSpecies(atomic_number, cutoff_radius, sigma_2b, sigma_3b, 
+ 				sigma_eam, theta_2b, theta_3b, alpha, r0, noise, rep_sig)
+ mymodel.fit(training_confs, training_forces, ncores)
+ forces = mymodel.predict(test_configurations, ncores)
+ mymodel.build_grid(start, start_eam, end_eam, num_2b, num_3b, num_eam, ncores)
+ mymodel.save("thismodel.json")
+ mymodel = models.EamSingleSpecies.from_json("thismodel.json")
+
+
+.. automodule:: mff.models.eam
    :members:

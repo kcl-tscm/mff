@@ -100,6 +100,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#two-body-model">Two Body Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#three-body-model">Three Body Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#combined-model">Combined Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eam-model">Eam Model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
@@ -113,18 +114,12 @@
 <li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#the-models-module">The “models” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#the-gp-module">The “gp” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#the-configurations-module">The “configurations” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#the-calculators-module">The “calculators” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#the-kernels-module">The “kernels” module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
 </ul>
 </li>
 </ul>
@@ -234,20 +229,24 @@ In the case of a 2+3-body kernel for a monoatomic system:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit_force_and_energy</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">training_energies</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">nnodes</span></code> can be passed to any fit function in order to run the process on multiple processors:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">nnodes</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">ncores</span></code> can be passed to any fit function in order to run the process on multiple processors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="predicting-forces-and-energies-with-the-gp">
 <h2>Predicting forces and energies with the GP<a class="headerlink" href="#predicting-forces-and-energies-with-the-gp" title="Permalink to this headline">¶</a></h2>
 <p>Once the Gaussian process has been fitted, it can be used to directly predict forces and energies on test configurations. To predict the force and the energy for a single test configuration:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">)</span>
-<span class="n">energy</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict_energy</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">energy</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict_energy</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>the boolean variable <code class="docutils literal notranslate"><span class="pre">return_std</span></code> can be passed to the force and energy predict functions in order to obtain also the standard deviation associated with the prediction, default is False:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mean_force</span><span class="p">,</span> <span class="n">std_force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">,</span> <span class="n">return_std</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">ncores</span></code> can be passed to any predict function in order to run the process on multiple processors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">force</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configuration</span><span class="p">,</span> <span class="n">ncores</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -266,8 +265,8 @@ For a 2-body model:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">nnodes</span></code> can be passed to the <code class="docutils literal notranslate"><span class="pre">build_grid</span></code> function for any model in order to run the process on multiple processors:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">,</span> <span class="n">nnodes</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+<p>Additionaly, the argument <code class="docutils literal notranslate"><span class="pre">ncores</span></code> can be passed to the <code class="docutils literal notranslate"><span class="pre">build_grid</span></code> function for any model in order to run the process on multiple processors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid</span> <span class="n">start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">,</span> <span class="n">ncores</span>  <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -304,11 +303,11 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
-<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 
-<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 
-<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
 
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
@@ -840,9 +839,9 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ThreeBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
-<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
-<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
-<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
 </pre></div>
@@ -866,11 +865,61 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span>
                        <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
-<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">)</span>
-<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">)</span>
-<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="eam-model">
+<h2>Eam Model<a class="headerlink" href="#eam-model" title="Permalink to this headline">¶</a></h2>
+<p>Module that uses an eam-like many-body kernel to do Guassian process regression,
+and to build eam mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto a tabulated eam
+potential via the <code class="docutils literal notranslate"><span class="pre">build</span> <span class="pre">grid</span></code> function call.
+A mapped model can be thensaved, loaded and used to run molecular
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">EamSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span>
+                        <span class="n">sigma</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">r0</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">grid_start</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">EamSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<hr class="docutils" />
+<p>Module that uses a 2+3+many-body kernel to do Guassian process regression,
+and to build eam mapped potentials.
+The model has to be first defined, then the Gaussian processes must be
+trained using training configurations and forces (and/or energies).
+Once a model has been trained, it can be used to predict forces
+(and/or energies) on unknonwn atomic configurations.
+A trained Gaussian process can then be mapped onto tabulated 2, 3 and eam
+potentials via the <code class="docutils literal notranslate"><span class="pre">build</span> <span class="pre">grid</span></code> function call.
+A mapped model can be thensaved, loaded and used to run molecular
+dynamics simulations via the calculator module.
+These mapped potentials retain the accuracy of the GP used to build them,
+while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoThreeEamSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span>
+                               <span class="n">sigma_eam</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">r0</span><span class="p">,</span> <span class="n">noise</span><span class="p">,</span> <span class="n">rep_sig</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">build_grid</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">start_eam</span><span class="p">,</span> <span class="n">end_eam</span><span class="p">,</span> <span class="n">num_2b</span><span class="p">,</span> <span class="n">num_3b</span><span class="p">,</span> <span class="n">num_eam</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
+<span class="n">mymodel</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
+<span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">EamSingleSpecies</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;thismodel.json&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

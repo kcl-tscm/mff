@@ -36,7 +36,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Index" href="genindex.html" />
-    <link rel="prev" title="Advanced Sampling" href="advanced_sampling.html" /> 
+    <link rel="prev" title="Calculators" href="calculators.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -100,6 +100,7 @@
 <li class="toctree-l2"><a class="reference internal" href="models.html#two-body-model">Two Body Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="models.html#three-body-model">Three Body Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="models.html#combined-model">Combined Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#eam-model">Eam Model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="confs.html">Configurations</a></li>
@@ -113,18 +114,12 @@
 <li class="toctree-l2"><a class="reference internal" href="calculators.html#example">Example</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="advanced_sampling.html">Advanced Sampling</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#theory-introduction">Theory/Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced_sampling.html#example">Example</a></li>
-</ul>
-</li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#the-models-module">The “models” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-gp-module">The “gp” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-configurations-module">The “configurations” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-calculators-module">The “calculators” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-kernels-module">The “kernels” module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-advanced-sampling-module">The “advanced_sampling” module</a></li>
 </ul>
 </li>
 </ul>
@@ -205,6 +200,7 @@
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.threebody.ThreeBodyTwoSpeciesModel</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.combined.CombinedSingleSpeciesModel</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.combined.CombinedTwoSpeciesModel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twothreeeam.TwoThreeEamSingleSpeciesModel</span></code></p>
 </div>
 <div class="section" id="the-gp-module">
 <h2>The “gp” module<a class="headerlink" href="#the-gp-module" title="Permalink to this headline">¶</a></h2>
@@ -222,6 +218,8 @@
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.ThreeBodyTwoSpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.CombinedSingleSpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.CombinedTwoSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.EamSingleSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoThreeEamSingleSpecies</span></code></p>
 </div>
 <div class="section" id="the-kernels-module">
 <h2>The “kernels” module<a class="headerlink" href="#the-kernels-module" title="Permalink to this headline">¶</a></h2>
@@ -229,10 +227,10 @@
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel</span></code></p>
 <p><a class="reference internal" href="gp.html#mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel" title="mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel</span></code></a></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel</span></code></p>
-</div>
-<div class="section" id="the-advanced-sampling-module">
-<h2>The “advanced_sampling” module<a class="headerlink" href="#the-advanced-sampling-module" title="Permalink to this headline">¶</a></h2>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.advanced_sampling</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.eamkernel.EamSingleSpeciesKernel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.eamkernel.EamMultiSpeciesKernel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.manybodykernel.ManyBodySingleSpeciesKernel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.manybodykernel.ManyBodyTwoSpeciesKernel</span></code></p>
 </div>
 </div>
 
@@ -247,7 +245,7 @@
         <a href="genindex.html" class="btn btn-neutral float-right" title="Index" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="advanced_sampling.html" class="btn btn-neutral float-left" title="Advanced Sampling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="calculators.html" class="btn btn-neutral float-left" title="Calculators" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

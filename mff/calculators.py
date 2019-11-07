@@ -368,7 +368,7 @@ class CombinedSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b, **kwargs)
 
 
-class CombinedEamSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies, EamSingleSpecies):
+class TwoThreeEamSingleSpecies(TwoBodySingleSpecies, ThreeBodySingleSpecies, EamSingleSpecies):
     def __init__(self, r_cut, grid_2b, grid_3b, grid_eam, alpha, r0, **kwargs):
         super().__init__(r_cut, grid_2b=grid_2b, grid_3b=grid_3b,
                          grid_eam=grid_eam, alpha=alpha, r0=r0, **kwargs)

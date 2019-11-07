@@ -15,6 +15,8 @@ The "models" module
 
 :class:`mff.models.combined.CombinedTwoSpeciesModel`
 
+:class:`mff.models.twothreeeam.TwoThreeEamSingleSpeciesModel`
+
    
 The "gp" module
 ---------------
@@ -42,6 +44,11 @@ The "calculators" module
 
 :class:`mff.calculators.CombinedTwoSpecies`
 
+:class:`mff.calculators.EamSingleSpecies`
+
+:class:`mff.calculators.TwoThreeEamSingleSpecies`
+
+
 The "kernels" module
 --------------------
 
@@ -53,9 +60,10 @@ The "kernels" module
 
 :class:`mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
 
-The "advanced_sampling" module
---------------------
+:class:`mff.kernels.eamkernel.EamSingleSpeciesKernel`
 
-:class:`mff.advanced_sampling`
+:class:`mff.kernels.eamkernel.EamMultiSpeciesKernel`
 
-
+:class:`mff.kernels.manybodykernel.ManyBodySingleSpeciesKernel`
+								   
+:class:`mff.kernels.manybodykernel.ManyBodyTwoSpeciesKernel`

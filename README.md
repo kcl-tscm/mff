@@ -21,9 +21,16 @@ For a detailed description of the theory behind Gaussian process regression to p
 
 For an example use of the MFF package to build 3-body force fields for Ni nanoclusters, please see [2].
 
-## Install
+## Pip Install
 
-Clone the repo into a folder:
+To install MFF with pip, simply run the following in a Python 3.6 or 3.7 environment:
+
+    pip install mff
+
+
+## Source Install
+
+To install the MFF package from source, first clone the repo into a folder:
 
     git clone https://github.com/kcl-tscm/mff.git
     cd mff

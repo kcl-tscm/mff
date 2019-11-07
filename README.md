@@ -21,42 +21,36 @@ For a detailed description of the theory behind Gaussian process regression to p
 
 For an example use of the MFF package to build 3-body force fields for Ni nanoclusters, please see [2].
 
-## Pip Install
+## Pip Installation
 
 To install MFF with pip, simply run the following in a Python 3.6 or 3.7 environment:
 
     pip install mff
 
 
-## Source Install
+## Source Installation
 
-To install the MFF package from source, first clone the repo into a folder:
+If the pip installation fails, try the following:
+Clone from source and enter the folder:
 
     git clone https://github.com/kcl-tscm/mff.git
     cd mff
 
 
-If you don't have it, install virtualenv
+With a working conda installation, create a new environment called mff-env
+using the requirements specified in the mff-env.yaml file
+(and remove previous environments with the same name if there are any):
 
-    pip install virtualenv
- 
- 
-Create a virtual environment using a python 3.6 installation
-
-	virtualenv --python=/usr/bin/python3.6 <path/to/new/virtualenv/>
+    conda env remove --name mff-env    
+    conda env create -f mff-env.yaml
 
 
-Activate the new virtual environment 
+Enter the newly created conda environment
 	
-	source <path/to/new/virtualenv/bin/activate>
+	conda activate mff-env
 
 
-To install from source run the following command:
-    
-    python setup.py install
-	
-
-Or, to build in place for development, run:
+To install from source the development version, run:
     
     python setup.py develop
 

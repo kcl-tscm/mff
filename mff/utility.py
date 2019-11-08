@@ -489,7 +489,7 @@ def get_training_set(c, f, el, ntr, method, cutoff, nbins=None, traj=None, cna_c
     return X, Y
 
 
-def get_model(elements, r_cut, ker, sigma=0.5, theta=0.5, noise=0.001, rep_sig=1):
+def get_model(elements, r_cut, ker, sigma=0.5, theta=0.5, noise=0.001, rep_sig=1, alpha =1, r0=10, sigma_eam = 1):
     """ Load the correct model based on the specifications of kernel and number of elements
 
     """
@@ -506,9 +506,15 @@ def get_model(elements, r_cut, ker, sigma=0.5, theta=0.5, noise=0.001, rep_sig=1
         elif ker == 'mb':
             m = models.ManyBodySingleSpeciesModel(
                 element=elements, r_cut=r_cut, sigma=sigma, noise=noise, theta=theta)
+        elif ker == 'eam':
+            m = models.EamySingleSpeciesModel(
+                element=elements, r_cut=r_cut, sigma=sigma, noise=noise, alpha=alpha, r0=r0)
+        elif ker == '23eam':
+            m = models.TwoThreeEamSingleSpeciesModel(element=elements, r_cut=r_cut, sigma_2b=sigma, sigma_3b=sigma*2, sigma_eam = sigma_eam,
+                                                  noise=noise, theta_2b=theta, theta_3b=theta,  alpha=alpha, r0=r0, rep_sig=rep_sig)
         else:
             print(
-                "Kernel Type not understood, available options are 2b, 3b, mb or combined.")
+                "Kernel Type not understood, available options are 2b, 3b, mb, eam, 23eam or combined.")
 
     elif len(elements) > 1:
         if ker == '2b':
@@ -523,9 +529,15 @@ def get_model(elements, r_cut, ker, sigma=0.5, theta=0.5, noise=0.001, rep_sig=1
         elif ker == 'mb':
             m = models.ManyBodyManySpeciesModel(
                 elements=elements, r_cut=r_cut, sigma=sigma, noise=noise, theta=theta)
+        elif ker == 'eam':
+            m = models.EamyManySpeciesModel(
+                elements=elements, r_cut=r_cut, sigma=sigma, noise=noise, alpha=alpha, r0=r0)
+        elif ker == '23eam':
+            m = models.TwoThreeEamManySpeciesModel(elements=elements, r_cut=r_cut, sigma_2b=sigma, sigma_3b=sigma*2, sigma_eam = sigma_eam,
+                                                  noise=noise, theta_2b=theta, theta_3b=theta,  alpha=alpha, r0=r0, rep_sig=rep_sig)
         else:
             print(
-                "Kernel Type not understood, available options are 2b, 3b, mb or combined.")
+                "Kernel Type not understood, available options are 2b, 3b, mb, eam, 23eam or combined.")
 
     else:
         print("Number of elements less than 1, elements must be an array or list with len >=1.")

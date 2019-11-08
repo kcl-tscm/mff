@@ -160,3 +160,11 @@ tutorials/k3_ff_s.pickle
 tutorials/data/Ni_19/models/
 mff/.vscode/launch.json
 mff/.vscode/settings.json
+
+tutorials/data/Ni_19/results/2b_6.50_0.40_0.0010_50.json
+
+tutorials/data/Ni_19/results/2b_8.00_0.40_0.0010_230.json
+
+tutorials/data/PtCu_13/models/MODEL_ker_TwoBodySingleSpecies_ntr_200.json
+
+tutorials/data/PtCu_13/results/2b_8.00_0.40_0.0010_200.json

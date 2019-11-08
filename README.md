@@ -37,22 +37,30 @@ Clone from source and enter the folder:
     cd mff
 
 
-With a working conda installation, create a new environment called mff-env
-using the requirements specified in the mff-env.yaml file
-(and remove previous environments with the same name if there are any):
+If you don't have it, install virtualenv:
 
-    conda env remove --name mff-env    
-    conda env create -f mff-env.yaml
+    pip install virtualenv	   
 
 
-Enter the newly created conda environment
-	
-	conda activate mff-env
+Create a virtual environment using a python 3.6 installation	
+
+	virtualenv --python=/usr/bin/python3.6 <path/to/new/virtualenv/>	
 
 
-To install from source the development version, run:
-    
+Activate the new virtual environment 	
+
+	source <path/to/new/virtualenv/bin/activate>	
+
+
+To install from source run the following command:	
+
+    python setup.py install	
+
+
+Or, to build in place for development, run:	
+
     python setup.py develop
+
 
 
 ## Examples

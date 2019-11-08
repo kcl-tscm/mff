@@ -605,6 +605,10 @@ def get_model_name(elements, kernel, ntr):
         first_name = "ThreeBody"
     elif kernel == "combined":
         first_name = "Combined"
+    elif kernel == "eam":
+        first_name = "Eam"
+    elif kernel == "23eam":
+        first_name = "TwoThreeEam"
 
     if len(elements) == 1:
         second_name = "SingleSpecies"
@@ -659,8 +663,8 @@ def test_energies(m, x_e, y_e, plot=False, ncores=1):
     RMSE_e = np.sqrt(np.mean((y_err) ** 2))  # Root mean square error on energy
 
     print('')
-    print('Energy RMSE: {:.4} eV'.format(RMSE_e))
-    print('Energy MAE : {:.4f} +- {:.4f} eV'.format(MAE, SMAE))
+    print('Energy RMSE: {:.4} eV/atom'.format(RMSE_e))
+    print('Energy MAE : {:.4f} +- {:.4f} eV/atom'.format(MAE, SMAE))
 
     if plot:
         density_plot(y_e, y_pred, 'energy')
@@ -778,12 +782,20 @@ def load_model(filename):
         m = models.ThreeBodySingleSpeciesModel.from_json(filename)
     elif model == "CombinedSingleSpeciesModel":
         m = models.CombinedSingleSpeciesModel.from_json(filename)
+    elif model == "EamSingleSpeciesModel":
+        m = models.EamSingleSpeciesModel.from_json(filename)
+    elif model == "TwoThreeEamSingleSpeciesModel":
+        m = models.TwoThreeEamSingleSpeciesModel.from_json(filename)
     elif model == "TwoBodyManySpeciesModel":
         m = models.TwoBodyManySpeciesModel.from_json(filename)
     elif model == "ThreeBodyManySpeciesModel":
         m = models.ThreeBodyManySpeciesModel.from_json(filename)
     elif model == "CombinedManySpeciesModel":
         m = models.CombinedManySpeciesModel.from_json(filename)
+    elif model == "EamSingleManyModel":
+        m = models.EamSingleManyModel.from_json(filename)
+    elif model == "TwoThreeEamManySpeciesModel":
+        m = models.TwoThreeEamManySpeciesModel.from_json(filename)
     else:
         print("Json file does contain unexpected model name")
         return 0

@@ -2375,7 +2375,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 
 <dl class="method">
 <dt id="mff.models.eam.EamMultiSpeciesModel.build_grid">
-<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">end</em>, <em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build the mapped eam potential.
 Calculates the energy predicted by the GP for a configuration which eam descriptor
 is evalued between start and end. These energies are stored and a 1D spline
@@ -2386,9 +2386,8 @@ the ase python package.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start</strong> (<em>float</em>) – smallest value of the eam descriptor to be mapped</p></li>
-<li><p><strong>end</strong> (<em>float</em>) – largest value of the eam descriptor to be mapped</p></li>
 <li><p><strong>num</strong> (<em>int</em>) – number of points to use in the grid of the mapped potential</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 </dl>
@@ -2485,6 +2484,7 @@ Loads the model, the associated GP and the mapped potential, if available.</p>
 atomic numbers of atoms within a cutoff from the central one</p></li>
 <li><p><strong>return_std</strong> (<em>bool</em>) – if True, returns the standard deviation
 associated to predictions according to the GP framework</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -2623,7 +2623,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 
 <dl class="method">
 <dt id="mff.models.eam.EamSingleSpeciesModel.build_grid">
-<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">end</em>, <em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamSingleSpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamSingleSpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build the mapped eam potential.
 Calculates the energy predicted by the GP for a configuration which eam descriptor
 is evalued between start and end. These energies are stored and a 1D spline
@@ -2634,9 +2634,8 @@ the ase python package.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start</strong> (<em>float</em>) – smallest value of the eam descriptor to be mapped</p></li>
-<li><p><strong>end</strong> (<em>float</em>) – largest value of the eam descriptor to be mapped</p></li>
 <li><p><strong>num</strong> (<em>int</em>) – number of points to use in the grid of the mapped potential</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 </dl>
@@ -2921,7 +2920,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 
 <dl class="method">
 <dt>
-<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">end</em>, <em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span></dt>
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span></dt>
 <dd><p>Build the mapped eam potential.
 Calculates the energy predicted by the GP for a configuration which eam descriptor
 is evalued between start and end. These energies are stored and a 1D spline
@@ -2932,9 +2931,8 @@ the ase python package.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start</strong> (<em>float</em>) – smallest value of the eam descriptor to be mapped</p></li>
-<li><p><strong>end</strong> (<em>float</em>) – largest value of the eam descriptor to be mapped</p></li>
 <li><p><strong>num</strong> (<em>int</em>) – number of points to use in the grid of the mapped potential</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 </dl>
@@ -3031,6 +3029,7 @@ Loads the model, the associated GP and the mapped potential, if available.</p>
 atomic numbers of atoms within a cutoff from the central one</p></li>
 <li><p><strong>return_std</strong> (<em>bool</em>) – if True, returns the standard deviation
 associated to predictions according to the GP framework</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3169,7 +3168,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 
 <dl class="method">
 <dt>
-<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">end</em>, <em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span></dt>
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span></dt>
 <dd><p>Build the mapped eam potential.
 Calculates the energy predicted by the GP for a configuration which eam descriptor
 is evalued between start and end. These energies are stored and a 1D spline
@@ -3180,9 +3179,8 @@ the ase python package.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start</strong> (<em>float</em>) – smallest value of the eam descriptor to be mapped</p></li>
-<li><p><strong>end</strong> (<em>float</em>) – largest value of the eam descriptor to be mapped</p></li>
 <li><p><strong>num</strong> (<em>int</em>) – number of points to use in the grid of the mapped potential</p></li>
+<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 </dl>

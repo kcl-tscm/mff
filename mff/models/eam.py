@@ -23,6 +23,18 @@ class NpEncoder(json.JSONEncoder):
             return super(NpEncoder, self).default(obj)
 
 
+def get_max_eam(X, rc, alpha, r0):
+    t_max = 0
+    for c in X:
+        dist = np.sum(c[:, :3]**2, axis=1)**0.5
+        cut_1 = 0.5*(1 + np.cos(np.pi*dist/rc))
+        t1 = np.exp(-2*alpha*(dist/r0 - 1))
+        t2 = -sum(cut_1*t1)**0.5
+        if t2 < t_max:
+            t_max = t2
+    return t_max
+
+
 class EamSingleSpeciesModel(Model):
     """ Eam single species model class
     Class managing the Gaussian process and its mapped counterpart
@@ -150,7 +162,7 @@ class EamSingleSpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, end, num, ncores=1):
+    def build_grid(self, num, ncores=1):
         """ Build the mapped eam potential. 
         Calculates the energy predicted by the GP for a configuration which eam descriptor
         is evalued between start and end. These energies are stored and a 1D spline
@@ -160,13 +172,14 @@ class EamSingleSpeciesModel(Model):
         the ase python package.
 
         Args:
-            start (float): smallest value of the eam descriptor to be mapped
-            end (float): largest value of the eam descriptor to be mapped
             num (int): number of points to use in the grid of the mapped potential   
+            ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.grid_start = start
-        self.grid_end = end
+        self.grid_start = 1.5 * \
+            get_max_eam(self.gp.X_train_, self.r_cut,
+                        self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        self.grid_end = 0
         self.grid_num = num
 
         dists = list(np.linspace(self.grid_start,
@@ -174,7 +187,6 @@ class EamSingleSpeciesModel(Model):
 
         grid_data = self.gp.predict_energy(dists, ncores=ncores, mapping=True)
         self.grid = interpolation.Spline1D(dists, grid_data)
-        return grid_data
 
     def save(self, path):
         """ Save the model.
@@ -199,7 +211,7 @@ class EamSingleSpeciesModel(Model):
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
                 'sigma': self.gp.kernel.theta[0],
-                'alpha': self.gp.kernel.theta[1],
+                'alpha': self.gp.kernel.theta[2],
                 'noise': self.gp.noise,
                 'r0': self.gp.kernel.theta[3]
             },
@@ -354,6 +366,7 @@ class EamMultiSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
+            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         Returns:
             forces (array): array of force vectors predicted by the GP
@@ -395,7 +408,7 @@ class EamMultiSpeciesModel(Model):
         warnings.warn('use save and load function', DeprecationWarning)
         self.gp.load(filename)
 
-    def build_grid(self, start, end, num, ncores=1):
+    def build_grid(self, num, ncores=1):
         """ Build the mapped eam potential. 
         Calculates the energy predicted by the GP for a configuration which eam descriptor
         is evalued between start and end. These energies are stored and a 1D spline
@@ -405,13 +418,15 @@ class EamMultiSpeciesModel(Model):
         the ase python package.
 
         Args:
-            start (float): smallest value of the eam descriptor to be mapped
-            end (float): largest value of the eam descriptor to be mapped
             num (int): number of points to use in the grid of the mapped potential   
+            ncores (int): number of CPUs to use for the gram matrix evaluation
+
         """
 
-        self.grid_start = start
-        self.grid_end = end
+        self.grid_start = 1.5 * \
+            get_max_eam(self.gp.X_train_, self.r_cut,
+                        self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        self.grid_end = 0
         self.grid_num = num
 
         dists = list(np.linspace(self.grid_start,
@@ -419,7 +434,6 @@ class EamMultiSpeciesModel(Model):
 
         grid_data = self.gp.predict_energy(dists, ncores=ncores, mapping=True)
         self.grid = interpolation.Spline1D(dists, grid_data)
-        return grid_data
 
     def save(self, path):
         """ Save the model.
@@ -444,7 +458,7 @@ class EamMultiSpeciesModel(Model):
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
                 'sigma': self.gp.kernel.theta[0],
-                'alpha': self.gp.kernel.theta[1],
+                'alpha': self.gp.kernel.theta[2],
                 'noise': self.gp.noise,
                 'r0': self.gp.kernel.theta[3]
             },

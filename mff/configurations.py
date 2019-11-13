@@ -46,8 +46,10 @@ def carve_from_snapshot(atoms, r_cut, forces_label=None, energy_label=None, atom
     if forces_label:
         forces = atoms.arrays.get(forces_label)
     else:
-        forces = atoms.get_forces()
-
+        try:
+            forces = atoms.get_forces()
+        except:
+            forces = None
     if energy_label and energy_label != 'energy':
         energy = atoms.arrays.get(energy_label)
     else:
@@ -242,9 +244,15 @@ def unpack(data):
         forces.append(i['forces'])
         energies.append(i['energy'])
 
-    forces = np.array([item for sublist in forces for item in sublist])
+    try:
+        forces = np.array([item for sublist in forces for item in sublist])
+    except:
+        logger.warning("No forces in the data file")
     confs = np.array([item for sublist in global_confs for item in sublist])
-    energies = np.array(energies)
+    try:
+        energies = np.array(energies)
+    except:
+        logger.warning("No energies in the data file")
     global_confs = np.array(global_confs)
 
     return elements, confs, forces, energies, global_confs

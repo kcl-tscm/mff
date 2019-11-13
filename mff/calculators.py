@@ -280,9 +280,9 @@ class ThreeBodySingleSpecies(MappedPotential):
 
             inds, pos, dists2 = nl.get_neighbors(i)
 
-            # Limitation
-            assert len(inds) is len(np.unique(inds)
-                                    ), "There are repetitive indices!\n{}".format(inds)
+            # # Limitation
+            # assert len(inds) is len(np.unique(inds)
+            #                         ), "There are repetitive indices!\n{}".format(inds)
 
             # ignoring already visited atoms
             inds, pos, dists2 = inds[inds >

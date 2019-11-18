@@ -245,6 +245,40 @@ To do so, simply run the following line of code on the <code class="docutils lit
 
 <dl class="class">
 <dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">EamManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_eam</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A mapped Eam calculator for ase</p>
+<dl class="attribute">
+<dt id="mff.calculators.EamManySpecies.grid_eam">
+<code class="sig-name descname">grid_eam</code><a class="headerlink" href="#mff.calculators.EamManySpecies.grid_eam" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of 1D Spline interpolator, one for each element in elements</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="mff.calculators.EamManySpecies.results">
+<code class="sig-name descname">results</code><a class="headerlink" href="#mff.calculators.EamManySpecies.results" title="Permalink to this definition">¶</a></dt>
+<dd><p>energy and forces calculated on the atoms object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">calculate</code><span class="sig-paren">(</span><em class="sig-param">atoms=None, properties=('energy', 'forces'), system_changes=['positions', 'numbers', 'cell', 'pbc', 'initial_charges', 'initial_magmoms']</em><span class="sig-paren">)</span></dt>
+<dd><p>Do the calculation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
 <em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">EamSingleSpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">grid_eam</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>A mapped Eam calculator for ase</p>
 <dl class="attribute">
@@ -581,6 +615,11 @@ mapped grids for element0-element0, element0-element1 and element1-element1 inte
 </dd></dl>
 
 </dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.calculators.</code><code class="sig-name descname">TwoThreeEamManySpecies</code><span class="sig-paren">(</span><em class="sig-param">r_cut</em>, <em class="sig-param">elements</em>, <em class="sig-param">grids_2b</em>, <em class="sig-param">grids_3b</em>, <em class="sig-param">grids_eam</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
 
 <dl class="class">
 <dt>

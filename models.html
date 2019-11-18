@@ -2303,25 +2303,26 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 </div>
 <span class="target" id="module-mff.models.eam"></span><p>TwoThreeEam Model</p>
 <dl class="class">
-<dt id="mff.models.eam.EamMultiSpeciesModel">
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamMultiSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Eam multi species model class
+<dt id="mff.models.eam.EamManySpeciesModel">
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Eam many species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>element</strong> (<em>int</em>) – The atomic number of the element considered</p></li>
+<li><p><strong>elements</strong> (<em>int</em>) – The atomic numbers of the element considered</p></li>
 <li><p><strong>r_cut</strong> (<em>foat</em>) – The cutoff radius used to carve the atomic environments</p></li>
 <li><p><strong>sigma</strong> (<em>foat</em>) – Lengthscale parameter of the Gaussian process</p></li>
-<li><p><strong>theta</strong> (<em>float</em>) – decay ratio of the cutoff function in the Gaussian Process</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – prefactor in the exponent of the eam descriptor</p></li>
+<li><p><strong>r0</strong> (<em>float</em>) – radius in the exponent of the eam descriptor</p></li>
 <li><p><strong>noise</strong> (<em>float</em>) – noise value associated with the training output data</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="attribute">
-<dt id="mff.models.eam.EamMultiSpeciesModel.gp">
-<code class="sig-name descname">gp</code><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.gp" title="Permalink to this definition">¶</a></dt>
-<dd><p>The eam multi species Gaussian Process</p>
+<dt id="mff.models.eam.EamManySpeciesModel.gp">
+<code class="sig-name descname">gp</code><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.gp" title="Permalink to this definition">¶</a></dt>
+<dd><p>The eam single species Gaussian Process</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>method</p>
@@ -2330,9 +2331,9 @@ Class managing the Gaussian process and its mapped counterpart</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="mff.models.eam.EamMultiSpeciesModel.grid">
-<code class="sig-name descname">grid</code><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.grid" title="Permalink to this definition">¶</a></dt>
-<dd><p>The eam multi species tabulated potential</p>
+<dt id="mff.models.eam.EamManySpeciesModel.grid">
+<code class="sig-name descname">grid</code><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>The eam single species tabulated potential</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>method</p>
@@ -2341,8 +2342,8 @@ Class managing the Gaussian process and its mapped counterpart</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="mff.models.eam.EamMultiSpeciesModel.grid_start">
-<code class="sig-name descname">grid_start</code><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.grid_start" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.grid_start">
+<code class="sig-name descname">grid_start</code><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.grid_start" title="Permalink to this definition">¶</a></dt>
 <dd><p>Minimum descriptor value for which the grid is defined</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -2352,8 +2353,8 @@ Class managing the Gaussian process and its mapped counterpart</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="mff.models.eam.EamMultiSpeciesModel.grid_end">
-<code class="sig-name descname">grid_end</code><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.grid_end" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.grid_end">
+<code class="sig-name descname">grid_end</code><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.grid_end" title="Permalink to this definition">¶</a></dt>
 <dd><p>Maximum descriptor value for which the grid is defined</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -2363,8 +2364,8 @@ Class managing the Gaussian process and its mapped counterpart</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="mff.models.eam.EamMultiSpeciesModel.grid_num">
-<code class="sig-name descname">grid_num</code><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.grid_num" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.grid_num">
+<code class="sig-name descname">grid_num</code><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.grid_num" title="Permalink to this definition">¶</a></dt>
 <dd><p>number of points used to create the eam multi grid</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -2374,8 +2375,8 @@ Class managing the Gaussian process and its mapped counterpart</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.build_grid">
-<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.build_grid">
+<code class="sig-name descname">build_grid</code><span class="sig-paren">(</span><em class="sig-param">num</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.build_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build the mapped eam potential.
 Calculates the energy predicted by the GP for a configuration which eam descriptor
 is evalued between start and end. These energies are stored and a 1D spline
@@ -2394,8 +2395,8 @@ the ase python package.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.fit">
-<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">forces</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.fit" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">forces</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the GP to a set of training forces using a
 eam single species force-force kernel</p>
 <dl class="field-list simple">
@@ -2412,8 +2413,8 @@ the central atoms of the training configurations</p></li>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.fit_energy">
-<code class="sig-name descname">fit_energy</code><span class="sig-paren">(</span><em class="sig-param">glob_confs</em>, <em class="sig-param">energies</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.fit_energy" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.fit_energy">
+<code class="sig-name descname">fit_energy</code><span class="sig-paren">(</span><em class="sig-param">glob_confs</em>, <em class="sig-param">energies</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.fit_energy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the GP to a set of training energies using a
 eam single species energy-energy kernel</p>
 <dl class="field-list simple">
@@ -2429,8 +2430,8 @@ grouped configurations belong to the same snapshot</p></li>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.fit_force_and_energy">
-<code class="sig-name descname">fit_force_and_energy</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">forces</em>, <em class="sig-param">glob_confs</em>, <em class="sig-param">energies</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.fit_force_and_energy" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.fit_force_and_energy">
+<code class="sig-name descname">fit_force_and_energy</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">forces</em>, <em class="sig-param">glob_confs</em>, <em class="sig-param">energies</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.fit_force_and_energy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the GP to a set of training forces and energies using
 eam single species force-force, energy-force and energy-energy kernels</p>
 <dl class="field-list simple">
@@ -2450,8 +2451,8 @@ grouped configurations belong to the same snapshot</p></li>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.from_json">
-<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.from_json" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load the model.
 Loads the model, the associated GP and the mapped potential, if available.</p>
 <dl class="field-list simple">
@@ -2468,14 +2469,14 @@ Loads the model, the associated GP and the mapped potential, if available.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.load_gp">
-<code class="sig-name descname">load_gp</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.load_gp" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.load_gp">
+<code class="sig-name descname">load_gp</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.load_gp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads the GP object, now obsolete</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.predict">
-<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.predict" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.predict">
+<code class="sig-name descname">predict</code><span class="sig-paren">(</span><em class="sig-param">confs</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.predict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Predict the forces acting on the central atoms of confs using a GP</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2484,7 +2485,6 @@ Loads the model, the associated GP and the mapped potential, if available.</p>
 atomic numbers of atoms within a cutoff from the central one</p></li>
 <li><p><strong>return_std</strong> (<em>bool</em>) – if True, returns the standard deviation
 associated to predictions according to the GP framework</p></li>
-<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -2502,8 +2502,8 @@ forces_errors (array): errors associated to the force predictions,</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.predict_energy">
-<code class="sig-name descname">predict_energy</code><span class="sig-paren">(</span><em class="sig-param">glob_confs</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.predict_energy" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.predict_energy">
+<code class="sig-name descname">predict_energy</code><span class="sig-paren">(</span><em class="sig-param">glob_confs</em>, <em class="sig-param">return_std=False</em>, <em class="sig-param">ncores=1</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.predict_energy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Predict the global energies of the central atoms of confs using a GP</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2529,8 +2529,8 @@ energies_errors (array): errors associated to the energies predictions,</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.save" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save the model.
 This creates a .json file containing the parameters of the model and the
 paths to the GP objects and the mapped potential, which are saved as
@@ -2543,8 +2543,8 @@ separate .gpy and .gpz files, respectively.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="mff.models.eam.EamMultiSpeciesModel.save_gp">
-<code class="sig-name descname">save_gp</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamMultiSpeciesModel.save_gp" title="Permalink to this definition">¶</a></dt>
+<dt id="mff.models.eam.EamManySpeciesModel.save_gp">
+<code class="sig-name descname">save_gp</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel.save_gp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the GP object, now obsolete</p>
 </dd></dl>
 
@@ -2849,16 +2849,17 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 </div>
 <span class="target" id="module-mff.models.eam"></span><dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamMultiSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
-<dd><p>Eam multi species model class
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Eam many species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>element</strong> (<em>int</em>) – The atomic number of the element considered</p></li>
+<li><p><strong>elements</strong> (<em>int</em>) – The atomic numbers of the element considered</p></li>
 <li><p><strong>r_cut</strong> (<em>foat</em>) – The cutoff radius used to carve the atomic environments</p></li>
 <li><p><strong>sigma</strong> (<em>foat</em>) – Lengthscale parameter of the Gaussian process</p></li>
-<li><p><strong>theta</strong> (<em>float</em>) – decay ratio of the cutoff function in the Gaussian Process</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – prefactor in the exponent of the eam descriptor</p></li>
+<li><p><strong>r0</strong> (<em>float</em>) – radius in the exponent of the eam descriptor</p></li>
 <li><p><strong>noise</strong> (<em>float</em>) – noise value associated with the training output data</p></li>
 </ul>
 </dd>
@@ -2866,7 +2867,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="attribute">
 <dt>
 <code class="sig-name descname">gp</code></dt>
-<dd><p>The eam multi species Gaussian Process</p>
+<dd><p>The eam single species Gaussian Process</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>method</p>
@@ -2877,7 +2878,7 @@ Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="attribute">
 <dt>
 <code class="sig-name descname">grid</code></dt>
-<dd><p>The eam multi species tabulated potential</p>
+<dd><p>The eam single species tabulated potential</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>method</p>
@@ -3029,7 +3030,6 @@ Loads the model, the associated GP and the mapped potential, if available.</p>
 atomic numbers of atoms within a cutoff from the central one</p></li>
 <li><p><strong>return_std</strong> (<em>bool</em>) – if True, returns the standard deviation
 associated to predictions according to the GP framework</p></li>
-<li><p><strong>ncores</strong> (<em>int</em>) – number of CPUs to use for the gram matrix evaluation</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>

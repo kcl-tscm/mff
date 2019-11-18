@@ -565,10 +565,70 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
         return np.array(indices), np.array(distances), positions
 
 
+class EamManySpecies(ManySpeciesMappedPotential):
+    """A mapped Eam calculator for ase
+
+    Attributes:
+        grid_eam (object): list of 1D Spline interpolator, one for each element in elements
+        results(dict): energy and forces calculated on the atoms object
+
+    """
+
+    def __init__(self, r_cut, elements, grids_eam, alpha, r0, **kwargs):
+        """
+        Args:
+            elements (list): List of ordered atomic numbers of the mapped two species system.
+            grid_eam (list): list of 1D Spline interpolator, one for each element in elements
+            r_cut (float): cutoff radius
+            alpha (float): Exponential prefactor of the eam Descriptor
+            r0 (float): Radius in the exponent of the eam Descriptor
+
+        """
+        super().__init__(r_cut, elements, **kwargs)
+
+        self.elements = elements
+        self.r_cut = r_cut
+        self.grids_eam = grids_eam
+        self.alpha = alpha
+        self.r0 = r0
+
+    def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
+        """Do the calculation.
+        """
+        super().calculate(atoms, properties, system_changes)
+
+        forces = np.zeros((len(self.atoms), 3))
+        potential_energies = np.zeros((len(self.atoms), 1))
+        elements = atoms.get_atomic_numbers()
+
+        for i in range(len(self.atoms)):
+            inds, pos, dists2 = self.nl.get_neighbors(i)
+            el = elements[i]
+            dist = np.sqrt(dists2)
+            norm = pos / dist.reshape(-1, 1)
+
+            descriptor, descriptor_der = eam_descriptor(
+                dist, norm, self.r_cut, self.alpha, self.r0)
+
+            energy_local = self.grids_eam[el](descriptor, nu=0)
+            fs_scalars = self.grids_eam[el](descriptor, nu=1)
+
+            potential_energies[i] = np.sum(energy_local, axis=0)
+            forces[i] = np.sum(
+                descriptor_der * fs_scalars.reshape(-1, 1), axis=0)
+
+        self.results['energy'] += np.sum(potential_energies)
+        self.results['forces'] += forces
+
 class CombinedManySpecies(TwoBodyManySpecies, ThreeBodyManySpecies):
     def __init__(self, r_cut, elements, grids_2b, grids_3b, **kwargs):
         super().__init__(r_cut, elements, grids_2b=grids_2b, grids_3b=grids_3b, **kwargs)
 
+
+class TwoThreeEamManySpecies(TwoBodyManySpecies, ThreeBodyManySpecies, EamManySpecies):
+    def __init__(self, r_cut, elements,  grids_2b, grids_3b, grids_eam, alpha, r0, **kwargs):
+        super().__init__(r_cut = r_cut, elements= elements, grids_2b=grids_2b, grids_3b=grids_3b,
+                         grids_eam=grids_eam, alpha=alpha, r0=r0, **kwargs)
 
 if __name__ == '__main__':
     from ase.io import read

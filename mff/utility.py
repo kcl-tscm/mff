@@ -792,8 +792,12 @@ def load_model(filename):
         m = models.ThreeBodyManySpeciesModel.from_json(filename)
     elif model == "CombinedManySpeciesModel":
         m = models.CombinedManySpeciesModel.from_json(filename)
-    elif model == "EamSingleManyModel":
-        m = models.EamSingleManyModel.from_json(filename)
+    elif model == "EamSingleSpeciesModel":
+        m = models.EamSingleSpeciesModel.from_json(filename)
+    elif model == "EamManySpeciesModel":
+        m = models.EamManySpeciesModel.from_json(filename)
+    elif model == "TwoThreeEamSingleSpeciesModel":
+        m = models.TwoThreeEamSingleSpeciesModel.from_json(filename)
     elif model == "TwoThreeEamManySpeciesModel":
         m = models.TwoThreeEamManySpeciesModel.from_json(filename)
     else:

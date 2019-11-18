@@ -28,13 +28,21 @@ def dummy_calc_ff(data):
 
 
 def dummy_calc_ee(data):
-    array, theta0, theta1, theta2, theta3, kertype, mapping = data
-    if kertype == "single":
-        with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
-            fun = pickle.load(f)
-    elif kertype == "multi":
-        with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
-            fun = pickle.load(f)
+    array, theta0, theta1, theta2, theta3, kertype, mapping, alpha_1_descr = data
+    if mapping:
+        if kertype == "single":
+            with open(Mffpath / "keam_eed_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif kertype == "multi":
+            with open(Mffpath / "keam_eed_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
+    else:
+        if kertype == "single":
+            with open(Mffpath / "keam_ee_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif kertype == "multi":
+            with open(Mffpath / "keam_ee_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
     result = np.zeros(len(array))
 
     if not mapping:
@@ -44,22 +52,35 @@ def dummy_calc_ee(data):
                     result[i] += fun(np.zeros(3), np.zeros(3), conf1,
                                      conf2, theta0, theta1, theta2, theta3)
     else:
-        for i in np.arange(len(array)):
-            for conf2 in array[i][1]:
-                result[i] += fun(np.zeros(3), np.zeros(3), array[i]
-                                 [0], conf2, theta0, theta1, theta2, theta3)
-
+        if kertype == "multi":
+            for i in np.arange(len(array)):
+                for conf2 in array[i][1]:
+                    result[i] += fun(np.zeros(3), array[i]
+                                     [0], conf2, theta0, theta1, theta2, theta3, alpha_1_descr)
+        else:
+            for i in np.arange(len(array)):
+                for conf2 in array[i][1]:
+                    result[i] += fun(np.zeros(3), array[i]
+                                     [0], conf2, theta0, theta1, theta2, theta3)
     return result
 
 
 def dummy_calc_ef(data):
-    array, theta0, theta1, theta2, theta3, kertype, mapping = data
-    if kertype == "single":
-        with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
-            fun = pickle.load(f)
-    elif kertype == "multi":
-        with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
-            fun = pickle.load(f)
+    array, theta0, theta1, theta2, theta3, kertype, mapping, alpha_1_descr = data
+    if mapping:
+        if kertype == "single":
+            with open(Mffpath / "keam_efd_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif kertype == "multi":
+            with open(Mffpath / "keam_efd_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
+    else:
+        if kertype == "single":
+            with open(Mffpath / "keam_ef_s.pickle", 'rb') as f:
+                fun = pickle.load(f)
+        elif kertype == "multi":
+            with open(Mffpath / "keam_ef_m.pickle", 'rb') as f:
+                fun = pickle.load(f)
     result = np.zeros((len(array), 3))
     if not mapping:
         for i in np.arange(len(array)):
@@ -69,11 +90,18 @@ def dummy_calc_ef(data):
                 result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
                                   conf2,  theta0, theta1, theta2, theta3)
     else:
-        for i in np.arange(len(array)):
-            conf2 = np.array(array[i][1], dtype='float')
-            conf1 = np.array(array[i][0], dtype='float')
-            result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
-                              conf2, theta0, theta1, theta2, theta3)
+        if kertype == "multi":
+            for i in np.arange(len(array)):
+                conf2 = np.array(array[i][1], dtype='float')
+                conf1 = np.array(array[i][0], dtype='float')
+                result[i] += -fun(np.zeros(3), conf1,
+                                  conf2, theta0, theta1, theta2, theta3, alpha_1_descr)
+        else:
+            for i in np.arange(len(array)):
+                conf2 = np.array(array[i][1], dtype='float')
+                conf1 = np.array(array[i][0], dtype='float')
+                result[i] += -fun(np.zeros(3), conf1,
+                                  conf2, theta0, theta1, theta2, theta3)
     return result
 
 
@@ -157,7 +185,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
 
         return ker
 
-    def calc_ef(self, X_glob, X, ncores=1, mapping=False):
+    def calc_ef(self, X_glob, X, ncores=1, mapping=False, alpha_1_descr=0):
         """
         Calculate the energy-force kernel between two sets of configurations.
 
@@ -189,7 +217,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
-                      self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                      self.type, mapping, alpha_1_descr] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
@@ -210,14 +238,20 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                             ker[i, 3 * j:3 * j + 3] += self.k2_ef(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
             else:
-                for i, conf1 in enumerate(X_glob):
-                    for j, conf2 in enumerate(X):
-                        ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
-                            conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                if self.type == 'multi':
+                    for i, conf1 in enumerate(X_glob):
+                            for j, conf2 in enumerate(X):
+                                ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3], alpha_1_descr)
+                else:
+                    for i, conf1 in enumerate(X_glob):
+                        for j, conf2 in enumerate(X):
+                            ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
         return ker
 
-    def calc_ee(self, X1, X2, ncores=1, mapping=False):
+    def calc_ee(self, X1, X2, ncores=1, mapping=False, alpha_1_descr=0):
         """
         Calculate the energy-energy kernel between two global environments.
 
@@ -249,7 +283,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
-                      self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                      self.type, mapping, alpha_1_descr] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
@@ -273,12 +307,20 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                                 ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0],
                                                         self.theta[1], self.theta[2], self.theta[3])
             else:
-                ker = np.zeros((len(X1), len(X2)))
-                for i, conf1 in enumerate(X1):
-                    for j, x2 in enumerate(X2):
-                        for conf2 in x2:
-                            ker[i, j] += self.k2_ee_d(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                if self.type == 'multi':
+                    ker = np.zeros((len(X1), len(X2)))
+                    for i, conf1 in enumerate(X1):
+                            for j, x2 in enumerate(X2):
+                                for conf2 in x2:
+                                    ker[i, j] += self.k2_ee_d(
+                                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3], alpha_1_descr)
+                else:
+                    ker = np.zeros((len(X1), len(X2)))
+                    for i, conf1 in enumerate(X1):
+                        for j, x2 in enumerate(X2):
+                            for conf2 in x2:
+                                ker[i, j] += self.k2_ee_d(
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
 
         return ker
 
@@ -782,22 +824,25 @@ class EamMultiSpeciesKernel(BaseEam):
             rc = T.dscalar('rc')
             # Descriptor as a given input, used to map
             q1_descr = T.dscalar('q1_descr')
+            # Element of the central atom if descriptor is Given
+            alpha_1_descr = T.dscalar('alpha_1_descr')
             # Radius to use at denominator in the descriptor
             r0 = T.dscalar('r0')
 
             # positions of neighbours without chemical species (3D space assumed)
             rho1s = rho1[:, 0:3]
             rho2s = rho2[:, 0:3]
-            alpha_1 = rho1[:, 3]  # .flatten()
-            alpha_2 = rho2[:, 3]  # .flatten()
+            alpha_1 = rho1[0, 3]  # .flatten()
+            alpha_2 = rho2[0, 3]  # .flatten()
 
             # numerical kronecker
-            def delta_alpha2(a1j, a2m):
+            def delta_alpha(a1j, a2m):
                 d = T.exp(-(a1j - a2m) ** 2 / (2 * 1e-5 ** 2))
                 return d
 
             # matrices determining whether couples of atoms have the same atomic number
-            delta_alphas12 = delta_alpha2(alpha_1[:, None], alpha_2[None, :])
+            delta_alpha_12 = delta_alpha(alpha_1, alpha_2)
+            delta_alpha_12_descr = delta_alpha(alpha_1_descr, alpha_2)
 
             # distances of atoms wrt to the central one and wrt each other in 1 and 2
             r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
@@ -812,9 +857,9 @@ class EamMultiSpeciesKernel(BaseEam):
             q1 = -T.sqrt(T.sum(T.exp(-esp_term_1)*cut_1))
             q2 = -T.sqrt(T.sum(T.exp(-esp_term_2)*cut_2))
 
-            k = T.exp(-(q1-q2)**2/(2*sig**2))*delta_alphas12
+            k = T.exp(-(q1-q2)**2/(2*sig**2))*delta_alpha_12
 
-            k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))*delta_alphas12
+            k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))*delta_alpha_12_descr
 
             # energy energy kernel
             k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k,
@@ -834,12 +879,12 @@ class EamMultiSpeciesKernel(BaseEam):
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # energy energy descriptor kernel
-            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_descr,
+            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0, alpha_1_descr], k_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # energy force descriptor kernel
             k_ef_descr = T.grad(k_descr, r2)
-            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_ef_descr,
+            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0, alpha_1_descr], k_ef_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # Save the function that we want to use for multiprocessing
@@ -923,7 +968,7 @@ class EamMultiSpeciesKernel(BaseEam):
             """
             return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
 
-        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0):
+        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0, alpha_1_descr):
             """
             Eam kernel for global energy-force correlation
 
@@ -933,14 +978,15 @@ class EamMultiSpeciesKernel(BaseEam):
                 sig (float): lengthscale hyperparameter theta[0]
                 alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
+                alpha_1_descr (int): element of the central atom
 
             Returns:
                 kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0, alpha_1_descr)
 
-        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0):
+        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0, alpha_1_descr):
             """
             Eam kernel for force-force correlation
 
@@ -950,12 +996,13 @@ class EamMultiSpeciesKernel(BaseEam):
                 sig (float): lengthscale hyperparameter theta[0]
                 alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
+                alpha_1_descr (int): element of the central atom
 
             Returns:
                 kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0, alpha_1_descr)
 
         logger.info("Ended compilation of theano eam multi species kernels")
 

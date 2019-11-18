@@ -219,7 +219,7 @@ class EamSingleSpeciesModel(Model):
                 'r_min': self.grid_start,
                 'r_max': self.grid_end,
                 'r_num': self.grid_num,
-                'filename': None
+                'filename': {}
             } if self.grid else {}
         }
 
@@ -238,6 +238,8 @@ class EamSingleSpeciesModel(Model):
 
         with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
 
     @classmethod
     def from_json(cls, path):
@@ -279,38 +281,38 @@ class EamSingleSpeciesModel(Model):
 
         return model
 
-
-class EamMultiSpeciesModel(Model):
-    """ Eam multi species model class
+class EamManySpeciesModel(Model):
+    """ Eam many species model class
     Class managing the Gaussian process and its mapped counterpart
 
     Args:
-        element (int): The atomic number of the element considered
+        elements (int): The atomic numbers of the element considered
         r_cut (foat): The cutoff radius used to carve the atomic environments
         sigma (foat): Lengthscale parameter of the Gaussian process
-        theta (float): decay ratio of the cutoff function in the Gaussian Process
+        alpha (float): prefactor in the exponent of the eam descriptor
+        r0 (float): radius in the exponent of the eam descriptor
         noise (float): noise value associated with the training output data
 
     Attributes:
-        gp (method): The eam multi species Gaussian Process
-        grid (method): The eam multi species tabulated potential
+        gp (method): The eam single species Gaussian Process
+        grid (method): The eam single species tabulated potential
         grid_start (float): Minimum descriptor value for which the grid is defined
         grid_end (float): Maximum descriptor value for which the grid is defined
         grid_num (int): number of points used to create the eam multi grid
 
     """
 
-    def __init__(self, element, r_cut, sigma, alpha, r0, noise, **kwargs):
+    def __init__(self, elements, r_cut, sigma, alpha, r0, noise, **kwargs):
         super().__init__()
 
-        self.element = element
+        self.elements = elements
         self.r_cut = r_cut
 
-        kernel = kernels.EamSingleSpeciesKernel(
+        kernel = kernels.EamMultiSpeciesKernel(
             theta=[sigma, r_cut, alpha, r0])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
-        self.grid, self.grid_start, self.grid_end, self.grid_num = None, None, None, None
+        self.grid, self.grid_start, self.grid_end, self.grid_num = {}, None, None, None
 
     def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 
@@ -366,7 +368,6 @@ class EamMultiSpeciesModel(Model):
                 atomic numbers of atoms within a cutoff from the central one
             return_std (bool): if True, returns the standard deviation 
                 associated to predictions according to the GP framework
-            ncores (int): number of CPUs to use for the gram matrix evaluation
 
         Returns:
             forces (array): array of force vectors predicted by the GP
@@ -420,7 +421,6 @@ class EamMultiSpeciesModel(Model):
         Args:
             num (int): number of points to use in the grid of the mapped potential   
             ncores (int): number of CPUs to use for the gram matrix evaluation
-
         """
 
         self.grid_start = 1.5 * \
@@ -432,8 +432,9 @@ class EamMultiSpeciesModel(Model):
         dists = list(np.linspace(self.grid_start,
                                  self.grid_end, self.grid_num))
 
-        grid_data = self.gp.predict_energy(dists, ncores=ncores, mapping=True)
-        self.grid = interpolation.Spline1D(dists, grid_data)
+        for el in self.elements:
+            grid_data = self.gp.predict_energy(dists, ncores=ncores, mapping=True, alpha_1_descr=el)
+            self.grid[(el)] = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
         """ Save the model.
@@ -451,7 +452,7 @@ class EamMultiSpeciesModel(Model):
 
         params = {
             'model': self.__class__.__name__,
-            'element': self.element,
+            'elements': self.elements,
             'r_cut': self.r_cut,
             'fitted': self.gp.fitted,
             'gp': {
@@ -466,7 +467,7 @@ class EamMultiSpeciesModel(Model):
                 'r_min': self.grid_start,
                 'r_max': self.grid_end,
                 'r_num': self.grid_num,
-                'filename': None
+                'filename': {}
             } if self.grid else {}
         }
 
@@ -476,15 +477,17 @@ class EamMultiSpeciesModel(Model):
         params['gp']['filename'] = gp_filename
         self.gp.save(path / gp_filename)
 
-        if self.grid:
-            grid_filename = 'GRID_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz'.format(
-                p=params)
+        for k, grid in self.grid.items():
+            key = k
+            grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(
+                key, p=params)
+            params['grid']['filename'][key] = grid_filename
+            grid.save(path / grid_filename)
 
-            params['grid']['filename'] = grid_filename
-            self.grid.save(path / grid_filename)
-
-        with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
+        with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
 
     @classmethod
     def from_json(cls, path):
@@ -517,11 +520,15 @@ class EamMultiSpeciesModel(Model):
         model.gp.load(directory / gp_filename)
 
         if params['grid']:
-            grid_filename = params['grid']['filename']
-            model.grid = interpolation.Spline1D.load(directory / grid_filename)
-
             model.grid_start = params['grid']['r_min']
             model.grid_end = params['grid']['r_max']
             model.grid_num = params['grid']['r_num']
 
+            for key, grid_filename in params['grid']['filename'].items():
+                k = tuple(key)
+
+                model.grid[k] = interpolation.Spline1D.load(
+                    directory / grid_filename)
+
         return model
+

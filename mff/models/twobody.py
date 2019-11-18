@@ -263,6 +263,8 @@ class TwoBodySingleSpeciesModel(Model):
         with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
 
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
+
     @classmethod
     def from_json(cls, path):
         """ Load the model.
@@ -539,7 +541,7 @@ class TwoBodyManySpeciesModel(Model):
             'grid': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num,
-                'filename': None
+                'filename': {}
             } if self.grid else {}
         }
 
@@ -558,6 +560,8 @@ class TwoBodyManySpeciesModel(Model):
 
         with open(path / "MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
 
     @classmethod
     def from_json(cls, path):

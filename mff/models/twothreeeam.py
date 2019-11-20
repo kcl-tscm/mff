@@ -85,7 +85,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
             kernel=kernel_eam, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_eam, self.grid_start, self.grid_num = None, None, None, None, None
-        self.grid_eam_start, self.grid_eam_end, self.grid_eam_num = None, None, None
+        self.grid_eam_start, self.grid_end_eam, self.grid_eam_num = None, None, None
 
     def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 2- and
@@ -668,8 +668,8 @@ class TwoThreeEamManySpeciesModel(Model):
         self.gp_eam = gp.GaussianProcess(
             kernel=kernel_eam, noise=noise, **kwargs)
 
-        self.grid_2b, self.grid_3b, self.grid_eam, self.grid_start = {}, {}, {}, None
-        self.grid_num_2b, self.grid_num_3b, self.grid_eam_end, self.grid_eam_num = None, None, None, None
+        self.grid_2b, self.grid_3b, self.grid_eam, self.grid_start, self.grid_start_eam = {}, {}, {}, None, None
+        self.grid_num_2b, self.grid_num_3b, self.grid_end_eam, self.grid_eam_num = None, None, None, None
 
 
     def fit(self, confs, forces, ncores=1):
@@ -1011,6 +1011,14 @@ class TwoThreeEamManySpeciesModel(Model):
                 'theta': self.gp_3b.kernel.theta[1],
                 'noise': self.gp_3b.noise
             },
+            'gp_eam': {
+                'kernel': self.gp_eam.kernel.kernel_name,
+                'n_train': self.gp_eam.n_train,
+                'sigma': self.gp_eam.kernel.theta[0],
+                'alpha': self.gp_eam.kernel.theta[2],
+                'r0': self.gp_eam.kernel.theta[3],
+                'noise': self.gp_eam.noise
+            },
             'grid_2b': {
                 'r_min': self.grid_start,
                 'r_num': self.grid_num_2b,
@@ -1093,8 +1101,11 @@ class TwoThreeEamManySpeciesModel(Model):
                     params['r_cut'],
                     params['gp_2b']['sigma'],
                     params['gp_3b']['sigma'],
+                    params['gp_eam']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
+                    params['gp_eam']['alpha'],
+                    params['gp_eam']['r0'],
                     params['gp_2b']['noise'],
                     params['rep_sig'])
 

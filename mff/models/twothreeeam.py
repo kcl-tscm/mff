@@ -85,7 +85,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
             kernel=kernel_eam, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_eam, self.grid_start, self.grid_num = None, None, None, None, None
-        self.grid_eam_start, self.grid_end_eam, self.grid_eam_num = None, None, None
+        self.grid_start_eam, self.grid_end_eam, self.grid_num_eam = None, None, None
 
     def fit(self, confs, forces, ncores=1):
         """ Fit the GP to a set of training forces using a 2- and
@@ -352,9 +352,9 @@ class TwoThreeEamSingleSpeciesModel(Model):
 
         grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
 
-        self.grid_start = 1.5 * get_max_eam(self.gp_eam.X_train_, self.r_cut,
+        self.grid_start_eam = 1.5 * get_max_eam(self.gp_eam.X_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
-        self.grid_end = 0
+        self.grid_end_eam = 0
         self.grid_num_eam = num_eam
 
         dists = list(np.linspace(self.grid_start_eam,
@@ -669,7 +669,7 @@ class TwoThreeEamManySpeciesModel(Model):
             kernel=kernel_eam, noise=noise, **kwargs)
 
         self.grid_2b, self.grid_3b, self.grid_eam, self.grid_start, self.grid_start_eam = {}, {}, {}, None, None
-        self.grid_num_2b, self.grid_num_3b, self.grid_end_eam, self.grid_eam_num = None, None, None, None
+        self.grid_num_2b, self.grid_num_3b, self.grid_end_eam, self.grid_num_eam = None, None, None, None
 
 
     def fit(self, confs, forces, ncores=1):
@@ -884,7 +884,7 @@ class TwoThreeEamManySpeciesModel(Model):
         self.grid_start = start
         self.grid_num_2b = num_2b
         self.grid_num_3b = num_2b
-        self.grid_eam_num = num_eam
+        self.grid_num_eam = num_eam
         self.grid_start_eam = 1.5 * get_max_eam(self.gp_eam.X_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
         self.grid_end = 0
@@ -921,7 +921,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores=ncores)
 
         dists_eam = list(np.linspace(self.grid_start_eam,
-                                 self.grid_end, self.grid_eam_num))
+                                 self.grid_end, self.grid_num_eam))
         for el in self.elements:
             grid_data = self.gp_eam.predict_energy(
                 dists_eam, ncores=ncores, mapping=True, alpha_1_descr=el)
@@ -1032,7 +1032,7 @@ class TwoThreeEamManySpeciesModel(Model):
             'grid_eam': {
                 'r_min': self.grid_start_eam,
                 'r_max': self.grid_end,
-                'r_num': self.grid_eam_num,
+                'r_num': self.grid_num_eam,
                 'filename': {}
             } if self.grid else {}
         }
@@ -1057,6 +1057,14 @@ class TwoThreeEamManySpeciesModel(Model):
 
         params['gp_3b']['filename'] = gp_filename_3b
         self.gp_3b.save(path / gp_filename_3b)
+
+        ### SAVE THE EAM MODEL ###
+        gp_filename_eam = "GP_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npy".format(
+            p=params)
+
+        params['gp_eam']['filename'] = gp_filename_eam
+        self.gp_eam.save(path / gp_filename_eam)
+
 
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)

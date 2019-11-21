@@ -469,7 +469,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
             grid_filename_eam = 'GRID_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npz'.format(
                 p=params)
             print("Saved eam grid under name %s" % (grid_filename_eam))
-            params['grigrid_eamd']['filename'] = grid_filename_eam
+            params['grid_eam']['filename'] = grid_filename_eam
             self.grid_eam.save(path / grid_filename_eam)
 
         with open(path / "MODEL_23eam_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:

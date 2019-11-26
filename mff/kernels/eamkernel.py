@@ -434,7 +434,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
-                          self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                          self.type, False, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
@@ -512,7 +512,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
-                          self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                          self.type, False, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)

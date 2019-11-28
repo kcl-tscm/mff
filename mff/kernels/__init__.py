@@ -1,4 +1,4 @@
-from .eamkernel import EamSingleSpeciesKernel, EamMultiSpeciesKernel
+from .eamkernel import EamManySpeciesKernel, EamSingleSpeciesKernel
 from .manybodykernel import (ManyBodyManySpeciesKernel,
                              ManyBodySingleSpeciesKernel)
 from .threebodykernel import (ThreeBodyManySpeciesKernel,
@@ -12,4 +12,4 @@ __all__ = [TwoBodySingleSpeciesKernel,
            ManyBodySingleSpeciesKernel,
            ManyBodyManySpeciesKernel,
            EamSingleSpeciesKernel, 
-           EamMultiSpeciesKernel]
+           EamManySpeciesKernel]

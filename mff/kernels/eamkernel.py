@@ -768,7 +768,7 @@ class EamSingleSpeciesKernel(BaseEam):
         return k2_ee, k2_ef, k2_ff, k2_ee_d, k2_ef_d
 
 
-class EamMultiSpeciesKernel(BaseEam):
+class EamManySpeciesKernel(BaseEam):
     """Eam multi species kernel.
 
     Args:

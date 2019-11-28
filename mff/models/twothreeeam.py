@@ -45,21 +45,30 @@ class TwoThreeEamSingleSpeciesModel(Model):
 
     Args:
         element (int): The atomic number of the element considered
-        r_cut (foat): The cutoff radius used to carve the atomic environments
-        sigma_2b (foat): Lengthscale parameter of the 2-body Gaussian process
-        sigma_3b (foat): Lengthscale parameter of the 3-body Gaussian process
+        r_cut (float): The cutoff radius used to carve the atomic environments
+        sigma_2b (float): Lengthscale parameter of the 2-body Gaussian process
+        sigma_3b (float): Lengthscale parameter of the 3-body Gaussian process
+        sigma_3b (float): Lengthscale parameter of the EAM Gaussian process
         theta_2b (float): decay ratio of the cutoff function in the 2-body Gaussian Process
         theta_3b (float): decay ratio of the cutoff function in the 3-body Gaussian Process
+        alpha (float): prefactor of the exponent in the EAM kernel
+        r0 (float): distance parameter of the EAM kernel
         noise (float): noise value associated with the training output data
 
     Attributes:
         gp_2b (method): The 2-body single species Gaussian Process
         gp_3b (method): The 3-body single species Gaussian Process
+        gp_eam (method): The eam single species Gaussian Process
         grid_2b (method): The 2-body single species tabulated potential
         grid_3b (method): The 3-body single species tabulated potential
+        grid_eam (method): The eam single species tabulated potential
         grid_start (float): Minimum atomic distance for which the grids are defined (cannot be 0.0)
-        grid_num (int): number of points per side used to create the 2- and 3-body grid. The 3-body
+        grid_num (int): Number of points per side used to create the 2- and 3-body grid. The 3-body
             grid is 3-dimensional, therefore its total number of grid points will be grid_num^3
+        grid_start_eam (float): Start of the tabulated potential for EAM descriptor
+        grid_end_eam (float): End of the tabulated potential for EAM descriptor
+        grid_num_eam (float): Number of points per of the tabulated potential for EAM descriptor
+
     """
 
     def __init__(self, element, r_cut, sigma_2b, sigma_3b, sigma_eam, theta_2b, theta_3b,
@@ -621,29 +630,34 @@ class TwoThreeEamSingleSpeciesModel(Model):
 
 
 class TwoThreeEamManySpeciesModel(Model):
-    """ 2- and 3-body many species model class
+    """ 2-, 3-body and EAM many species model class
     Class managing the Gaussian processes and their mapped counterparts
 
     Args:
-        elements (list): List containing the atomic numbers in increasing order
-        r_cut (foat): The cutoff radius used to carve the atomic environments
-        sigma_2b (foat): Lengthscale parameter of the 2-body Gaussian process
-        sigma_3b (foat): Lengthscale parameter of the 2-body Gaussian process
+        elements (int): The atomic numbers of the element considered
+        r_cut (float): The cutoff radius used to carve the atomic environments
+        sigma_2b (float): Lengthscale parameter of the 2-body Gaussian process
+        sigma_3b (fofloatat): Lengthscale parameter of the 3-body Gaussian process
+        sigma_eam (float): Lengthscale parameter of the EAM Gaussian process
         theta_2b (float): decay ratio of the cutoff function in the 2-body Gaussian Process
         theta_3b (float): decay ratio of the cutoff function in the 3-body Gaussian Process
+        alpha (float): prefactor of the exponent in the EAM kernel
+        r0 (float): distance parameter of the EAM kernel
         noise (float): noise value associated with the training output data
 
     Attributes:
-        gp_2b (method): The 2-body single species Gaussian Process
-        gp_3b (method): The 3-body single species Gaussian Process
-        grid_2b (list): Contains the three 2-body two species tabulated potentials, accounting for
-            interactions between two atoms of types 0-0, 0-1, and 1-1.
-        grid_2b (list): Contains the three 3-body two species tabulated potentials, accounting for
-            interactions between three atoms of types 0-0-0, 0-0-1, 0-1-1, and 1-1-1.
+        gp_2b (method): The 2-body many species Gaussian Process
+        gp_3b (method): The 3-body many species Gaussian Process
+        gp_eam (method): The eam many species Gaussian Process
+        grid_2b (method): The 2-body many species tabulated potentials
+        grid_3b (method): The 3-body many species tabulated potentials
+        grid_eam (method): The eam many species tabulated potentials
         grid_start (float): Minimum atomic distance for which the grids are defined (cannot be 0.0)
-        grid_num_2b (int):number of points to use in the grid of the 2-body mapped potential
-        grid_num_3b (int): number of points to use to generate the list of distances used to
-                generate the triplets of atoms for the 2-body mapped potential
+        grid_num (int): Number of points per side used to create the 2- and 3-body grid. The 3-body
+            grid is 3-dimensional, therefore its total number of grid points will be grid_num^3
+        grid_start_eam (float): Start of the tabulated potential for EAM descriptor
+        grid_end_eam (float): End of the tabulated potential for EAM descriptor
+        grid_num_eam (float): Number of points per of the tabulated potential for EAM descriptor
     """
 
     def __init__(self, elements, r_cut, sigma_2b, sigma_3b, sigma_eam, theta_2b, theta_3b,
@@ -875,9 +889,10 @@ class TwoThreeEamManySpeciesModel(Model):
         Args:
             start (float): smallest interatomic distance for which the energy is predicted
                 by the GP and stored inn the 3-body mapped potential
-            num (int): number of points to use in the grid of the 2-body mapped potentials
+            nnum_2bum (int): number of points to use in the grid of the 2-body mapped potentials
             num_3b (int): number of points to use to generate the list of distances used to
                 generate the triplets of atoms for the 3-body mapped potentials
+            num_eam (int): number of points to use in the grid of the eam mapped potentials
             ncores (int): number of CPUs to use to calculate the energy predictions
         """
 

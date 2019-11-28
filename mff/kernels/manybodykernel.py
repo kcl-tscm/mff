@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 def dummy_calc_ff(data):
+    """ Function used when multiprocessing.
+    Args:
+        data (list of objects): contains all the information required
+            for the computation of the kernel values
+    
+    Returns:
+        result (array): the computed kernel values
+
+    """
+
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
         with open(Mffpath / "k3_ff_s.pickle", 'rb') as f:
@@ -28,6 +38,16 @@ def dummy_calc_ff(data):
 
 
 def dummy_calc_ee(data):
+    """ Function used when multiprocessing.
+    Args:
+        data (list of objects): contains all the information required
+            for the computation of the kernel valuesf
+    
+    Returns:
+        result (array): the computed kernel values
+
+    """
+
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
         with open(Mffpath / "k3_ee_s.pickle", 'rb') as f:
@@ -45,6 +65,16 @@ def dummy_calc_ee(data):
 
 
 def dummy_calc_ef(data):
+    """ Function used when multiprocessing.
+    Args:
+        data (list of objects): contains all the information required
+            for the computation of the kernel values
+    
+    Returns:
+        result (array): the computed kernel values
+
+    """
+
     array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
         with open(Mffpath / "k3_ef_s.pickle", 'rb') as f:

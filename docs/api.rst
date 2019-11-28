@@ -3,19 +3,22 @@ API Reference
 
 The "models" module
 -------------------
-:mod:`mff.models.twobody`
 
-:class:`mff.models.twobody.TwoBodyTwoSpeciesModel`
+:class:`mff.models.twobody.TwoBodySingleSpeciesModel`
+
+:class:`mff.models.twobody.TwoBodyManySpeciesModel`
 
 :class:`mff.models.threebody.ThreeBodySingleSpeciesModel`
 
-:class:`mff.models.threebody.ThreeBodyTwoSpeciesModel`
+:class:`mff.models.threebody.ThreeBodyManySpeciesModel`
 
 :class:`mff.models.combined.CombinedSingleSpeciesModel`
 
-:class:`mff.models.combined.CombinedTwoSpeciesModel`
+:class:`mff.models.combined.CombinedManySpeciesModel`
 
 :class:`mff.models.twothreeeam.TwoThreeEamSingleSpeciesModel`
+
+:class:`mff.models.twothreeeam.TwoThreeEamManySpeciesModel`
 
    
 The "gp" module
@@ -26,7 +29,7 @@ The "gp" module
 The "configurations" module
 ---------------------------
 
-:class:`mff.configurations.Configurations`
+:mod:`mff.configurations`
 
 
 The "calculators" module
@@ -34,19 +37,23 @@ The "calculators" module
 
 :class:`mff.calculators.TwoBodySingleSpecies`
 
-:class:`mff.calculators.TwoBodyTwoSpecies`
+:class:`mff.calculators.TwoBodyManySpecies`
 
 :class:`mff.calculators.ThreeBodySingleSpecies`
 
-:class:`mff.calculators.ThreeBodyTwoSpecies`
+:class:`mff.calculators.ThreeBodyManySpecies`
 
 :class:`mff.calculators.CombinedSingleSpecies`
 
-:class:`mff.calculators.CombinedTwoSpecies`
+:class:`mff.calculators.CombinedManySpecies`
 
 :class:`mff.calculators.EamSingleSpecies`
 
+:class:`mff.calculators.EamManySpecies`
+
 :class:`mff.calculators.TwoThreeEamSingleSpecies`
+
+:class:`mff.calculators.TwoThreeEamManySpecies`
 
 
 The "kernels" module
@@ -54,16 +61,23 @@ The "kernels" module
 
 :class:`mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel`
 
-:class:`mff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel`
+:class:`mff.kernels.twobodykernel.TwoBodyManySpeciesKernel`
 
 :class:`mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel`
 
-:class:`mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel`
+:class:`mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel`
 
 :class:`mff.kernels.eamkernel.EamSingleSpeciesKernel`
 
-:class:`mff.kernels.eamkernel.EamMultiSpeciesKernel`
+:class:`mff.kernels.eamkernel.EamManySpeciesKernel`
 
 :class:`mff.kernels.manybodykernel.ManyBodySingleSpeciesKernel`
 								   
-:class:`mff.kernels.manybodykernel.ManyBodyTwoSpeciesKernel`
+:class:`mff.kernels.manybodykernel.ManyBodyManySpeciesKernel`
+
+
+The "utility" module
+--------------------
+
+:mod:`mff.utility`
+

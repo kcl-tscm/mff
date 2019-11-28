@@ -198,19 +198,19 @@ When creating a model, it is therefore necessary to decide a priori the type of 
 <div class="section" id="building-a-model">
 <h2>Building a model<a class="headerlink" href="#building-a-model" title="Permalink to this headline">¶</a></h2>
 <p>To create a model based on a 2-body kernel for a monoatomic system:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>where the parameters refer to the atomic number of the species we are training the GP on, the cutoff radius we want to use, the lengthscale hyperparameter of the Gaussian Process, the hyperparameter governing the exponential decay of the cutoff function, and the noise associated with the output training data.
 In the case of a 2+3-body kernel for a monoatomic system:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>where we have two additional hyperparameters since the lengthscale value and the cutoff decay ratio of the 2- and 3-body kernels contained inside the combined Gaussian Process are be independent.</p>
 <p>When dealing with a two-element system, the syntax is very similar, but the <code class="docutils literal notranslate"><span class="pre">atomic_number</span></code> is instead a list containing the atomic numbers of the two species, in increasing order:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedTwoSpecies</span><span class="p">(</span><span class="n">atomic_numbers</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -301,7 +301,7 @@ calculator module.
 These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 
@@ -837,7 +837,7 @@ calculator module.
 These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ThreeBodySingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
 <span class="n">forces</span> <span class="o">=</span> <span class="n">mymodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_configurations</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
@@ -1557,7 +1557,7 @@ dynamics simulations via the calculator module.
 These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span>
                        <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
@@ -2291,7 +2291,7 @@ dynamics simulations via the calculator module.
 These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">EamSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span>
                         <span class="n">sigma</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">r0</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>
@@ -2837,7 +2837,7 @@ dynamics simulations via the calculator module.
 These mapped potentials retain the accuracy of the GP used to build them,
 while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="k">import</span> <span class="n">models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff</span> <span class="kn">import</span> <span class="n">models</span>
 <span class="n">mymodel</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TwoThreeEamSingleSpecies</span><span class="p">(</span><span class="n">atomic_number</span><span class="p">,</span> <span class="n">cutoff_radius</span><span class="p">,</span> <span class="n">sigma_2b</span><span class="p">,</span> <span class="n">sigma_3b</span><span class="p">,</span>
                                <span class="n">sigma_eam</span><span class="p">,</span> <span class="n">theta_2b</span><span class="p">,</span> <span class="n">theta_3b</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">r0</span><span class="p">,</span> <span class="n">noise</span><span class="p">,</span> <span class="n">rep_sig</span><span class="p">)</span>
 <span class="n">mymodel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">training_confs</span><span class="p">,</span> <span class="n">training_forces</span><span class="p">,</span> <span class="n">ncores</span><span class="p">)</span>

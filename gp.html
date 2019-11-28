@@ -516,7 +516,7 @@ force-force gram matrices for the Gaussian processes, and supports
 multi processing.
 The module is called by the gp.py script.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">twobodykernel</span> <span class="k">import</span> <span class="n">TwoBodySingleSpeciesKernel</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">twobodykernel</span> <span class="kn">import</span> <span class="n">TwoBodySingleSpeciesKernel</span>
 <span class="n">kernel</span> <span class="o">=</span> <span class="n">kernels</span><span class="o">.</span><span class="n">TwoBodySingleSpeciesKernel</span><span class="p">(</span><span class="n">theta</span><span class="o">=</span><span class="p">[</span><span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">r_cut</span><span class="p">])</span>
 <span class="n">ee_gram_matrix</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">calc_gram_e</span><span class="p">(</span><span class="n">training_configurations</span><span class="p">,</span> <span class="n">number_nodes</span><span class="p">)</span>
 </pre></div>
@@ -777,7 +777,7 @@ force-force gram matrices for the Gaussian processes, and supports
 multi processing.
 The module is called by the gp.py script.</p>
 <p>Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">threebodykernel</span> <span class="k">import</span> <span class="n">ThreeBodySingleSpeciesKernel</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">threebodykernel</span> <span class="kn">import</span> <span class="n">ThreeBodySingleSpeciesKernel</span>
 <span class="n">kernel</span> <span class="o">=</span> <span class="n">kernels</span><span class="o">.</span><span class="n">ThreeBodySingleSpeciesKernel</span><span class="p">(</span><span class="n">theta</span><span class="o">=</span><span class="p">[</span><span class="n">sigma</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">r_cut</span><span class="p">])</span>
 <span class="n">ee_gram_matrix</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">calc_gram_e</span><span class="p">(</span><span class="n">training_configurations</span><span class="p">,</span> <span class="n">number_nodes</span><span class="p">)</span>
 </pre></div>

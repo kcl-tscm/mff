@@ -213,21 +213,21 @@ To do so, simply run the following line of code on the <code class="docutils lit
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <p>Assuming we already trained a model named <code class="docutils literal notranslate"><span class="pre">model</span></code> and built the relative mapped force field, we can assign an ASE calculator based on such force field to an ASE atoms object.</p>
 <p>For a 2-body single species model:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">TwoBodySingleSpecies</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="kn">import</span> <span class="n">TwoBodySingleSpecies</span>
 <span class="n">calc</span> <span class="o">=</span> <span class="n">TwoBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
 <span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>For a 3-body model:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">ThreeBodySingleSpecies</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="kn">import</span> <span class="n">ThreeBodySingleSpecies</span>
 <span class="n">calc</span> <span class="o">=</span> <span class="n">ThreeBodySingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
 <span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>For a combined (2+3-body) model:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="k">import</span> <span class="n">CombinedSingleSpecies</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mff.calculators</span> <span class="kn">import</span> <span class="n">CombinedSingleSpecies</span>
 <span class="n">calc</span> <span class="o">=</span> <span class="n">CombinedSingleSpecies</span><span class="p">(</span><span class="n">r_cut</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_2b</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">grid_3b</span><span class="p">)</span>
 <span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_atomic_numbers</span><span class="p">())]</span>
 <span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>

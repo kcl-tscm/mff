@@ -120,6 +120,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#the-configurations-module">The “configurations” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-calculators-module">The “calculators” module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-kernels-module">The “kernels” module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-utility-module">The “utility” module</a></li>
 </ul>
 </li>
 </ul>
@@ -194,13 +195,14 @@
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="the-models-module">
 <h2>The “models” module<a class="headerlink" href="#the-models-module" title="Permalink to this headline">¶</a></h2>
-<p><a class="reference internal" href="models.html#module-mff.models.twobody" title="mff.models.twobody"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mff.models.twobody</span></code></a></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twobody.TwoBodyTwoSpeciesModel</span></code></p>
+<p><a class="reference internal" href="models.html#mff.models.twobody.TwoBodySingleSpeciesModel" title="mff.models.twobody.TwoBodySingleSpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twobody.TwoBodySingleSpeciesModel</span></code></a></p>
+<p><a class="reference internal" href="models.html#mff.models.twobody.TwoBodyManySpeciesModel" title="mff.models.twobody.TwoBodyManySpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twobody.TwoBodyManySpeciesModel</span></code></a></p>
 <p><a class="reference internal" href="models.html#mff.models.threebody.ThreeBodySingleSpeciesModel" title="mff.models.threebody.ThreeBodySingleSpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.threebody.ThreeBodySingleSpeciesModel</span></code></a></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.threebody.ThreeBodyTwoSpeciesModel</span></code></p>
+<p><a class="reference internal" href="models.html#mff.models.threebody.ThreeBodyManySpeciesModel" title="mff.models.threebody.ThreeBodyManySpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.threebody.ThreeBodyManySpeciesModel</span></code></a></p>
 <p><a class="reference internal" href="models.html#mff.models.combined.CombinedSingleSpeciesModel" title="mff.models.combined.CombinedSingleSpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.combined.CombinedSingleSpeciesModel</span></code></a></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.combined.CombinedTwoSpeciesModel</span></code></p>
+<p><a class="reference internal" href="models.html#mff.models.combined.CombinedManySpeciesModel" title="mff.models.combined.CombinedManySpeciesModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.combined.CombinedManySpeciesModel</span></code></a></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twothreeeam.TwoThreeEamSingleSpeciesModel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.models.twothreeeam.TwoThreeEamManySpeciesModel</span></code></p>
 </div>
 <div class="section" id="the-gp-module">
 <h2>The “gp” module<a class="headerlink" href="#the-gp-module" title="Permalink to this headline">¶</a></h2>
@@ -208,29 +210,35 @@
 </div>
 <div class="section" id="the-configurations-module">
 <h2>The “configurations” module<a class="headerlink" href="#the-configurations-module" title="Permalink to this headline">¶</a></h2>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.configurations.Configurations</span></code></p>
+<p><a class="reference internal" href="confs.html#module-mff.configurations" title="mff.configurations"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mff.configurations</span></code></a></p>
 </div>
 <div class="section" id="the-calculators-module">
 <h2>The “calculators” module<a class="headerlink" href="#the-calculators-module" title="Permalink to this headline">¶</a></h2>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoBodySingleSpecies</span></code></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoBodyTwoSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoBodyManySpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.ThreeBodySingleSpecies</span></code></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.ThreeBodyTwoSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.ThreeBodyManySpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.CombinedSingleSpecies</span></code></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.CombinedTwoSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.CombinedManySpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.EamSingleSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.EamManySpecies</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoThreeEamSingleSpecies</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.calculators.TwoThreeEamManySpecies</span></code></p>
 </div>
 <div class="section" id="the-kernels-module">
 <h2>The “kernels” module<a class="headerlink" href="#the-kernels-module" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference internal" href="gp.html#mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel" title="mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.twobodykernel.TwoBodySingleSpeciesKernel</span></code></a></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.twobodykernel.TwoBodyTwoSpeciesKernel</span></code></p>
+<p><a class="reference internal" href="gp.html#mff.kernels.twobodykernel.TwoBodyManySpeciesKernel" title="mff.kernels.twobodykernel.TwoBodyManySpeciesKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.twobodykernel.TwoBodyManySpeciesKernel</span></code></a></p>
 <p><a class="reference internal" href="gp.html#mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel" title="mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.threebodykernel.ThreeBodySingleSpeciesKernel</span></code></a></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.threebodykernel.ThreeBodyTwoSpeciesKernel</span></code></p>
+<p><a class="reference internal" href="gp.html#mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel" title="mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.threebodykernel.ThreeBodyManySpeciesKernel</span></code></a></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.eamkernel.EamSingleSpeciesKernel</span></code></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.eamkernel.EamMultiSpeciesKernel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.eamkernel.EamManySpeciesKernel</span></code></p>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.manybodykernel.ManyBodySingleSpeciesKernel</span></code></p>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.manybodykernel.ManyBodyTwoSpeciesKernel</span></code></p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">mff.kernels.manybodykernel.ManyBodyManySpeciesKernel</span></code></p>
+</div>
+<div class="section" id="the-utility-module">
+<h2>The “utility” module<a class="headerlink" href="#the-utility-module" title="Permalink to this headline">¶</a></h2>
+<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">mff.utility</span></code></p>
 </div>
 </div>
 

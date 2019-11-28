@@ -653,17 +653,17 @@ class TwoThreeEamManySpeciesModel(Model):
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
-        kernel_2b = kernels.TwoBodySingleSpeciesKernel(
+        kernel_2b = kernels.TwoBodyManySpeciesKernel(
             theta=[sigma_2b, theta_2b, r_cut])
         self.gp_2b = gp.GaussianProcess(
             kernel=kernel_2b, noise=noise, **kwargs)
 
-        kernel_3b = kernels.ThreeBodySingleSpeciesKernel(
+        kernel_3b = kernels.ThreeBodyManySpeciesKernel(
             theta=[sigma_3b, theta_3b, r_cut])
         self.gp_3b = gp.GaussianProcess(
             kernel=kernel_3b, noise=noise, **kwargs)
 
-        kernel_eam = kernels.EamSingleSpeciesKernel(
+        kernel_eam = kernels.EamManySpeciesKernel(
             theta=[sigma_eam, r_cut, alpha, r0])
         self.gp_eam = gp.GaussianProcess(
             kernel=kernel_eam, noise=noise, **kwargs)

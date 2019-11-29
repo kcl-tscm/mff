@@ -1,0 +1,22 @@
+{
+    "model": "TwoBodyManySpeciesModel",
+    "elements": [
+        47,
+        79
+    ],
+    "r_cut": 5.3,
+    "rep_sig": 1.760127297983133,
+    "fitted": [
+        "force",
+        null
+    ],
+    "gp": {
+        "kernel": "TwoBody",
+        "n_train": 200,
+        "sigma": 0.4,
+        "theta": 1.06,
+        "noise": 0.001,
+        "filename": "GP_ker_TwoBody_ntr_200.npy"
+    },
+    "grid": {}
+}

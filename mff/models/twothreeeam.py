@@ -1162,7 +1162,12 @@ class TwoThreeEamManySpeciesModel(Model):
         except:
             warnings.warn("The 3-body GP file is missing")
             pass
-
+        try:
+            model.gp_eam.load(directory / gp_filename_eam)
+        except:
+            warnings.warn("The EAM GP file is missing")
+            pass
+        
         if params['grid_2b']:
             for key, grid_filename_2b in params['grid_2b']['filename'].items():
                 k = tuple(int(ind) for ind in key.split('_'))

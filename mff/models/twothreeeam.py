@@ -1064,7 +1064,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 'r_max': self.grid_end,
                 'r_num': self.grid_num_eam,
                 'filename': {}
-            } if self.grid else {}
+            } if self.grid_eam else {}
         }
 
         gp_filename_2b = "GP_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(

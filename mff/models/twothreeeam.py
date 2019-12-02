@@ -1150,6 +1150,7 @@ class TwoThreeEamManySpeciesModel(Model):
 
         gp_filename_2b = params['gp_2b']['filename']
         gp_filename_3b = params['gp_3b']['filename']
+        gp_filename_eam = params['gp_eam']['filename']
 
         try:
             model.gp_2b.load(directory / gp_filename_2b)

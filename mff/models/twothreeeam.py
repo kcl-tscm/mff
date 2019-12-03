@@ -1104,12 +1104,13 @@ class TwoThreeEamManySpeciesModel(Model):
             params['grid_3b']['filename'][key] = grid_filename_3b
             self.grid_3b[k].save(path / grid_filename_3b)
 
-        if self.grid_eam:
-            grid_filename_eam = 'GRID_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npz'.format(
-                p=params)
+        for k, grid in self.grid_eam.items():
+            key = str(k)
+            grid_filename_eam = 'GRID_{}_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npz'.format(
+                key, p=params)
             print("Saved eam grid under name %s" % (grid_filename_eam))
-            params['grid_eam']['filename'] = grid_filename_eam
-            self.grid_eam.save(path / grid_filename_eam)
+            params['grid_eam']['filename'][key] = grid_filename_eam
+            self.grid_eam[key].save(path / grid_filename_eam)
 
         with open(path / "MODEL_23eam_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)

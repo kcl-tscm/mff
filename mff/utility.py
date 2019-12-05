@@ -837,3 +837,37 @@ def density_plot(x, y, mode):
         plt.ylabel("Predicted Energy [eV/atom]")
         plt.title("Energy Prediction Error")
     plt.show()
+
+
+def get_calculator(filepath):
+
+    from mff import calculators
+    m = load_model(filepath)
+    with open(filepath) as f:
+        model_json = json.load(f)
+    model_name = model_json['model']
+
+    if model_name == 'TwoBodySingleSpeciesModel':
+        calc = calculators.TwoBodySingleSpecies(m.r_cut, m.grid)
+    elif model_name == 'ThreeBodySingleSpeciesModel':
+        calc = calculators.ThreeBodySingleSpecies(m.r_cut, m.grid)
+    elif model_name == 'CombinedSingleSpeciesModel':
+        calc = calculators.CombinedSingleSpecies(m.r_cut, m.grid_2b, m.grid_3b)
+    elif model_name == 'TwoThreeEamSingleSpeciesModel':
+        calc = calculators.TwoThreeEamSingleSpecies(m.r_cut, m.grid_2b, m.grid_3b, m.grid_eam,
+            m.gp_eam.kernel.theta[2], m.gp_eam.kernel.theta[3])
+
+    elif model_name == 'TwoBodyManySpeciesModel':
+        calc = calculators.TwoBodyManySpecies(m.r_cut,m.elements, m.grid)
+    elif model_name == 'ThreeBodyManySpeciesModel':
+        calc = calculators.ThreeBodySManySpecies(m.r_cut,m.elements, m.grid)
+    elif model_name == 'CombinedManySpeciesModel':
+        calc = calculators.CombinedManySpecies(m.r_cut, m.elements, m.grid_2b, m.grid_3b)
+    elif model_name == 'TwoThreeEamManySpeciesModel':
+        calc = calculators.TwoThreeEamManySpecies(m.r_cut, m.elements, m.grid_2b, m.grid_3b,
+             m.grid_eam, m.gp_eam.kernel.theta[2], m.gp_eam.kernel.theta[3])
+    else:
+        print("ERROR: Model type not understood when loading")
+        quit()
+
+    return calc

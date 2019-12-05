@@ -363,8 +363,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
 
         grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
 
-        self.grid_start_eam = 1.5 * get_max_eam(self.gp_eam.X_train_, self.r_cut,
-                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+        self.grid_start_eam = 3.0 * self.max_grid_eam
         self.grid_end_eam = 0
         self.grid_num_eam = num_eam
 
@@ -519,7 +518,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                     params['gp_eam']['alpha'],
                     params['gp_eam']['r0'],
                     params['gp_2b']['noise'],
-
+                    params['gp_eam']['max_eam'],
                     params['rep_sig'])
 
         gp_filename_2b = params['gp_2b']['filename']
@@ -915,7 +914,7 @@ class TwoThreeEamManySpeciesModel(Model):
         self.grid_num_2b = num_2b
         self.grid_num_3b = num_2b
         self.grid_num_eam = num_eam
-        self.grid_start_eam = 1.5 * self.max_grid_eam
+        self.grid_start_eam = 3.0 * self.max_grid_eam
         self.grid_end = 0
 
         num_elements = [x for x in range(len(self.elements))]
@@ -951,10 +950,10 @@ class TwoThreeEamManySpeciesModel(Model):
 
         dists_eam = list(np.linspace(self.grid_start_eam,
                                  self.grid_end, self.grid_num_eam))
-        for el in self.elements:
+        for ind_el in num_elements:
             grid_data = self.gp_eam.predict_energy(
-                dists_eam, ncores=ncores, mapping=True, alpha_1_descr=el)
-            self.grid_eam[(el)] = interpolation.Spline1D(dists_eam, grid_data)
+                dists_eam, ncores=ncores, mapping=True, alpha_1_descr=self.elements[ind_el])
+            self.grid_eam[(ind_el)] = interpolation.Spline1D(dists_eam, grid_data)
 
     def build_grid_3b(self, dists, element_k, element_i, element_j, ncores=1):
         """ Build a mapped 3-body potential.
@@ -1106,7 +1105,7 @@ class TwoThreeEamManySpeciesModel(Model):
 
         for k, grid in self.grid_eam.items():
             key = str(k)
-            grid_filename_eam = 'GRID_{}_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npz'.format(
+            grid_filename_eam = 'GRID_{}_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npy'.format(
                 key, p=params)
             print("Saved eam grid under name %s" % (grid_filename_eam))
             params['grid_eam']['filename'][key] = grid_filename_eam
@@ -1185,7 +1184,7 @@ class TwoThreeEamManySpeciesModel(Model):
             model.grid_num_3b = params['grid_3b']['r_num']
 
             for key, grid_filename in params['grid_eam']['filename'].items():
-                k = tuple(key)
+                k = int(key)
 
                 model.grid_eam[k] = interpolation.Spline1D.load(
                     directory / grid_filename)

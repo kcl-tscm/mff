@@ -591,6 +591,8 @@ class EamManySpecies(ManySpeciesMappedPotential):
         self.grids_eam = grids_eam
         self.alpha = alpha
         self.r0 = r0
+        self.element_map = {element: index for index,
+                    element in enumerate(elements)}
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
         """Do the calculation.
@@ -600,10 +602,11 @@ class EamManySpecies(ManySpeciesMappedPotential):
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
         elements = atoms.get_atomic_numbers()
+        num_elements = [x for x in range(len(self.elements))]
 
         for i in range(len(self.atoms)):
             inds, pos, dists2 = self.nl.get_neighbors(i)
-            el = elements[i]
+            el = self.element_map[elements[i]]
             dist = np.sqrt(dists2)
             norm = pos / dist.reshape(-1, 1)
 

@@ -667,7 +667,7 @@ class TwoThreeEamManySpeciesModel(Model):
     def __init__(self, elements, r_cut, sigma_2b, sigma_3b, sigma_eam, theta_2b, theta_3b,
                  alpha, r0, noise, max_grid_eam = 0, rep_sig = 1, **kwargs):
         super().__init__()
-        self.elements = elements
+        self.elements = list(np.sort(elements))
         self.r_cut = r_cut
         self.rep_sig = rep_sig
         self.max_grid_eam = max_grid_eam
@@ -917,43 +917,38 @@ class TwoThreeEamManySpeciesModel(Model):
         self.grid_start_eam = 3.0 * self.max_grid_eam
         self.grid_end = 0
 
-        num_elements = [x for x in range(len(self.elements))]
-        perm_list_2b = list(combinations_with_replacement(num_elements, 2))
-        perm_list_3b = list(combinations_with_replacement(num_elements, 3))
+        perm_list_2b = list(combinations_with_replacement(self.elements, 2))
+        perm_list_3b = list(combinations_with_replacement(self.elements, 3))
 
         dists_2b = np.linspace(start, self.r_cut, num_2b)
         confs_2b = np.zeros((num_2b, 1, 5))
         confs_2b[:, 0, 0] = dists_2b
 
         for pair in perm_list_2b:  # in this for loop, predicting then save for each individual one
-            ind1 = pair[0]
-            ind2 = pair[1]
             confs_2b[:, 0, 3], confs_2b[:, 0,
-                                        4] = self.elements[ind1], self.elements[ind2]
+                                        4] = pair[0], pair[1]
             mapped_energies = self.gp_2b.predict_energy(
                 confs_2b, ncores=ncores, mapping=True)
             if self.rep_sig:
                 mapped_energies += utility.get_repulsive_energies(
                     confs_2b, self.rep_sig, mapping=True)
-            self.grid_2b[(ind1, ind2)] = interpolation.Spline1D(
+            self.grid_2b[pair] = interpolation.Spline1D(
                 dists_2b, mapped_energies)
 
         dists_3b = np.linspace(start, self.r_cut, num_3b)
 
         for trip in perm_list_3b:
-            ind1 = trip[0]
-            ind2 = trip[1]
-            ind3 = trip[2]
 
-            self.grid_3b[(ind1, ind2, ind3)] = self.build_grid_3b(
-                dists_3b, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores=ncores)
+            self.grid_3b[trip] = self.build_grid_3b(
+                dists_3b, trip[0], trip[1], trip[2], ncores=ncores)
 
         dists_eam = list(np.linspace(self.grid_start_eam,
                                  self.grid_end, self.grid_num_eam))
-        for ind_el in num_elements:
+
+        for el in self.elements:
             grid_data = self.gp_eam.predict_energy(
-                dists_eam, ncores=ncores, mapping=True, alpha_1_descr=self.elements[ind_el])
-            self.grid_eam[(ind_el)] = interpolation.Spline1D(dists_eam, grid_data)
+                dists_eam, ncores=ncores, mapping=True, alpha_1_descr=el)
+            self.grid_eam[(el)] = interpolation.Spline1D(dists_eam, grid_data)
 
     def build_grid_3b(self, dists, element_k, element_i, element_j, ncores=1):
         """ Build a mapped 3-body potential.
@@ -1078,7 +1073,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 key, p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
-            self.grid_2b[k].save(path / grid_filename_2b)
+            grid.save(path / grid_filename_2b)
 
         ### SAVE THE 3B MODEL ###
         gp_filename_3b = "GP_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(
@@ -1101,7 +1096,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 key, p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
-            self.grid_3b[k].save(path / grid_filename_3b)
+            grid.save(path / grid_filename_3b)
 
         for k, grid in self.grid_eam.items():
             key = str(k)
@@ -1109,7 +1104,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 key, p=params)
             print("Saved eam grid under name %s" % (grid_filename_eam))
             params['grid_eam']['filename'][key] = grid_filename_eam
-            self.grid_eam[key].save(path / grid_filename_eam)
+            grid.save(path / grid_filename_eam)
 
         with open(path / "MODEL_23eam_ntr_{p[gp_2b][n_train]}.json".format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)

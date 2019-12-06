@@ -378,7 +378,7 @@ class ThreeBodyManySpeciesModel(Model):
 
     def __init__(self, elements, r_cut, sigma, theta, noise, **kwargs):
         super().__init__()
-        self.elements = elements
+        self.elements = list(np.sort(elements))
         self.r_cut = r_cut
 
         kernel = kernels.ThreeBodyManySpeciesKernel(
@@ -525,16 +525,12 @@ class ThreeBodyManySpeciesModel(Model):
         self.grid_num = num
 
         dists = np.linspace(start, self.r_cut, num)
-        num_elements = [x for x in range(len(self.elements))]
-        perm_list = list(combinations_with_replacement(num_elements, 3))
+        perm_list = list(combinations_with_replacement(self.elements, 3))
 
         for trip in perm_list:
-            ind1 = trip[0]
-            ind2 = trip[1]
-            ind3 = trip[2]
 
-            self.grid[(ind1, ind2, ind3)] = self.build_grid_3b(
-                dists, self.elements[ind1], self.elements[ind2], self.elements[ind3], ncores)
+            self.grid[trip] = self.build_grid_3b(
+                dists,  trip[0],  trip[1],  trip[2], ncores)
 
     def build_grid_3b(self, dists, element_i, element_j, element_k, ncores):
         """ Build a mapped 3-body potential. 

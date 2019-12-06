@@ -176,7 +176,7 @@ class EamSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.grid_start = 1.5 * \
+        self.grid_start = 3.0 * \
             get_max_eam(self.gp.X_train_, self.r_cut,
                         self.gp.kernel.theta[2], self.gp.kernel.theta[3])
         self.grid_end = 0
@@ -305,10 +305,10 @@ class EamManySpeciesModel(Model):
     def __init__(self, elements, r_cut, sigma, alpha, r0, noise, **kwargs):
         super().__init__()
 
-        self.elements = elements
+        self.elements = list(np.sort(elements))
         self.r_cut = r_cut
 
-        kernel = kernels.EamMultiSpeciesKernel(
+        kernel = kernels.EamManySpeciesKernel(
             theta=[sigma, r_cut, alpha, r0])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
@@ -423,7 +423,7 @@ class EamManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.grid_start = 1.5 * \
+        self.grid_start = 3.0 * \
             get_max_eam(self.gp.X_train_, self.r_cut,
                         self.gp.kernel.theta[2], self.gp.kernel.theta[3])
         self.grid_end = 0
@@ -478,7 +478,7 @@ class EamManySpeciesModel(Model):
         self.gp.save(path / gp_filename)
 
         for k, grid in self.grid.items():
-            key = k
+            key = str(k)
             grid_filename = "GRID_{}_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npz".format(
                 key, p=params)
             params['grid']['filename'][key] = grid_filename
@@ -509,7 +509,7 @@ class EamManySpeciesModel(Model):
         with open(path) as fp:
             params = json.load(fp)
 
-        model = cls(params['element'],
+        model = cls(params['elements'],
                     params['r_cut'],
                     params['gp']['sigma'],
                     params['gp']['alpha'],

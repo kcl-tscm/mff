@@ -396,9 +396,7 @@ class TwoBodyManySpecies(ManySpeciesMappedPotential):
 
         """
         super().__init__(r_cut, elements, **kwargs)
-        self.elements = elements
-        self.element_map = {element: index for index,
-                            element in enumerate(elements)}
+        self.elements = list(np.sort(elements))
         self.grids_2b = grids_2b
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
@@ -419,14 +417,14 @@ class TwoBodyManySpecies(ManySpeciesMappedPotential):
             energy_local = np.zeros_like(dist)
             fs_scalars = np.zeros_like(dist)
 
-            atom_element_index = self.element_map[atom.number]
+            atom_element_index = atom.number
 
             for element in self.elements:
                 local_inds = np.argwhere(atoms.numbers[inds] == element)
                 if len(local_inds) > 0:
                     # Doing this so that the order of the elements is always increasing
-                    ellist = (sorted([atom_element_index, self.element_map[element]])[0],
-                              sorted([atom_element_index, self.element_map[element]])[1])
+                    ellist = (sorted([atom_element_index, element])[0],
+                              sorted([atom_element_index, element])[1])
                     local_grid = self.grids_2b[ellist]
                     energy_local[local_inds] = local_grid(
                         dist[local_inds], nu=0)
@@ -463,9 +461,7 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
         """
         super().__init__(r_cut, elements, **kwargs)
 
-        self.elements = elements
-        self.element_map = {element: index for index,
-                            element in enumerate(elements)}
+        self.elements = list(np.sort(elements))
         self.grids_3b = grids_3b
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
@@ -479,18 +475,14 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
         indices, distances, positions = self.find_triplets(atoms)
 
         # Get an array which is a copy of the indices of atoms participating in each triplet
-        mapping = np.zeros(max(self.elements)+1)
-        for i, e in enumerate(self.elements):
-            mapping[e] = i
-        el_mapping = mapping[atoms.get_atomic_numbers()]
+        el_mapping = atoms.get_atomic_numbers()
         el_indices = el_mapping[indices]
         el_indices = np.sort(el_indices, axis=1)
 
         d_ij, d_jk, d_ki = np.hsplit(distances, 3)
 
         list_triplets, list_grids = [], []
-        num_elements = [x for x in range(len(self.elements))]
-        perm_list = list(combinations_with_replacement(num_elements, 3))
+        perm_list = list(combinations_with_replacement(self.elements, 3))
 
         for trip in perm_list:
             is_this_the_right_triplet = np.sum(
@@ -527,7 +519,6 @@ class ThreeBodyManySpecies(ManySpeciesMappedPotential):
 
         '''
         nl = self.nl
-        # atomic_numbers = self.atoms.get_array('numbers', copy=False)
 
         indices, distances, positions = [], [], dict()
 
@@ -586,13 +577,11 @@ class EamManySpecies(ManySpeciesMappedPotential):
         """
         super().__init__(r_cut, elements, **kwargs)
 
-        self.elements = elements
+        self.elements = list(np.sort(elements))
         self.r_cut = r_cut
         self.grids_eam = grids_eam
         self.alpha = alpha
         self.r0 = r0
-        self.element_map = {element: index for index,
-                    element in enumerate(elements)}
 
     def calculate(self, atoms=None, properties=('energy', 'forces'), system_changes=all_changes):
         """Do the calculation.
@@ -602,19 +591,17 @@ class EamManySpecies(ManySpeciesMappedPotential):
         forces = np.zeros((len(self.atoms), 3))
         potential_energies = np.zeros((len(self.atoms), 1))
         elements = atoms.get_atomic_numbers()
-        num_elements = [x for x in range(len(self.elements))]
 
         for i in range(len(self.atoms)):
             inds, pos, dists2 = self.nl.get_neighbors(i)
-            el = self.element_map[elements[i]]
             dist = np.sqrt(dists2)
             norm = pos / dist.reshape(-1, 1)
 
             descriptor, descriptor_der = eam_descriptor(
                 dist, norm, self.r_cut, self.alpha, self.r0)
 
-            energy_local = self.grids_eam[el](descriptor, nu=0)
-            fs_scalars = self.grids_eam[el](descriptor, nu=1)
+            energy_local = self.grids_eam[elements[i]](descriptor, nu=0)
+            fs_scalars = self.grids_eam[elements[i]](descriptor, nu=1)
 
             potential_energies[i] = np.sum(energy_local, axis=0)
             forces[i] = np.sum(

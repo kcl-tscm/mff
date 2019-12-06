@@ -328,7 +328,7 @@ class TwoBodyManySpeciesModel(Model):
     def __init__(self, elements, r_cut, sigma, theta, noise, rep_sig=1, **kwargs):
         super().__init__()
 
-        self.elements = elements
+        self.elements = list(np.sort(elements))
         self.r_cut = r_cut
         self.rep_sig = rep_sig
 
@@ -487,29 +487,17 @@ class TwoBodyManySpeciesModel(Model):
         confs = np.zeros((num, 1, 5))
         confs[:, 0, 0] = dists
 
-        # Doing for summation n different interactions
-        # 0-0
-        # 0-1  1-1
-        # 0-2  1-2  2-2
-        # 0-3  1-3  2-3  3-3
-        # etc... the nth element contributes n interactions
-
-        num_elements = [x for x in range(len(self.elements))]
-
-        perm_list = list(combinations_with_replacement(
-            num_elements, 2))  # list format [(0, 1), (0, 2)...]
+        perm_list = list(combinations_with_replacement(self.elements, 2))
 
         for pair in perm_list:  # in this for loop, predicting then save for each individual one
-            ind1 = pair[0]
-            ind2 = pair[1]
             confs[:, 0, 3], confs[:, 0,
-                                  4] = self.elements[ind1], self.elements[ind2]
+                                  4] = pair[0], pair[1]
             grid_data = self.gp.predict_energy(
                 list(confs), ncores=ncores, mapping=True)
             if self.rep_sig:
                 grid_data += utility.get_repulsive_energies(
                     confs, self.rep_sig, mapping=True)
-            self.grid[(ind1, ind2)] = interpolation.Spline1D(dists, grid_data)
+            self.grid[pair] = interpolation.Spline1D(dists, grid_data)
 
     def save(self, path):
         """ Save the model.

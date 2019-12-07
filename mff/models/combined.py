@@ -763,7 +763,7 @@ class CombinedManySpeciesModel(Model):
                 list(confs_2b), ncores=ncores, mapping=True)
             if self.rep_sig:
                 mapped_energies += utility.get_repulsive_energies(
-                    confs, self.rep_sig, mapping=True)
+                    confs_2b, self.rep_sig, mapping=True)
             self.grid_2b[pair] = interpolation.Spline1D(dists_2b, mapped_energies)
 
 

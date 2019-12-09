@@ -34,6 +34,13 @@ def get_max_eam(X, rc, alpha, r0):
             t_max = t2
     return t_max
 
+def get_max_eam_energy(X_glob, rc, alpha, r0):
+    t_max = 0
+    for X in X_glob:
+        t2 = get_max_eam(X, rc, alpha, r0)
+        if t2 < t_max:
+            t_max = t2
+    return t_max
 
 class EamSingleSpeciesModel(Model):
     """ Eam single species model class
@@ -175,10 +182,15 @@ class EamSingleSpeciesModel(Model):
             num (int): number of points to use in the grid of the mapped potential   
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
-
-        self.grid_start = 3.0 * \
-            get_max_eam(self.gp.X_train_, self.r_cut,
-                        self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        
+        if 'force' in self.gp.fitted:
+            self.grid_start = 3.0 * \
+                get_max_eam(self.gp.X_train_, self.r_cut,
+                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        else:
+           self.grid_start = 3.0 * \
+                get_max_eam_energy(self.gp.X_glob_train_, self.r_cut,
+                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
         self.grid_end = 0
         self.grid_num = num
 
@@ -423,9 +435,15 @@ class EamManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        self.grid_start = 3.0 * \
-            get_max_eam(self.gp.X_train_, self.r_cut,
-                        self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        if 'force' in self.gp.fitted:
+            self.grid_start = 3.0 * \
+                get_max_eam(self.gp.X_train_, self.r_cut,
+                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+        else:
+           self.grid_start = 3.0 * \
+                get_max_eam_energy(self.gp.X_glob_train_, self.r_cut,
+                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+                            
         self.grid_end = 0
         self.grid_num = num
 

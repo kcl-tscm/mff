@@ -38,6 +38,14 @@ def get_max_eam(X, rc, alpha, r0):
             t_max = t2
     return t_max
 
+def get_max_eam_energy(X_glob, rc, alpha, r0):
+    t_max = 0
+    for X in X_glob:
+        t2 = get_max_eam(X, rc, alpha, r0)
+        if t2 < t_max:
+            t_max = t2
+    return t_max
+
 
 class TwoThreeEamSingleSpeciesModel(Model):
     """ 2-,  3-body and eam  single species model class
@@ -128,6 +136,9 @@ class TwoThreeEamSingleSpeciesModel(Model):
         self.gp_eam.fit(confs, forces - two_body_forces -
                         three_body_forces, ncores=ncores)
 
+        self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
+                        self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
         3-body single species energy-energy kernel functions. The 2-body Gaussian
@@ -159,8 +170,11 @@ class TwoThreeEamSingleSpeciesModel(Model):
         three_body_energies = self.gp_3b.predict_energy(
             glob_confs, ncores=ncores)
 
-        self.gp_eam.fit(glob_confs, energies - two_body_energies -
+        self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
                         three_body_energies, ncores=ncores)
+
+        self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
+                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -202,6 +216,9 @@ class TwoThreeEamSingleSpeciesModel(Model):
             glob_confs, ncores=ncores)
         self.gp_eam.fit_force_and_energy(confs, forces - two_body_forces - three_body_forces,
                                          glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
+
+        self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
+                        self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
 
     def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using the
@@ -362,6 +379,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                     grid_3b[ind_k, ind_j, ind_i] = grid_3b[ind_i, ind_j, ind_k]
 
         grid_3b = interpolation.Spline3D(dists_3b, dists_3b, dists_3b, grid_3b)
+
 
         self.grid_start_eam = 3.0 * self.max_grid_eam
         self.grid_end_eam = 0
@@ -755,10 +773,10 @@ class TwoThreeEamManySpeciesModel(Model):
         three_body_energies = self.gp_3b.predict_energy(
             glob_confs, ncores=ncores)
 
-        self.gp_eam.fit(glob_confs, energies - two_body_energies -
+        self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
                         three_body_energies, ncores=ncores)
 
-        self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
+        self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
@@ -1069,7 +1087,7 @@ class TwoThreeEamManySpeciesModel(Model):
 
         for k, grid in self.grid_2b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npy".format(
+            grid_filename_2b = "GRID_{}_ker_{p[gp_2b][kernel]}_ntr_{p[gp_2b][n_train]}.npz".format(
                 key, p=params)
             print("Saved 2-body grid under name %s" % (grid_filename_2b))
             params['grid_2b']['filename'][key] = grid_filename_2b
@@ -1092,7 +1110,7 @@ class TwoThreeEamManySpeciesModel(Model):
 
         for k, grid in self.grid_3b.items():
             key = '_'.join(str(element) for element in k)
-            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npy".format(
+            grid_filename_3b = "GRID_{}_ker_{p[gp_3b][kernel]}_ntr_{p[gp_3b][n_train]}.npz".format(
                 key, p=params)
             print("Saved 3-body grid under name %s" % (grid_filename_3b))
             params['grid_3b']['filename'][key] = grid_filename_3b
@@ -1100,7 +1118,7 @@ class TwoThreeEamManySpeciesModel(Model):
 
         for k, grid in self.grid_eam.items():
             key = str(k)
-            grid_filename_eam = 'GRID_{}_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npy'.format(
+            grid_filename_eam = 'GRID_{}_ker_{p[gp_eam][kernel]}_ntr_{p[gp_eam][n_train]}.npz'.format(
                 key, p=params)
             print("Saved eam grid under name %s" % (grid_filename_eam))
             params['grid_eam']['filename'][key] = grid_filename_eam

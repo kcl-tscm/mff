@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='mff',
-    version='0.7.4',
+    version='0.8',
     author='Claudio Zeni, Adam Fekete, Aldo Glielmo',
     author_email='',
     description='Gaussian process regression to extract non-parametric 2-, 3- and many-body force fields.',

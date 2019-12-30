@@ -31,7 +31,7 @@ def dummy_calc_ff(data):
         with open(Mffpath / "k3_ff_m.pickle", 'rb') as f:
             fun = pickle.load(f)
     result = np.zeros((len(array), 3, 3))
-    for i in np.arange(len(array)):
+    for i in range(len(array)):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0],
                         array[i][1],  theta0, theta1, theta2)
     return result
@@ -58,13 +58,13 @@ def dummy_calc_ee(data):
     result = np.zeros(len(array))
 
     if not mapping:
-        for i in np.arange(len(array)):
+        for i in range(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
                     result[i] += fun(np.zeros(3), np.zeros(3),
                                      conf1, conf2, theta0, theta1, theta2)
     else:
-        for i in np.arange(len(array)):
+        for i in range(len(array)):
             for conf2 in array[i][1]:
                 result[i] += fun(np.zeros(3), np.zeros(3),
                                  array[i][0], conf2, theta0, theta1, theta2)
@@ -92,14 +92,14 @@ def dummy_calc_ef(data):
             fun = pickle.load(f)
     result = np.zeros((len(array), 3))
     if not mapping:
-        for i in np.arange(len(array)):
+        for i in range(len(array)):
             conf2 = np.array(array[i][1], dtype='float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
                 result[i] += -fun(np.zeros(3), np.zeros(3),
                                   conf1, conf2,  theta0, theta1, theta2)
     else:
-        for i in np.arange(len(array)):
+        for i in range(len(array)):
             conf2 = np.array(array[i][1], dtype='float')
             conf1 = np.array(array[i][0], dtype='float')
             result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
@@ -149,10 +149,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         ker = np.zeros((len(X1) * 3, len(X2) * 3))
 
         if ncores > 1:
-            confs = []
-            for x1 in X1:
-                for x2 in X2:
-                    confs.append(np.asarray([x1, x2]))
+
+            confs = [[x1, x2] for x1 in X1 for x2 in X2]
             n = len(confs)
             import sys
             sys.setrecursionlimit(100000)
@@ -162,15 +160,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[1:-1] = [(i + 1) * factor for i in range(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                      self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
-
+                      self.type] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+            del confs
             import multiprocessing as mp
             pool = mp.Pool(ncores)
             result = pool.map(dummy_calc_ff, clist)
+            del clist
             pool.close()
             pool.join()
 
@@ -179,6 +178,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 for j in range(len(X2)):
                     ker[i * 3: i * 3 + 3, 3 * j:3 * j +
                         3] = result[(j + i * len(X2))]
+            del result
 
         else:
             for i, conf1 in enumerate(X1):
@@ -203,10 +203,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
         ker = np.zeros((len(X_glob), len(X) * 3))
 
         if ncores > 1:
-            confs = []
-            for x1 in X_glob:
-                for x2 in X:
-                    confs.append(np.asarray([x1, x2]))
+            confs = [[x1, x2] for x1 in X_glob for x2 in X]
             n = len(confs)
             import sys
             sys.setrecursionlimit(100000)
@@ -216,15 +213,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[1:-1] = [(i + 1) * factor for i in range(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                      self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
-
+                      self.type, mapping] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+            del confs
             import multiprocessing as mp
             pool = mp.Pool(ncores)
             result = pool.map(dummy_calc_ef, clist)
+            del clist
             pool.close()
             pool.join()
             result = np.vstack(np.asarray(result))
@@ -261,12 +259,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
        """
         if ncores > 1:  # Used for multiprocessing
-            confs = []
 
             # Build a list of all input pairs which matrix needs to be computed
-            for x1 in X1:
-                for x2 in X2:
-                    confs.append(np.asarray([x1, x2]))
+            confs = [[x1, x2] for x1 in X1 for x2 in X2]
+
             n = len(confs)
             import sys
             sys.setrecursionlimit(100000)
@@ -276,15 +272,19 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             # Way to split the kernels functions to compute evenly across the nodes
             splitind = np.zeros(ncores + 1)
             factor = (n + (ncores - 1)) / ncores
-            splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
+            splitind[1:-1] = [(i + 1) * factor for i in range(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                      self.type, mapping] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                      self.type, mapping] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+
+            del confs_2b
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
             result = pool.map(dummy_calc_ee, clist)
+
+            del clist
             pool.close()
             pool.join()
             result = np.concatenate(result).ravel()
@@ -294,6 +294,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 for j in range(len(X2)):
                     ker[i, j] = result[j + i*len(X2)]
 
+            del result 
+            
         else:
             if not mapping:
                 ker = np.zeros((len(X1), len(X2)))
@@ -330,11 +332,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if ncores > 1:
-                confs = []
-                for i in np.arange(len(X)):
-                    for j in np.arange(i + 1):
-                        thislist = np.asarray([X[i], X[j]])
-                        confs.append(thislist)
+                confs = [[X[i], X[j]] for i in range(len(X)) for j in range(i + 1)]
+
                 n = len(confs)
                 logger.info(
                     'Using %i cores for the 3-body force-force gram matrix calculation' % (ncores))
@@ -346,41 +345,44 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind = np.zeros(ncores + 1)
                 factor = (n + (ncores - 1)) / ncores
                 splitind[1:-1] = [(i + 1) *
-                                  factor for i in np.arange(ncores - 1)]
+                                  factor for i in range(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                          self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
-
+                          self.type] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                del confs
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ff, clist)
+                del clist
                 pool.close()
                 pool.join()
 
                 result = np.concatenate(result).reshape((n, 3, 3))
                 off_diag = np.zeros((len(X) * 3, len(X) * 3))
                 diag = np.zeros((len(X) * 3, len(X) * 3))
-                for i in np.arange(len(X)):
+                for i in range(len(X)):
                     diag[3 * i:3 * i + 3, 3 * i:3 * i +
                          3] = result[i + i * (i + 1) // 2]
-                    for j in np.arange(i):
+                    for j in range(i):
                         off_diag[3 * i:3 * i + 3, 3 * j:3 *
                                  j + 3] = result[j + i * (i + 1) // 2]
+                del result
 
             else:
                 diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
                 off_diag = np.zeros((X.shape[0] * 3, X.shape[0] * 3))
-                for i in np.arange(X.shape[0]):
+                for i in range(X.shape[0]):
                     diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = \
                         self.k3_ff(X[i], X[i], self.theta[0],
                                    self.theta[1], self.theta[2])
-                    for j in np.arange(i):
+                    for j in range(i):
                         off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
                             self.k3_ff(X[i], X[j], self.theta[0],
                                        self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
+            del diag, off_diag
             return gram
 
     def calc_gram_e(self, X, ncores=1, eval_gradient=False):  # Untested
@@ -400,13 +402,8 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if ncores > 1:
-                confs = []
-
                 # Build a list of all input pairs which matrix needs to be computed
-                for i in np.arange(len(X)):
-                    for j in np.arange(i + 1):
-                        thislist = np.array([list(X[i]), list(X[j])])
-                        confs.append(thislist)
+                confs = [[X[i], X[j]] for i in range(len(X)) for j in range(i + 1)]
 
                 n = len(confs)
                 import sys
@@ -418,30 +415,32 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind = np.zeros(ncores + 1)
                 factor = (n + (ncores - 1)) / ncores
                 splitind[1:-1] = [(i + 1) *
-                                  factor for i in np.arange(ncores - 1)]
+                                  factor for i in range(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                          self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
-
+                          self.type, False] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                del confs
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ee, clist)
+                del clist
                 pool.close()
                 pool.join()
 
                 result = np.concatenate(result).ravel()
                 off_diag = np.zeros((len(X), len(X)))
                 diag = np.zeros((len(X), len(X)))
-                for i in np.arange(len(X)):
+                for i in range(len(X)):
                     diag[i, i] = result[i + i * (i + 1) // 2]
-                    for j in np.arange(i):
+                    for j in range(i):
                         off_diag[i, j] = result[j + i * (i + 1) // 2]
+                del result
 
             else:
                 diag = np.zeros((X.shape[0], X.shape[0]))
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
-                for i in np.arange(X.shape[0]):
+                for i in range(X.shape[0]):
                     for k, conf1 in enumerate(X[i]):
                         diag[i, i] += self.k3_ee(conf1, conf1,
                                                  self.theta[0], self.theta[1], self.theta[2])
@@ -449,13 +448,14 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                             # *2 here to speed up the loop
                             diag[i, i] += 2.0*self.k3_ee(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
-                    for j in np.arange(i):
+                    for j in range(i):
                         for conf1 in X[i]:
                             for conf2 in X[j]:
                                 off_diag[i, j] += self.k3_ee(
                                     conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
-            gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
+            gram = diag + off_diag + off_diag.T
+            del diag, off_diag            
             return gram
 
     def calc_gram_ef(self, X, X_glob, ncores=1, eval_gradient=False):
@@ -480,11 +480,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             raise NotImplementedError('ERROR: GRADIENT NOT IMPLEMENTED YET')
         else:
             if ncores > 1:  # Multiprocessing
-                confs = []
-                for i in np.arange(len(X_glob)):
-                    for j in np.arange(len(X)):
-                        thislist = np.asarray([X_glob[i], X[j]])
-                        confs.append(thislist)
+                confs = [[x1, x2] for x1 in X_glob for x2 in X]
                 n = len(confs)
                 import sys
                 sys.setrecursionlimit(100000)
@@ -495,32 +491,32 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 splitind = np.zeros(ncores + 1)
                 factor = (n + (ncores - 1)) / ncores
                 splitind[1:-1] = [(i + 1) *
-                                  factor for i in np.arange(ncores - 1)]
+                                  factor for i in range(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
                 clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
-                          self.type, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
+                          self.type, False] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
+                del confs
                 import multiprocessing as mp
                 pool = mp.Pool(ncores)
                 result = pool.map(dummy_calc_ef, clist)
+                del clist
                 pool.close()
                 pool.join()
 
                 result = np.concatenate(result).ravel()
-                for i in np.arange(X_glob.shape[0]):
-                    for j in np.arange(X.shape[0]):
+                for i in range(X_glob.shape[0]):
+                    for j in range(X.shape[0]):
                         gram[i, 3 * j:3 * j + 3] = result[3 *
                                                           (j + i * X.shape[0]):3 + 3*(j + i * X.shape[0])]
-
+                del result
             else:
-                for i in np.arange(X_glob.shape[0]):
-                    for j in np.arange(X.shape[0]):
+                for i in range(X_glob.shape[0]):
+                    for j in range(X.shape[0]):
                         for k in X_glob[i]:
                             gram[i, 3 * j:3 * j + 3] += self.k3_ef(
                                 k, X[j], self.theta[0], self.theta[1], self.theta[2])
-
-            self.gram_ef = gram
 
             return gram
 
@@ -528,7 +524,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
         diag = np.zeros((X.shape[0] * 3))
 
-        for i in np.arange(X.shape[0]):
+        for i in range(X.shape[0]):
             diag[i * 3:(i + 1) * 3] = np.diag(self.k3_ff(X[i], X[i],
                                                          self.theta[0], self.theta[1], self.theta[2]))
 
@@ -538,7 +534,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
 
         diag = np.zeros((X.shape[0]))
 
-        for i in np.arange(X.shape[0]):
+        for i in range(X.shape[0]):
             diag[i] = self.k3_ee(X[i], X[i], self.theta[0],
                                  self.theta[1], self.theta[2])
 

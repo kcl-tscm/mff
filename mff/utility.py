@@ -684,15 +684,21 @@ def save_gp(m, folder, kernel, cutoff, sigma, noise, ntr):
     m.save(folder / "models")
 
 
-def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, kernel, cutoff, sigma, noise, ntr, sampling, MAE=None, SMAE=None, RMSE_e=None):
+def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, test_folder, kernel, cutoff, sigma, noise, ntr, sampling, MAE=None, SMAE=None, RMSE_e=None):
     """ Save a .json file containing details about the model and the errors it incurred in
     """
     if not isinstance(folder, Path):
         folder = Path(folder)
     if not os.path.exists(folder / "results"):
         os.makedirs(folder / "results")
-    end_name = "%s_%.2f_%.2f_%.4f_%i.json" % (
-        kernel, cutoff, sigma, noise, ntr)
+
+    if test_folder == None or test_folder == "None":
+        end_name = "%s_%.2f_%.2f_%.4f_%i.json" % (
+            kernel, cutoff, sigma, noise, ntr)
+
+    else:
+        end_name = "on_%s_%s_%.2f_%.2f_%.4f_%i.json" % (test_folder
+            kernel, cutoff, sigma, noise, ntr)
 
     filename = folder / "results" / end_name
     errors = {
@@ -747,7 +753,7 @@ def train_and_test_gp(train_folder, traj_filename, cutoff=5.0, test_folder=None,
         m, x, y, x_e, y_e, plot, test_mode, ncores)
 
     # Save a report of the errors
-    save_report(MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, train_folder, kernel,
+    save_report(MAE_c, MAE_f, SMAE_f, M_f, RMSE_f, train_folder, test_folder, kernel,
                 cutoff, sigma, noise, len(X), sampling, MAE_e, SMAE_e, RMSE_e)
     return m
 

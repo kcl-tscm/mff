@@ -689,6 +689,8 @@ def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, test_folder, kernel, cutof
     """
     if not isinstance(folder, Path):
         folder = Path(folder)
+    if not isinstance(test_folder, Path):
+        test_folder = Path(test_folder)
     if not os.path.exists(folder / "results"):
         os.makedirs(folder / "results")
 
@@ -697,7 +699,8 @@ def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, test_folder, kernel, cutof
             kernel, cutoff, sigma, noise, ntr)
 
     else:
-        end_name = "on_%s_%s_%.2f_%.2f_%.4f_%i.json" % (test_folder,
+        test_final_name = test_folder.stem
+        end_name = "on_%s_%s_%.2f_%.2f_%.4f_%i.json" % (test_final_name,
             kernel, cutoff, sigma, noise, ntr)
 
     filename = folder / "results" / end_name

@@ -697,7 +697,7 @@ def save_report(MAEC, MAEF, SMAEF, MF, RMSEF, folder, test_folder, kernel, cutof
             kernel, cutoff, sigma, noise, ntr)
 
     else:
-        end_name = "on_%s_%s_%.2f_%.2f_%.4f_%i.json" % (test_folder
+        end_name = "on_%s_%s_%.2f_%.2f_%.4f_%i.json" % (test_folder,
             kernel, cutoff, sigma, noise, ntr)
 
     filename = folder / "results" / end_name

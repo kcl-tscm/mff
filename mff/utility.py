@@ -735,7 +735,7 @@ def train_and_test_gp(train_folder, traj_filename, cutoff=5.0, test_folder=None,
         train_folder, cutoff, traj_filename)
     if test_folder is not None and test_folder != "None":
         print("The test folder is", test_folder)
-        confs_2, forces_2, energies_2, elements_2, global_confs_2 = get_data(
+        elements_2, confs_2, forces_2, energies_2, global_confs_2 = get_data(
             test_folder, cutoff, traj_filename)
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_twosets(confs_1, forces_1, global_confs_1,
                                                         energies_1, elements_1, confs_2, forces_2, global_confs_2, energies_2,

@@ -178,27 +178,19 @@ class ManyBodySingleSpeciesModel(Model):
                 'theta': self.gp.kernel.theta[1],
                 'noise': self.gp.noise
             },
-            'grid': {
-                'r_min': self.grid_start,
-                'r_num': self.grid_num
-            } if self.grid else {}
+            'grid': {}
         }
 
-        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(
-            prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(
+            p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
-        if self.grid:
-            grid_filename = '{}_grid_num_{p[grid][r_num]}.npz'.format(
-                prefix, p=params)
-
-            params['grid']['filename'] = grid_filename
-            self.grid.save(directory / grid_filename)
-
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
 
     @classmethod
     def from_json(cls, path):
@@ -217,9 +209,9 @@ class ManyBodySingleSpeciesModel(Model):
             path = Path(path)
 
         directory, prefix = path.parent, path.stem
+
         with open(path) as fp:
             params = json.load(fp)
-
         model = cls(params['element'],
                     params['r_cut'],
                     params['gp']['sigma'],
@@ -227,14 +219,11 @@ class ManyBodySingleSpeciesModel(Model):
                     params['gp']['noise'])
 
         gp_filename = params['gp']['filename']
-        model.gp.load(directory / gp_filename)
-
-        if params['grid']:
-            grid_filename = params['grid']['filename']
-            model.grid = interpolation.Spline1D.load(directory / grid_filename)
-
-            model.grid_start = params['grid']['r_min']
-            model.grid_num = params['grid']['r_num']
+        try:
+            model.gp.load(directory / gp_filename)
+        except:
+            warnings.warn("The many-body GP file is missing")
+            pass
 
         return model
 
@@ -398,18 +387,20 @@ class ManyBodyManySpeciesModel(Model):
             'grid': {}
         }
 
-        gp_filename = "{}_gp_ker_many_ntr_{p[gp][n_train]}.npy".format(
-            prefix, p=params)
+        gp_filename = "GP_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.npy".format(
+            p=params)
 
         params['gp']['filename'] = gp_filename
-        self.gp.save(directory / gp_filename)
+        self.gp.save(path / gp_filename)
 
-        with open(directory / '{}.json'.format(prefix), 'w') as fp:
+        with open(path / 'MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json'.format(p=params), 'w') as fp:
             json.dump(params, fp, indent=4, cls=NpEncoder)
+
+        print("Saved model with name: MODEL_ker_{p[gp][kernel]}_ntr_{p[gp][n_train]}.json".format(p=params))
 
     @classmethod
     def from_json(cls, path):
-        """ Load the models.
+        """ Load the model.
         Loads the model, the associated GP and the mapped potential, if available.
 
         Args:
@@ -417,7 +408,6 @@ class ManyBodyManySpeciesModel(Model):
 
         Return:
             model (obj): the model object
-
         """
 
         if not isinstance(path, Path):
@@ -427,7 +417,6 @@ class ManyBodyManySpeciesModel(Model):
 
         with open(path) as fp:
             params = json.load(fp)
-
         model = cls(params['elements'],
                     params['r_cut'],
                     params['gp']['sigma'],

@@ -609,6 +609,8 @@ def get_model_name(elements, kernel, ntr):
         first_name = "Eam"
     elif kernel == "23eam":
         first_name = "TwoThreeEam"
+    elif kernel == "mb":
+        first_name = "ManyBody"
 
     if len(elements) == 1:
         second_name = "SingleSpecies"

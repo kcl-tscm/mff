@@ -711,7 +711,7 @@ class TwoBodyManySpeciesKernel(BaseTwoBody):
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
-        super().__init__(kernel_name='TwoBody', theta=theta, bounds=bounds)
+        super().__init__(kernel_name='TwoBodyManySpecies', theta=theta, bounds=bounds)
         self.type = "multi"
 
     @staticmethod

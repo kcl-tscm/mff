@@ -278,7 +278,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
             clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                       self.type, mapping] for i in range(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
-            del confs_2b
+            del confs
 
             import multiprocessing as mp
             pool = mp.Pool(ncores)
@@ -775,7 +775,7 @@ class ThreeBodyManySpeciesKernel(BaseThreeBody):
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
-        super().__init__(kernel_name='ThreeBody', theta=theta, bounds=bounds)
+        super().__init__(kernel_name='ThreeBodyManySpecies', theta=theta, bounds=bounds)
         self.type = "multi"
 
     @staticmethod

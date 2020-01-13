@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from mff import gp, interpolation, kernels, utility
+from mff import gp, interpolation, kernels, utility, models
 
 from .base import Model
 
@@ -84,14 +84,24 @@ class CombinedSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = ("models/MODEL_ker_TwoBodySingleSpecies_ntr_%i.json" %(len(forces)))
+        try:
+            model_2b = models.TwoBodySingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded 2-body model to bootstart things")
 
-        self.gp_2b.fit(confs, forces, ncores=ncores)
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        ntr = len(confs)
+            self.gp_2b.fit(confs, forces, ncores=ncores)
+
         two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
 
         self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
@@ -110,15 +120,27 @@ class CombinedSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
+        hypotetical_model_name = "models/MODEL_ker_TwoBodySingleSpecies_ntr_%i.json" %(len(energies))
+        try:
+            model_2b = models.TwoBodySingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(
+                        glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+            print("Loaded 2-body model to bootstart things")
 
-        ntr = len(glob_confs)
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+
+            self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
+
         two_body_energies = self.gp_2b.predict_energy(
             glob_confs, ncores=ncores)
 
@@ -143,16 +165,31 @@ class CombinedSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = "models/MODEL_ker_TwoBodySingleSpecies_ntr_%i.json" %(len(energies)+len(forces))
+        try:
+            model_2b = models.TwoBodySingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        self.gp_2b.fit_force_and_energy(
-            confs, forces, glob_confs, energies, ncores=ncores)
+            print("Loaded 2-body model to bootstart things")
+
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+
+            self.gp_2b.fit_force_and_energy(
+                confs, forces, glob_confs, energies, ncores=ncores)
 
         two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
         two_body_energies = self.gp_2b.predict_energy(
@@ -574,13 +611,24 @@ class CombinedManySpeciesModel(Model):
                 the central atoms of the training configurations
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
+        hypotetical_model_name = "models/MODEL_ker_TwoBodyManySpecies_ntr_%i.json" %(len(forces))
+        try:
+            model_2b = models.TwoBodyManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded 2-body model to bootstart things")
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        self.gp_2b.fit(confs, forces, ncores=ncores)
+            self.gp_2b.fit(confs, forces, ncores=ncores)
 
         ntr = len(confs)
         two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
@@ -600,12 +648,23 @@ class CombinedManySpeciesModel(Model):
             energies (array) : Array containing the total energy of each snapshot
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
-
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
+        hypotetical_model_name = "models/MODEL_ker_TwoBodyManySpecies_ntr_%i.json" %(len(energies))
+        try:
+            model_2b = models.TwoBodyManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(
+                        glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+            print("Loaded 2-body model to bootstart things")
+        
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
 
         self.gp_2b.fit_energy(glob_confs, energies, ncores=1)
 
@@ -634,13 +693,27 @@ class CombinedManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = "models/MODEL_ker_TwoBodyManySpecies_ntr_%i.json" %(len(forces) + len(energies))
+        try:
+            model_2b = models.TwoBodyManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_2b.rep_sig
+            self.gp_2b = model_2b.gp
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded 2-body model to bootstart things")
+
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
         self.gp_2b.fit_force_and_energy(
             confs, forces, glob_confs, energies, ncores=ncores)

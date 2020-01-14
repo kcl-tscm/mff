@@ -286,14 +286,14 @@ def sample_oneset(c, f, gc, en, el, method, ntr, ntest, cutoff, nbins=None, f_e_
     return X, Y, X_e, Y_e, x, y, x_e, y_e
 
 
-def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins=None, traj=None, cna_cut=None):
+def sample_twosets(c1, f1, gc1, en1, el1, c2, f2, gc2, en2, el2, method, ntr, ntest, cutoff, nbins=None, f_e_ratio=100, traj=None, cna_cut=None):
     """ Get training and test set from two databases with method of choice
     """
     ind_test = np.random.choice(np.arange(len(c2)), size=ntest, replace=False)
     ind_test_e = np.random.choice(
-        np.arange(len(gc2)), size=ntest//100+1, replace=False)
+        np.arange(len(gc2)), size=ntest//f_e_ratio+1, replace=False)
     ind_train_e = np.random.choice(
-        np.arange(len(gc1)), size=ntr//100 + 1, replace=False)
+        np.arange(len(gc1)), size=ntr//f_e_ratio + 1, replace=False)
 
     if ((en1 == None).any()) or len(c1) != len(en1):
         en1 = np.zeros(len(c1))
@@ -742,7 +742,7 @@ def train_and_test_gp(train_folder, traj_filename, cutoff=5.0, test_folder=None,
             test_folder, cutoff, traj_filename)
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_twosets(confs_1, forces_1, global_confs_1,
                                                         energies_1, elements_1, confs_2, forces_2, global_confs_2, energies_2,
-                                                        elements_2, sampling, training_points, test_points, cutoff, nbins,  train_folder + '/' + traj_filename, cna_cut)
+                                                        elements_2, sampling, training_points, test_points, cutoff, nbins, f_e_ratio, train_folder + '/' + traj_filename, cna_cut)
     else:
         X, Y, X_e, Y_e, x, y, x_e, y_e = sample_oneset(confs_1, forces_1, global_confs_1,
                                                        energies_1, elements_1, sampling, training_points, test_points, cutoff, nbins, f_e_ratio, train_folder + '/' + traj_filename, cna_cut)

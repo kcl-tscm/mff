@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from mff import gp, interpolation, kernels, utility
+from mff import gp, interpolation, kernels, utility, models
 
 from .base import Model
 
@@ -121,20 +121,36 @@ class TwoThreeEamSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(forces)))
+        try:
+            model_comb = models.CombinedSingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit(confs, forces, ncores=ncores)
+            if self.rep_sig:
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded combined model to bootstart training")
 
-        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+            combined_forces = model_comb.predict(confs, ncores=ncores)
+            self.gp_eam.fit(confs, forces - combined_forces, ncores=ncores)
+            
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
+            self.gp_2b.fit(confs, forces, ncores=ncores)
 
-        three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
-        self.gp_eam.fit(confs, forces - two_body_forces -
-                        three_body_forces, ncores=ncores)
+            two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+
+            self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
+
+            three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
+            self.gp_eam.fit(confs, forces - two_body_forces -
+                            three_body_forces, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
                         self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
@@ -153,25 +169,41 @@ class TwoThreeEamSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(energies)))
+        try:
+            model_comb = models.CombinedSingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+            print("Loaded combined model to bootstart training")
 
-        two_body_energies = self.gp_2b.predict_energy(
-            glob_confs, ncores=ncores)
+            combined_energies = model_comb.predict_energy(glob_confs, ncores=ncores)
+            self.gp_eam.fit_energy(glob_confs, energies - combined_energies, ncores=ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies -
-                              two_body_energies, ncores=ncores)
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
 
-        three_body_energies = self.gp_3b.predict_energy(
-            glob_confs, ncores=ncores)
+            self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
 
-        self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
-                        three_body_energies, ncores=ncores)
+            two_body_energies = self.gp_2b.predict_energy(
+                glob_confs, ncores=ncores)
+
+            self.gp_3b.fit_energy(glob_confs, energies -
+                                two_body_energies, ncores=ncores)
+
+            three_body_energies = self.gp_3b.predict_energy(
+                glob_confs, ncores=ncores)
+
+            self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
+                            three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
@@ -194,28 +226,48 @@ class TwoThreeEamSingleSpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(energies)+len(forces)))
+        try:
+            model_comb = models.CombinedSingleSpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit_force_and_energy(
-            confs, forces, glob_confs, energies, ncores=ncores)
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded combined model to bootstart training")
 
-        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
-        two_body_energies = self.gp_2b.predict_energy(
-            glob_confs, ncores=ncores)
-        self.gp_3b.fit_force_and_energy(
-            confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
+            combined_forces = model_comb.predict(confs, ncores=ncores)
+            combined_energies = model_comb.predict_energy(glob_confs, ncores=ncores)
+            self.gp_eam.fit_force_and_energy(confs, forces - combined_forces, 
+                glob_confs, energies - combined_energies, ncores=ncores)
 
-        three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
-        three_body_energies = self.gp_3b.predict_energy(
-            glob_confs, ncores=ncores)
-        self.gp_eam.fit_force_and_energy(confs, forces - two_body_forces - three_body_forces,
-                                         glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+
+            self.gp_2b.fit_force_and_energy(
+                confs, forces, glob_confs, energies, ncores=ncores)
+
+            two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+            two_body_energies = self.gp_2b.predict_energy(
+                glob_confs, ncores=ncores)
+            self.gp_3b.fit_force_and_energy(
+                confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
+
+            three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
+            three_body_energies = self.gp_3b.predict_energy(
+                glob_confs, ncores=ncores)
+            self.gp_eam.fit_force_and_energy(confs, forces - two_body_forces - three_body_forces,
+                                            glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
                         self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
@@ -724,20 +776,36 @@ class TwoThreeEamManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(forces)))
+        try:
+            model_comb = models.CombinedManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit(confs, forces, ncores=ncores)
+            if self.rep_sig:
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded combined model to bootstart training")
 
-        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+            combined_forces = model_comb.predict(confs, ncores=ncores)
+            self.gp_eam.fit(confs, forces - combined_forces, ncores=ncores)
+            
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
+            self.gp_2b.fit(confs, forces, ncores=ncores)
 
-        three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
-        self.gp_eam.fit(confs, forces - two_body_forces -
-                        three_body_forces, ncores=ncores)
+            two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+
+            self.gp_3b.fit(confs, forces - two_body_forces, ncores=ncores)
+
+            three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
+            self.gp_eam.fit(confs, forces - two_body_forces -
+                            three_body_forces, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
@@ -756,25 +824,41 @@ class TwoThreeEamManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(glob_confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(energies)))
+        try:
+            model_comb = models.CombinedManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+            print("Loaded combined model to bootstart training")
 
-        two_body_energies = self.gp_2b.predict_energy(
-            glob_confs, ncores=ncores)
+            combined_energies = model_comb.predict_energy(glob_confs, ncores=ncores)
+            self.gp_eam.fit_energy(glob_confs, energies - combined_energies, ncores=ncores)
 
-        self.gp_3b.fit_energy(glob_confs, energies -
-                              two_body_energies, ncores=ncores)
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(glob_confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
 
-        three_body_energies = self.gp_3b.predict_energy(
-            glob_confs, ncores=ncores)
+            self.gp_2b.fit_energy(glob_confs, energies, ncores=ncores)
 
-        self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
-                        three_body_energies, ncores=ncores)
+            two_body_energies = self.gp_2b.predict_energy(
+                glob_confs, ncores=ncores)
+
+            self.gp_3b.fit_energy(glob_confs, energies -
+                                two_body_energies, ncores=ncores)
+
+            three_body_energies = self.gp_3b.predict_energy(
+                glob_confs, ncores=ncores)
+
+            self.gp_eam.fit_energy(glob_confs, energies - two_body_energies -
+                            three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
@@ -797,28 +881,48 @@ class TwoThreeEamManySpeciesModel(Model):
             ncores (int): number of CPUs to use for the gram matrix evaluation
         """
 
-        if self.rep_sig:
-            self.rep_sig = utility.find_repulstion_sigma(confs)
-            self.rep_energies = utility.get_repulsive_energies(
-                glob_confs, self.rep_sig)
-            energies -= self.rep_energies
-            self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
-            forces -= self.rep_forces
+        hypotetical_model_name = ("models/MODEL_combined_ntr_%i.json" %(len(energies)+len(forces)))
+        try:
+            model_comb = models.CombinedManySpeciesModel.from_json(hypotetical_model_name)
+            self.rep_sig = model_comb.rep_sig
+            self.gp_2b = model_comb.gp_2b
+            self.gp_3b = model_comb.gp_3b
 
-        self.gp_2b.fit_force_and_energy(
-            confs, forces, glob_confs, energies, ncores=ncores)
+            if self.rep_sig:
+                self.rep_energies = utility.get_repulsive_energies(glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
+            print("Loaded combined model to bootstart training")
 
-        two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
-        two_body_energies = self.gp_2b.predict_energy(
-            glob_confs, ncores=ncores)
-        self.gp_3b.fit_force_and_energy(
-            confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
+            combined_forces = model_comb.predict(confs, ncores=ncores)
+            combined_energies = model_comb.predict_energy(glob_confs, ncores=ncores)
+            self.gp_eam.fit_force_and_energy(confs, forces - combined_forces, 
+                glob_confs, energies - combined_energies, ncores=ncores)
+    
+        except:
+            if self.rep_sig:
+                self.rep_sig = utility.find_repulstion_sigma(confs)
+                self.rep_energies = utility.get_repulsive_energies(
+                    glob_confs, self.rep_sig)
+                energies -= self.rep_energies
+                self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
+                forces -= self.rep_forces
 
-        three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
-        three_body_energies = self.gp_3b.predict_energy(
-            glob_confs, ncores=ncores)
-        self.gp_eam.fit_force_and_energy(confs, forces - two_body_forces - three_body_forces,
-                                         glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
+            self.gp_2b.fit_force_and_energy(
+                confs, forces, glob_confs, energies, ncores=ncores)
+
+            two_body_forces = self.gp_2b.predict(confs, ncores=ncores)
+            two_body_energies = self.gp_2b.predict_energy(
+                glob_confs, ncores=ncores)
+            self.gp_3b.fit_force_and_energy(
+                confs, forces - two_body_forces, glob_confs, energies - two_body_energies, ncores=ncores)
+
+            three_body_forces = self.gp_3b.predict(confs, ncores=ncores)
+            three_body_energies = self.gp_3b.predict_energy(
+                glob_confs, ncores=ncores)
+            self.gp_eam.fit_force_and_energy(confs, forces - two_body_forces - three_body_forces,
+                                                glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
                                             self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])

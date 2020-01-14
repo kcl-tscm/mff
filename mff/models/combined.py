@@ -92,7 +92,7 @@ class CombinedSingleSpeciesModel(Model):
             if self.rep_sig:
                 self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
                 forces -= self.rep_forces
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
 
         except:
             if self.rep_sig:
@@ -130,7 +130,7 @@ class CombinedSingleSpeciesModel(Model):
                 self.rep_energies = utility.get_repulsive_energies(
                         glob_confs, self.rep_sig)
                 energies -= self.rep_energies
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
 
         except:
             if self.rep_sig:
@@ -177,7 +177,7 @@ class CombinedSingleSpeciesModel(Model):
                 self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
                 forces -= self.rep_forces
 
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
 
         except:
             if self.rep_sig:
@@ -620,7 +620,7 @@ class CombinedManySpeciesModel(Model):
                 self.rep_sig = utility.find_repulstion_sigma(confs)
                 self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
                 forces -= self.rep_forces
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
 
         except:
             if self.rep_sig:
@@ -657,7 +657,7 @@ class CombinedManySpeciesModel(Model):
                 self.rep_energies = utility.get_repulsive_energies(
                         glob_confs, self.rep_sig)
                 energies -= self.rep_energies
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
         
         except:
             if self.rep_sig:
@@ -704,7 +704,7 @@ class CombinedManySpeciesModel(Model):
                 energies -= self.rep_energies
                 self.rep_forces = utility.get_repulsive_forces(confs, self.rep_sig)
                 forces -= self.rep_forces
-            print("Loaded 2-body model to bootstart things")
+            print("Loaded 2-body model to bootstart training")
 
         except:
             if self.rep_sig:

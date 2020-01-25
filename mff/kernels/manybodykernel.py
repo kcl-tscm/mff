@@ -614,18 +614,12 @@ class ManyBodySingleSpeciesKernel(BaseManyBody):
             # final shape is M1 M1 M2 M2
             ker = k1n + k2n + k3n
 
-            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * \
-                (0.5 * (T.sgn(rc - r1j) + 1))
-            cut_jk = cut_j[:, None] * cut_j[None, :] * (
-                T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
+            cut_j = 0.5*(1+T.cos(np.pi*r1j/rc))
+            cut_m = 0.5*(1+T.cos(np.pi*r2m/rc))
 
-            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * \
-                (0.5 * (T.sgn(rc - r2m) + 1))
-            cut_mn = cut_m[:, None] * cut_m[None, :] * (
-                T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
-
+            cut_jk = cut_j[:,None]*cut_j[None,:]*0.5*(1+T.cos(np.pi*rjk/rc))
+            cut_mn = cut_m[:,None]*cut_m[None,:]*0.5*(1+T.cos(np.pi*rmn/rc))
+            
             # --------------------------------------------------
             # REMOVE DIAGONAL ELEMENTS AND ADD CUTOFF
             # --------------------------------------------------
@@ -886,17 +880,11 @@ class ManyBodyManySpeciesKernel(BaseManyBody):
             ker_loc = k1n * delta_perm1 + k2n * delta_perm3 + k3n * delta_perm5
 
             # Faster version of cutoff (less calculations)
-            cut_j = T.exp(-theta / T.abs_(rc - r1j)) * \
-                (0.5 * (T.sgn(rc - r1j) + 1))
-            cut_jk = cut_j[:, None] * cut_j[None, :] * (
-                T.exp(-theta / T.abs_(rc - rjk[:, :])) *
-                (0.5 * (T.sgn(rc - rjk) + 1))[:, :])
+            cut_j = 0.5*(1+T.cos(np.pi*r1j/rc))
+            cut_m = 0.5*(1+T.cos(np.pi*r2m/rc))
 
-            cut_m = T.exp(-theta / T.abs_(rc - r2m)) * \
-                (0.5 * (T.sgn(rc - r2m) + 1))
-            cut_mn = cut_m[:, None] * cut_m[None, :] * (
-                T.exp(-theta / T.abs_(rc - rmn[:, :])) *
-                (0.5 * (T.sgn(rc - rmn) + 1))[:, :])
+            cut_jk = cut_j[:,None]*cut_j[None,:]*0.5*(1+T.cos(np.pi*rjk/rc))
+            cut_mn = cut_m[:,None]*cut_m[None,:]*0.5*(1+T.cos(np.pi*rmn/rc))
 
             # --------------------------------------------------
             # REMOVE DIAGONAL ELEMENTS

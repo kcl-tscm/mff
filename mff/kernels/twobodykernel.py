@@ -591,10 +591,7 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             # squared exponential of the above distance matrices
             se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
 
-            # cutoff functions calculated for the various distance matrices
-            cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                (T.exp(-theta / abs(rc - r1j[:, None]))
-                 * T.exp(-theta / abs(rc - r2m[None, :])))
+            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))
 
             # apply the cutoff function to the squared exponential partial kernels
             se_jm = se_jm*cut_jm
@@ -771,36 +768,12 @@ class TwoBodyManySpeciesKernel(BaseTwoBody):
             # distances of atoms wrt to the central one and wrt each other in 1 and 2
             r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
             r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
-            rjk = T.sqrt(
-                T.sum((rho1s[None, :, :] - rho1s[:, None, :]) ** 2, axis=2))
-            rmn = T.sqrt(
-                T.sum((rho2s[None, :, :] - rho2s[:, None, :]) ** 2, axis=2))
 
             # Get the squared exponential kernels
             se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
-            se_jkmn = T.exp(-(rjk[:, :, None, None] -
-                              rmn[None, None, :, :]) ** 2 / (2 * sig ** 2))
-            se_jk2m = T.exp(-(rjk[:, :, None] -
-                              r2m[None, None, :]) ** 2 / (2 * sig ** 2))
-            se_1jmn = T.exp(-(r1j[:, None, None] -
-                              rmn[None, :, :]) ** 2 / (2 * sig ** 2))
 
-            # Define cutoff functions
-            cut_jkmn = (0.5 * (1 + T.sgn(rc - rjk[:, :, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, None, :, :]))) * \
-                (T.exp(-theta / abs(rc - rjk[:, :, None, None]))
-                 * T.exp(-theta / abs(rc - rmn[None, None, :, :])))
-
-            cut_jm = (0.5 * (1 + T.sgn(rc - r1j[:, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, :]))) * \
-                (T.exp(-theta / abs(rc - r1j[:, None]))
-                 * T.exp(-theta / abs(rc - r2m[None, :])))
-
-            cut_jkm = (0.5 * (1 + T.sgn(rc - rjk[:, :, None]))) * (0.5 * (1 + T.sgn(rc - r2m[None, None, :]))) * \
-                (T.exp(-theta / abs(rc - rjk[:, :, None])) *
-                 T.exp(-theta / abs(rc - r2m[None, None, :])))
-
-            cut_jmn = (0.5 * (1 + T.sgn(rc - r1j[:, None, None]))) * (0.5 * (1 + T.sgn(rc - rmn[None, :, :]))) * \
-                (T.exp(-theta / abs(rc - r1j[:, None, None]))
-                 * T.exp(-theta / abs(rc - rmn[None, :, :])))
+            # Define cutoff function
+            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))
 
             # Apply cutoffs and chemical species masks
             se_jm = se_jm*cut_jm * \

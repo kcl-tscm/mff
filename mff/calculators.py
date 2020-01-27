@@ -39,7 +39,7 @@ def eam_descriptor(dist, norm, rc, alpha, r0):
     try:
         dqdrij = -1/(2*q) * (dq1*q2 + q1*dq2)
     except ZeroDivisionError:
-        dqdrij = 0
+        dqdrij = np.zeros(len(q))
     dqdr = -dqdrij[:, None]*norm
     return q, dqdr
 

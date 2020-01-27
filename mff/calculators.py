@@ -36,7 +36,10 @@ def eam_descriptor(dist, norm, rc, alpha, r0):
 
     dq2 = - np.pi/(2*rc) * np.sin(np.pi*dist/rc)
 
-    dqdrij = -1/(2*q) * (dq1*q2 + q1*dq2)
+    try:
+        dqdrij = -1/(2*q) * (dq1*q2 + q1*dq2)
+    except ZeroDivisionError:
+        dqdrij = 0
     dqdr = -dqdrij[:, None]*norm
     return q, dqdr
 

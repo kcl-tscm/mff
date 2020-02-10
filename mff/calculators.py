@@ -205,7 +205,7 @@ class TwoBodySingleSpecies(MappedPotential):
             dist = np.sqrt(dists2)
             norm = pos / dist.reshape(-1, 1)
 
-            energy_local = self.grid_2b(dist, nu=0)
+            energy_local = 0.5*self.grid_2b(dist, nu=0)
             fs_scalars = self.grid_2b(dist, nu=1)
 
             potential_energies[i] = np.sum(energy_local, axis=0)

@@ -61,12 +61,12 @@ def dummy_calc_ee(data):
         for i in range(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
-                    result[i] += fun(np.zeros(3), np.zeros(3),
+                    result[i] += 1/9.0*fun(np.zeros(3), np.zeros(3),
                                      conf1, conf2, theta0, theta1, theta2)
     else:
         for i in range(len(array)):
             for conf2 in array[i][1]:
-                result[i] += fun(np.zeros(3), np.zeros(3),
+                result[i] += 1/3.0*fun(np.zeros(3), np.zeros(3),
                                  array[i][0], conf2, theta0, theta1, theta2)
 
     return result
@@ -96,7 +96,7 @@ def dummy_calc_ef(data):
             conf2 = np.array(array[i][1], dtype='float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
-                result[i] += -fun(np.zeros(3), np.zeros(3),
+                result[i] += -1/3.0*fun(np.zeros(3), np.zeros(3),
                                   conf1, conf2,  theta0, theta1, theta2)
     else:
         for i in range(len(array)):
@@ -236,7 +236,7 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 for i, x1 in enumerate(X_glob):
                     for j, conf2 in enumerate(X):
                         for conf1 in x1:
-                            ker[i, 3 * j:3 * j + 3] += self.k3_ef(
+                            ker[i, 3 * j:3 * j + 3] += 1/3.0*self.k3_ef(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
             else:
                 for i, conf1 in enumerate(X_glob):
@@ -303,14 +303,14 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                     for j, x2 in enumerate(X2):
                         for conf1 in x1:
                             for conf2 in x2:
-                                ker[i, j] += self.k3_ee(conf1, conf2,
+                                ker[i, j] += 1/9.0*self.k3_ee(conf1, conf2,
                                                         self.theta[0], self.theta[1], self.theta[2])
             else:
                 ker = np.zeros((len(X1), len(X2)))
                 for i, conf1 in enumerate(X1):
                     for j, x2 in enumerate(X2):
                         for conf2 in x2:
-                            ker[i, j] += self.k3_ee(conf1, conf2,
+                            ker[i, j] += 1/3.0*self.k3_ee(conf1, conf2,
                                                     self.theta[0], self.theta[1], self.theta[2])
 
         return ker
@@ -442,16 +442,16 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
                 for i in range(X.shape[0]):
                     for k, conf1 in enumerate(X[i]):
-                        diag[i, i] += self.k3_ee(conf1, conf1,
+                        diag[i, i] += 1/9.0*self.k3_ee(conf1, conf1,
                                                  self.theta[0], self.theta[1], self.theta[2])
                         for conf2 in X[i][:k]:
                             # *2 here to speed up the loop
-                            diag[i, i] += 2.0*self.k3_ee(
+                            diag[i, i] += 1/9.0*2.0*self.k3_ee(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
                     for j in range(i):
                         for conf1 in X[i]:
                             for conf2 in X[j]:
-                                off_diag[i, j] += self.k3_ee(
+                                off_diag[i, j] += 1/9.0*self.k3_ee(
                                     conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T
@@ -515,30 +515,10 @@ class BaseThreeBody(Kernel, metaclass=ABCMeta):
                 for i in range(X_glob.shape[0]):
                     for j in range(X.shape[0]):
                         for k in X_glob[i]:
-                            gram[i, 3 * j:3 * j + 3] += self.k3_ef(
+                            gram[i, 3 * j:3 * j + 3] += 1/3.0*self.k3_ef(
                                 k, X[j], self.theta[0], self.theta[1], self.theta[2])
 
             return gram
-
-    def calc_diag(self, X):
-
-        diag = np.zeros((X.shape[0] * 3))
-
-        for i in range(X.shape[0]):
-            diag[i * 3:(i + 1) * 3] = np.diag(self.k3_ff(X[i], X[i],
-                                                         self.theta[0], self.theta[1], self.theta[2]))
-
-        return diag
-
-    def calc_diag_e(self, X):
-
-        diag = np.zeros((X.shape[0]))
-
-        for i in range(X.shape[0]):
-            diag[i] = self.k3_ee(X[i], X[i], self.theta[0],
-                                 self.theta[1], self.theta[2])
-
-        return diag
 
     @staticmethod
     @abstractmethod

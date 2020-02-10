@@ -61,12 +61,12 @@ def dummy_calc_ee(data):
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
-                    result[i] += fun(np.zeros(3), np.zeros(3),
+                    result[i] += 0.25*fun(np.zeros(3), np.zeros(3),
                                      conf1, conf2, theta0, theta1, theta2)
     else:
         for i in np.arange(len(array)):
             for conf2 in array[i][1]:
-                result[i] += fun(np.zeros(3), np.zeros(3),
+                result[i] += 0.5*fun(np.zeros(3), np.zeros(3),
                                  array[i][0], conf2, theta0, theta1, theta2)
 
     return result
@@ -96,7 +96,7 @@ def dummy_calc_ef(data):
             conf2 = np.array(array[i][1], dtype='float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
-                result[i] += -fun(np.zeros(3), np.zeros(3),
+                result[i] += -0.5*fun(np.zeros(3), np.zeros(3),
                                   conf1, conf2,  theta0, theta1, theta2)
     else:
         for i in np.arange(len(array)):
@@ -135,7 +135,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
 
     def calc(self, X1, X2, ncores=1):
         """
-        Calculate the energy-force kernel between two sets of configurations.
+        Calculate the force-force kernel between two sets of configurations.
 
         Args:
             X1 (list): list of N1 Mx5 arrays containing xyz coordinates and atomic species
@@ -237,7 +237,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 for i, x1 in enumerate(X_glob):
                     for j, conf2 in enumerate(X):
                         for conf1 in x1:
-                            ker[i, 3 * j:3 * j + 3] += self.k2_ef(
+                            ker[i, 3 * j:3 * j + 3] += 0.5*self.k2_ef(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
             else:
                 for i, conf1 in enumerate(X_glob):
@@ -300,14 +300,14 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                     for j, x2 in enumerate(X2):
                         for conf1 in x1:
                             for conf2 in x2:
-                                ker[i, j] += self.k2_ee(conf1, conf2,
+                                ker[i, j] += 0.25*self.k2_ee(conf1, conf2,
                                                         self.theta[0], self.theta[1], self.theta[2])
             else:
                 ker = np.zeros((len(X1), len(X2)))
                 for i, conf1 in enumerate(X1):
                     for j, x2 in enumerate(X2):
                         for conf2 in x2:
-                            ker[i, j] += self.k2_ee(conf1, conf2,
+                            ker[i, j] += 0.5*self.k2_ee(conf1, conf2,
                                                     self.theta[0], self.theta[1], self.theta[2])
 
         return ker
@@ -443,16 +443,16 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
                 for i in np.arange(X.shape[0]):
                     for k, conf1 in enumerate(X[i]):
-                        diag[i, i] += self.k2_ee(conf1, conf1,
+                        diag[i, i] += 0.25*self.k2_ee(conf1, conf1,
                                                  self.theta[0], self.theta[1], self.theta[2])
                         for conf2 in X[i][:k]:
                             # *2 here to speed up the loop
-                            diag[i, i] += 2.0*self.k2_ee(
+                            diag[i, i] += 0.25*2.0*self.k2_ee(
                                 conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
                     for j in np.arange(i):
                         for conf1 in X[i]:
                             for conf2 in X[j]:
-                                off_diag[i, j] += self.k2_ee(
+                                off_diag[i, j] += 0.25*self.k2_ee(
                                     conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
@@ -517,7 +517,7 @@ class BaseTwoBody(Kernel, metaclass=ABCMeta):
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         for k in X_glob[i]:
-                            gram[i, 3 * j:3 * j + 3] += self.k2_ef(
+                            gram[i, 3 * j:3 * j + 3] += 0.5*self.k2_ef(
                                 k, X[j], self.theta[0], self.theta[1], self.theta[2])
 
             self.gram_ef = gram

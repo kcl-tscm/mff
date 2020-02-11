@@ -591,7 +591,8 @@ class TwoBodySingleSpeciesKernel(BaseTwoBody):
             # squared exponential of the above distance matrices
             se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
 
-            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))
+            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))*(
+                (T.sgn(rc-r1j) + 1) / 2)*((T.sgn(rc-r2m) + 1) / 2)
 
             # apply the cutoff function to the squared exponential partial kernels
             se_jm = se_jm*cut_jm
@@ -773,7 +774,8 @@ class TwoBodyManySpeciesKernel(BaseTwoBody):
             se_jm = T.exp(-(r1j[:, None] - r2m[None, :]) ** 2 / (2 * sig ** 2))
 
             # Define cutoff function
-            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))
+            cut_jm = 0.5*(1+T.cos(np.pi*r1j[:, None]/rc))*0.5*(1+T.cos(np.pi*r2m[None, :]/rc))*(
+                (T.sgn(rc-r1j) + 1) / 2)*((T.sgn(rc-r2m) + 1) / 2)
 
             # Apply cutoffs and chemical species masks
             se_jm = se_jm*cut_jm * \

@@ -577,11 +577,10 @@ class EamSingleSpeciesKernel(BaseEam):
     Args:
         theta[0] (float): lengthscale of the kernel
         theta[1] (float): cutoff radius
-        theta[2] (float): factor in the exponent of the many-body decriptor
-        theta[3] (float): radius in the descriptor's exponent
+        theta[2] (float): radius in the descriptor's exponent
     """
 
-    def __init__(self, theta=(1., 1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
+    def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-1, 1e2), (1e-1, 1e2))):
         super().__init__(kernel_name='EamSingleSpecies', theta=theta, bounds=bounds)
         self.type = "single"
 
@@ -621,8 +620,6 @@ class EamSingleSpeciesKernel(BaseEam):
             rho1, rho2 = T.dmatrices('rho1', 'rho2')
             # lengthscale hyperparameter
             sig = T.dscalar('sig')
-            # Prefactor to the exponent of the descriptor
-            alpha = T.dscalar('alpha')
             # cutoff hyperparameters
             rc = T.dscalar('rc')
             # Descriptor as a given input, used to map
@@ -638,26 +635,26 @@ class EamSingleSpeciesKernel(BaseEam):
             r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
             r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
-            esp_term_1 = 2*alpha*(r1j/r0 - 1)
-            esp_term_2 = 2*alpha*(r2m/r0 - 1)
+            esp_term_1 = (r1j/r0 - 1)
+            esp_term_2 = (r2m/r0 - 1)
 
             cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
             cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
 
-            q1 = -T.sqrt(T.sum(T.exp(-esp_term_1)*cut_1))
-            q2 = -T.sqrt(T.sum(T.exp(-esp_term_2)*cut_2))
+            q1 = T.sum(T.exp(-esp_term_1)*cut_1)
+            q2 = T.sum(T.exp(-esp_term_2)*cut_2)
 
             k = T.exp(-(q1-q2)**2/(2*sig**2))
 
             k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))
 
             # energy energy kernel
-            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k,
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # energy force kernel - Used to predict energies from forces
             k_ef = T.grad(k, r2)
-            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ef,
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k_ef,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # force force kernel - it uses only local atom pairs to avoid useless computation
@@ -665,16 +662,16 @@ class EamSingleSpeciesKernel(BaseEam):
             k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
                                      sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
-            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ff_der,
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k_ff_der,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # energy energy descriptor kernel
-            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_descr,
+            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, r0], k_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # energy force descriptor kernel
             k_ef_descr = T.grad(k_descr, r2)
-            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0], k_ef_descr,
+            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, r0], k_ef_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # Save the function that we want to use for multiprocessing
@@ -707,7 +704,7 @@ class EamSingleSpeciesKernel(BaseEam):
         # WRAPPERS (we don't want to plug the position of the central element every time)
         # --------------------------------------------------
 
-        def k2_ee(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ee(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for global energy-energy correlation
 
@@ -715,16 +712,15 @@ class EamSingleSpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (float): scalar valued energy-energy Eam kernel
 
             """
-            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ef(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ef(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for global energy-force correlation
 
@@ -732,16 +728,15 @@ class EamSingleSpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ff(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ff(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for force-force correlation
 
@@ -749,16 +744,15 @@ class EamSingleSpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0):
+        def k2_ee_d(descr1, conf2,  sig, rc, r0):
             """
             Eam kernel for global energy-force correlation
 
@@ -766,16 +760,15 @@ class EamSingleSpeciesKernel(BaseEam):
                 descr1 (float): descriptor calculated for the first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, r0)
 
-        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0):
+        def k2_ef_d(descr1, conf2, sig, rc, r0):
             """
             Eam kernel for force-force correlation
 
@@ -783,14 +776,13 @@ class EamSingleSpeciesKernel(BaseEam):
                 descr1 (float): descriptor calculated for the first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[`]
 
             Returns:
                 kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0)
+            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, r0)
 
         logger.info("Ended compilation of theano eam single species kernels")
 
@@ -803,8 +795,7 @@ class EamManySpeciesKernel(BaseEam):
     Args:
         theta[0] (float): lengthscale of the kernel
         theta[1] (float): cutoff radius
-        theta[2] (float): factor in the exponent of the many-body decriptor
-        theta[3] (float): radius in the descriptor's exponent
+        theta[2] (float): radius in the descriptor's exponent
     """
 
     def __init__(self, theta=(1., 1., 1.), bounds=((1e-2, 1e2), (1e-2, 1e2), (1e-2, 1e2))):
@@ -847,8 +838,6 @@ class EamManySpeciesKernel(BaseEam):
             rho1, rho2 = T.dmatrices('rho1', 'rho2')
             # lengthscale hyperparameter
             sig = T.dscalar('sig')
-            # Prefactor to the exponent of the descriptor
-            alpha = T.dscalar('alpha')
             # cutoff hyperparameters
             rc = T.dscalar('rc')
             # Descriptor as a given input, used to map
@@ -877,26 +866,26 @@ class EamManySpeciesKernel(BaseEam):
             r1j = T.sqrt(T.sum((rho1s[:, :] - r1[None, :]) ** 2, axis=1))
             r2m = T.sqrt(T.sum((rho2s[:, :] - r2[None, :]) ** 2, axis=1))
 
-            esp_term_1 = 2*alpha*(r1j/r0 - 1)
-            esp_term_2 = 2*alpha*(r2m/r0 - 1)
+            esp_term_1 = (r1j/r0 - 1)
+            esp_term_2 = (r2m/r0 - 1)
 
             cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
             cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
 
-            q1 = -T.sqrt(T.sum(T.exp(-esp_term_1)*cut_1))
-            q2 = -T.sqrt(T.sum(T.exp(-esp_term_2)*cut_2))
+            q1 = T.sum(T.exp(-esp_term_1)*cut_1)
+            q2 = T.sum(T.exp(-esp_term_2)*cut_2)
 
             k = T.exp(-(q1-q2)**2/(2*sig**2))*delta_alpha_12
 
             k_descr = T.exp(-(q1_descr-q2)**2/(2*sig**2))*delta_alpha_12_descr
 
             # energy energy kernel
-            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k,
+            k_ee_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # energy force kernel - Used to predict energies from forces
             k_ef = T.grad(k, r2)
-            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ef,
+            k_ef_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k_ef,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # force force kernel - it uses only local atom pairs to avoid useless computation
@@ -904,16 +893,16 @@ class EamManySpeciesKernel(BaseEam):
             k_ff_der, updates = scan(lambda j, k_ff, r2: T.grad(k_ff[j], r2),
                                      sequences=T.arange(k_ff.shape[0]), non_sequences=[k_ff, r2])
 
-            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, alpha, r0], k_ff_der,
+            k_ff_fun = function([r1, r2, rho1, rho2, sig, rc, r0], k_ff_der,
                                 allow_input_downcast=False, on_unused_input='warn')
 
             # energy energy descriptor kernel
-            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0, alpha_1_descr], k_descr,
+            k_ee_fun_d = function([r2, q1_descr, rho2, sig, rc, r0, alpha_1_descr], k_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # energy force descriptor kernel
             k_ef_descr = T.grad(k_descr, r2)
-            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, alpha, r0, alpha_1_descr], k_ef_descr,
+            k_ef_fun_d = function([r2, q1_descr, rho2, sig, rc, r0, alpha_1_descr], k_ef_descr,
                                   allow_input_downcast=False, on_unused_input='warn')
 
             # Save the function that we want to use for multiprocessing
@@ -946,7 +935,7 @@ class EamManySpeciesKernel(BaseEam):
         # WRAPPERS (we don't want to plug the position of the central element every time)
         # --------------------------------------------------
 
-        def k2_ee(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ee(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for global energy-energy correlation
 
@@ -954,16 +943,15 @@ class EamManySpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (float): scalar valued energy-energy Eam kernel
 
             """
-            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return k_ee_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ef(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ef(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for global energy-force correlation
 
@@ -971,16 +959,15 @@ class EamManySpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return -k_ef_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ff(conf1, conf2, sig, rc, alpha, r0):
+        def k2_ff(conf1, conf2, sig, rc, r0):
             """
             Eam kernel for force-force correlation
 
@@ -988,16 +975,15 @@ class EamManySpeciesKernel(BaseEam):
                 conf1 (array): first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
 
             Returns:
                 kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, alpha, r0)
+            return k_ff_fun(np.zeros(3), np.zeros(3), conf1, conf2, sig, rc, r0)
 
-        def k2_ee_d(descr1, conf2,  sig, rc, alpha, r0, alpha_1_descr):
+        def k2_ee_d(descr1, conf2,  sig, rc, r0, alpha_1_descr):
             """
             Eam kernel for global energy-force correlation
 
@@ -1005,7 +991,6 @@ class EamManySpeciesKernel(BaseEam):
                 descr1 (float): descriptor calculated for the first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
                 rc (float): cutoff distance hyperparameter theta[2]
                 alpha_1_descr (int): element of the central atom
 
@@ -1013,9 +998,9 @@ class EamManySpeciesKernel(BaseEam):
                 kernel (array): 3x1 energy-force Eam kernel
 
             """
-            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0, alpha_1_descr)
+            return k_ee_fun_d(np.zeros(3), descr1, conf2, sig, rc, r0, alpha_1_descr)
 
-        def k2_ef_d(descr1, conf2, sig, rc, alpha, r0, alpha_1_descr):
+        def k2_ef_d(descr1, conf2, sig, rc, r0, alpha_1_descr):
             """
             Eam kernel for force-force correlation
 
@@ -1023,15 +1008,14 @@ class EamManySpeciesKernel(BaseEam):
                 descr1 (float): descriptor calculated for the first configuration.
                 conf2 (array): second configuration.
                 sig (float): lengthscale hyperparameter theta[0]
-                alpha (float): exponential prefactor to descriptor theta[1]
-                rc (float): cutoff distance hyperparameter theta[2]
+                rc (float): cutoff distance hyperparameter theta[1]
                 alpha_1_descr (int): element of the central atom
 
             Returns:
                 kernel (matrix): 3x3 force-force Eam kernel
 
             """
-            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, alpha, r0, alpha_1_descr)
+            return -k_ef_fun_d(np.zeros(3), descr1, conf2, sig, rc, r0, alpha_1_descr)
 
         logger.info("Ended compilation of theano eam multi species kernels")
 

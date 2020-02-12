@@ -2305,7 +2305,7 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 <span class="target" id="module-mff.models.eam"></span><p>TwoThreeEam Model</p>
 <dl class="class">
 <dt id="mff.models.eam.EamManySpeciesModel">
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamManySpeciesModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Eam many species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">
@@ -2314,7 +2314,6 @@ Class managing the Gaussian process and its mapped counterpart</p>
 <li><p><strong>elements</strong> (<em>int</em>) – The atomic numbers of the element considered</p></li>
 <li><p><strong>r_cut</strong> (<em>foat</em>) – The cutoff radius used to carve the atomic environments</p></li>
 <li><p><strong>sigma</strong> (<em>foat</em>) – Lengthscale parameter of the Gaussian process</p></li>
-<li><p><strong>alpha</strong> (<em>float</em>) – prefactor in the exponent of the eam descriptor</p></li>
 <li><p><strong>r0</strong> (<em>float</em>) – radius in the exponent of the eam descriptor</p></li>
 <li><p><strong>noise</strong> (<em>float</em>) – noise value associated with the training output data</p></li>
 </ul>
@@ -2553,7 +2552,7 @@ separate .gpy and .gpz files, respectively.</p>
 
 <dl class="class">
 <dt id="mff.models.eam.EamSingleSpeciesModel">
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamSingleSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamSingleSpeciesModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamSingleSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#mff.models.eam.EamSingleSpeciesModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Eam single species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">
@@ -2850,7 +2849,7 @@ while speeding up the calculations by a factor of 10^4 in typical scenarios.</p>
 </div>
 <span class="target" id="module-mff.models.eam"></span><dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamManySpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">elements</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>Eam many species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">
@@ -2859,7 +2858,6 @@ Class managing the Gaussian process and its mapped counterpart</p>
 <li><p><strong>elements</strong> (<em>int</em>) – The atomic numbers of the element considered</p></li>
 <li><p><strong>r_cut</strong> (<em>foat</em>) – The cutoff radius used to carve the atomic environments</p></li>
 <li><p><strong>sigma</strong> (<em>foat</em>) – Lengthscale parameter of the Gaussian process</p></li>
-<li><p><strong>alpha</strong> (<em>float</em>) – prefactor in the exponent of the eam descriptor</p></li>
 <li><p><strong>r0</strong> (<em>float</em>) – radius in the exponent of the eam descriptor</p></li>
 <li><p><strong>noise</strong> (<em>float</em>) – noise value associated with the training output data</p></li>
 </ul>
@@ -3098,7 +3096,7 @@ separate .gpy and .gpz files, respectively.</p>
 
 <dl class="class">
 <dt>
-<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamSingleSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">alpha</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
+<em class="property">class </em><code class="sig-prename descclassname">mff.models.eam.</code><code class="sig-name descname">EamSingleSpeciesModel</code><span class="sig-paren">(</span><em class="sig-param">element</em>, <em class="sig-param">r_cut</em>, <em class="sig-param">sigma</em>, <em class="sig-param">r0</em>, <em class="sig-param">noise</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>Eam single species model class
 Class managing the Gaussian process and its mapped counterpart</p>
 <dl class="field-list simple">

@@ -27,21 +27,21 @@ class NpEncoder(json.JSONEncoder):
             return super(NpEncoder, self).default(obj)
 
 
-def get_max_eam(X, rc, alpha, r0):
+def get_max_eam(X, rc, r0):
     t_max = 0
     for c in X:
         dist = np.sum(c[:, :3]**2, axis=1)**0.5
         cut_1 = 0.5*(1 + np.cos(np.pi*dist/rc))
-        t1 = np.exp(-2*alpha*(dist/r0 - 1))
+        t1 = np.exp(-(dist/r0 - 1))
         t2 = -sum(cut_1*t1)**0.5
         if t2 < t_max:
             t_max = t2
     return t_max
 
-def get_max_eam_energy(X_glob, rc, alpha, r0):
+def get_max_eam_energy(X_glob, rc, r0):
     t_max = 0
     for X in X_glob:
-        t2 = get_max_eam(X, rc, alpha, r0)
+        t2 = get_max_eam(X, rc, r0)
         if t2 < t_max:
             t_max = t2
     return t_max
@@ -59,7 +59,6 @@ class TwoThreeEamSingleSpeciesModel(Model):
         sigma_3b (float): Lengthscale parameter of the EAM Gaussian process
         theta_2b (float): decay ratio of the cutoff function in the 2-body Gaussian Process
         theta_3b (float): decay ratio of the cutoff function in the 3-body Gaussian Process
-        alpha (float): prefactor of the exponent in the EAM kernel
         r0 (float): distance parameter of the EAM kernel
         noise (float): noise value associated with the training output data
         max_grid_eam (float): Maximum (negative) value of the EAM descriptor
@@ -81,7 +80,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
     """
 
     def __init__(self, element, r_cut, sigma_2b, sigma_3b, sigma_eam, theta_2b, theta_3b,
-                 alpha, r0, noise, max_grid_eam = 0, rep_sig=1, **kwargs):
+                 r0, noise, max_grid_eam = 0, rep_sig=1, **kwargs):
         super().__init__()
         self.element = element
         self.r_cut = r_cut
@@ -99,7 +98,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
             kernel=kernel_3b, noise=noise, **kwargs)
 
         kernel_eam = kernels.EamSingleSpeciesKernel(
-            theta=[sigma_eam, r_cut, alpha, r0])
+            theta=[sigma_eam, r_cut, r0])
         self.gp_eam = gp.GaussianProcess(
             kernel=kernel_eam, noise=noise, **kwargs)
 
@@ -153,7 +152,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                             three_body_forces, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
-                        self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                        self.gp_eam.kernel.theta[2])
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -206,7 +205,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                             three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
-                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                                            self.gp_eam.kernel.theta[2])
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -270,7 +269,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                                             glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
-                        self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                        self.gp_eam.kernel.theta[2])
 
     def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using the
@@ -489,8 +488,7 @@ class TwoThreeEamSingleSpeciesModel(Model):
                 'kernel': self.gp_eam.kernel.kernel_name,
                 'n_train': self.gp_eam.n_train,
                 'sigma': self.gp_eam.kernel.theta[0],
-                'alpha': self.gp_eam.kernel.theta[2],
-                'r0': self.gp_eam.kernel.theta[3],
+                'r0': self.gp_eam.kernel.theta[2],
                 'max_eam': self.max_grid_eam,
                 'noise': self.gp_eam.noise
             },
@@ -585,7 +583,6 @@ class TwoThreeEamSingleSpeciesModel(Model):
                     params['gp_eam']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
-                    params['gp_eam']['alpha'],
                     params['gp_eam']['r0'],
                     params['gp_2b']['noise'],
                     params['gp_eam']['max_eam'],
@@ -714,7 +711,6 @@ class TwoThreeEamManySpeciesModel(Model):
         sigma_eam (float): Lengthscale parameter of the EAM Gaussian process
         theta_2b (float): decay ratio of the cutoff function in the 2-body Gaussian Process
         theta_3b (float): decay ratio of the cutoff function in the 3-body Gaussian Process
-        alpha (float): prefactor of the exponent in the EAM kernel
         max_grid_eam (float): Maximum (negative) value of the EAM descriptor
         r0 (float): distance parameter of the EAM kernel
         noise (float): noise value associated with the training output data
@@ -735,7 +731,7 @@ class TwoThreeEamManySpeciesModel(Model):
     """
 
     def __init__(self, elements, r_cut, sigma_2b, sigma_3b, sigma_eam, theta_2b, theta_3b,
-                 alpha, r0, noise, max_grid_eam = 0, rep_sig = 1, **kwargs):
+                 r0, noise, max_grid_eam = 0, rep_sig = 1, **kwargs):
         super().__init__()
         self.elements = list(np.sort(elements))
         self.r_cut = r_cut
@@ -753,7 +749,7 @@ class TwoThreeEamManySpeciesModel(Model):
             kernel=kernel_3b, noise=noise, **kwargs)
 
         kernel_eam = kernels.EamManySpeciesKernel(
-            theta=[sigma_eam, r_cut, alpha, r0])
+            theta=[sigma_eam, r_cut, r0])
         self.gp_eam = gp.GaussianProcess(
             kernel=kernel_eam, noise=noise, **kwargs)
 
@@ -808,7 +804,7 @@ class TwoThreeEamManySpeciesModel(Model):
                             three_body_forces, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
-                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                                            self.gp_eam.kernel.theta[2])
 
     def fit_energy(self, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -861,7 +857,7 @@ class TwoThreeEamManySpeciesModel(Model):
                             three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam_energy(self.gp_eam.X_glob_train_, self.r_cut,
-                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                                            self.gp_eam.kernel.theta[2])
 
     def fit_force_and_energy(self, confs, forces, glob_confs, energies, ncores=1):
         """ Fit the GP to a set of training energies using a 2- and
@@ -925,7 +921,7 @@ class TwoThreeEamManySpeciesModel(Model):
                                                 glob_confs, energies - two_body_energies - three_body_energies, ncores=ncores)
 
         self.max_grid_eam = get_max_eam(self.gp_eam.X_train_, self.r_cut,
-                                            self.gp_eam.kernel.theta[2], self.gp_eam.kernel.theta[3])
+                                            self.gp_eam.kernel.theta[2])
 
     def predict(self, confs, return_std=False, ncores=1):
         """ Predict the forces acting on the central atoms of confs using the
@@ -1160,8 +1156,7 @@ class TwoThreeEamManySpeciesModel(Model):
                 'kernel': self.gp_eam.kernel.kernel_name,
                 'n_train': self.gp_eam.n_train,
                 'sigma': self.gp_eam.kernel.theta[0],
-                'alpha': self.gp_eam.kernel.theta[2],
-                'r0': self.gp_eam.kernel.theta[3],
+                'r0': self.gp_eam.kernel.theta[2],
                 'max_eam': self.max_grid_eam,
                 'noise': self.gp_eam.noise
             },
@@ -1259,7 +1254,6 @@ class TwoThreeEamManySpeciesModel(Model):
                     params['gp_eam']['sigma'],
                     params['gp_2b']['theta'],
                     params['gp_3b']['theta'],
-                    params['gp_eam']['alpha'],
                     params['gp_eam']['r0'],
                     params['gp_2b']['noise'],
                     params['gp_eam']['max_eam'],

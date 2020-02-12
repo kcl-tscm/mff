@@ -23,21 +23,21 @@ class NpEncoder(json.JSONEncoder):
             return super(NpEncoder, self).default(obj)
 
 
-def get_max_eam(X, rc, alpha, r0):
+def get_max_eam(X, rc, r0):
     t_max = 0
     for c in X:
         dist = np.sum(c[:, :3]**2, axis=1)**0.5
         cut_1 = 0.5*(1 + np.cos(np.pi*dist/rc))
-        t1 = np.exp(-2*alpha*(dist/r0 - 1))
+        t1 = np.exp(-(dist/r0 - 1))
         t2 = -sum(cut_1*t1)**0.5
         if t2 < t_max:
             t_max = t2
     return t_max
 
-def get_max_eam_energy(X_glob, rc, alpha, r0):
+def get_max_eam_energy(X_glob, rc, r0):
     t_max = 0
     for X in X_glob:
-        t2 = get_max_eam(X, rc, alpha, r0)
+        t2 = get_max_eam(X, rc, r0)
         if t2 < t_max:
             t_max = t2
     return t_max
@@ -62,14 +62,14 @@ class EamSingleSpeciesModel(Model):
 
     """
 
-    def __init__(self, element, r_cut, sigma, alpha, r0, noise, **kwargs):
+    def __init__(self, element, r_cut, sigma, r0, noise, **kwargs):
         super().__init__()
 
         self.element = element
         self.r_cut = r_cut
 
         kernel = kernels.EamSingleSpeciesKernel(
-            theta=[sigma, r_cut, alpha, r0])
+            theta=[sigma, r_cut, r0])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_end, self.grid_num = None, None, None, None
@@ -186,11 +186,11 @@ class EamSingleSpeciesModel(Model):
         if 'force' in self.gp.fitted:
             self.grid_start = 3.0 * \
                 get_max_eam(self.gp.X_train_, self.r_cut,
-                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+                            self.gp.kernel.theta[2])
         else:
            self.grid_start = 3.0 * \
                 get_max_eam_energy(self.gp.X_glob_train_, self.r_cut,
-                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+                            self.gp.kernel.theta[2])
         self.grid_end = 0
         self.grid_num = num
 
@@ -223,9 +223,8 @@ class EamSingleSpeciesModel(Model):
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
                 'sigma': self.gp.kernel.theta[0],
-                'alpha': self.gp.kernel.theta[2],
                 'noise': self.gp.noise,
-                'r0': self.gp.kernel.theta[3]
+                'r0': self.gp.kernel.theta[2]
             },
             'grid': {
                 'r_min': self.grid_start,
@@ -276,7 +275,6 @@ class EamSingleSpeciesModel(Model):
         model = cls(params['element'],
                     params['r_cut'],
                     params['gp']['sigma'],
-                    params['gp']['alpha'],
                     params['gp']['noise'],
                     params['gp']['r0'])
 
@@ -301,7 +299,6 @@ class EamManySpeciesModel(Model):
         elements (int): The atomic numbers of the element considered
         r_cut (foat): The cutoff radius used to carve the atomic environments
         sigma (foat): Lengthscale parameter of the Gaussian process
-        alpha (float): prefactor in the exponent of the eam descriptor
         r0 (float): radius in the exponent of the eam descriptor
         noise (float): noise value associated with the training output data
 
@@ -314,14 +311,14 @@ class EamManySpeciesModel(Model):
 
     """
 
-    def __init__(self, elements, r_cut, sigma, alpha, r0, noise, **kwargs):
+    def __init__(self, elements, r_cut, sigma, r0, noise, **kwargs):
         super().__init__()
 
         self.elements = list(np.sort(elements))
         self.r_cut = r_cut
 
         kernel = kernels.EamManySpeciesKernel(
-            theta=[sigma, r_cut, alpha, r0])
+            theta=[sigma, r_cut, r0])
         self.gp = gp.GaussianProcess(kernel=kernel, noise=noise, **kwargs)
 
         self.grid, self.grid_start, self.grid_end, self.grid_num = {}, None, None, None
@@ -438,11 +435,11 @@ class EamManySpeciesModel(Model):
         if 'force' in self.gp.fitted:
             self.grid_start = 3.0 * \
                 get_max_eam(self.gp.X_train_, self.r_cut,
-                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+                            self.gp.kernel.theta[2])
         else:
            self.grid_start = 3.0 * \
                 get_max_eam_energy(self.gp.X_glob_train_, self.r_cut,
-                            self.gp.kernel.theta[2], self.gp.kernel.theta[3])
+                            self.gp.kernel.theta[2])
                             
         self.grid_end = 0
         self.grid_num = num
@@ -477,9 +474,8 @@ class EamManySpeciesModel(Model):
                 'kernel': self.gp.kernel.kernel_name,
                 'n_train': self.gp.n_train,
                 'sigma': self.gp.kernel.theta[0],
-                'alpha': self.gp.kernel.theta[2],
                 'noise': self.gp.noise,
-                'r0': self.gp.kernel.theta[3]
+                'r0': self.gp.kernel.theta[2]
             },
             'grid': {
                 'r_min': self.grid_start,
@@ -530,7 +526,6 @@ class EamManySpeciesModel(Model):
         model = cls(params['elements'],
                     params['r_cut'],
                     params['gp']['sigma'],
-                    params['gp']['alpha'],
                     params['gp']['noise'],
                     params['gp']['r0'])
 

@@ -22,7 +22,7 @@ def dummy_calc_ff(data):
         result (array): the computed kernel values
 
     """
-    array, theta0, theta1, theta2, theta3, kertype = data
+    array, theta0, theta1, theta2, kertype = data
     if kertype == "single":
         with open(Mffpath / "keam_ff_s.pickle", 'rb') as f:
             fun = pickle.load(f)
@@ -32,7 +32,7 @@ def dummy_calc_ff(data):
     result = np.zeros((len(array), 3, 3))
     for i in np.arange(len(array)):
         result[i] = fun(np.zeros(3), np.zeros(3), array[i][0],
-                        array[i][1],  theta0, theta1, theta2, theta3)
+                        array[i][1],  theta0, theta1, theta2)
     return result
 
 
@@ -47,7 +47,7 @@ def dummy_calc_ee(data):
 
     """
 
-    array, theta0, theta1, theta2, theta3, kertype, mapping, alpha_1_descr = data
+    array, theta0, theta1, theta2, kertype, mapping, alpha_1_descr = data
     if mapping:
         if kertype == "single":
             with open(Mffpath / "keam_eed_s.pickle", 'rb') as f:
@@ -68,19 +68,19 @@ def dummy_calc_ee(data):
         for i in np.arange(len(array)):
             for conf1 in array[i][0]:
                 for conf2 in array[i][1]:
-                    result[i] += fun(np.zeros(3), np.zeros(3), conf1,
-                                     conf2, theta0, theta1, theta2, theta3)
+                    result[i] += 0.25*fun(np.zeros(3), np.zeros(3), conf1,
+                                     conf2, theta0, theta1, theta2)
     else:
         if kertype == "multi":
             for i in np.arange(len(array)):
                 for conf2 in array[i][1]:
-                    result[i] += fun(np.zeros(3), array[i]
-                                     [0], conf2, theta0, theta1, theta2, theta3, alpha_1_descr)
+                    result[i] += 0.5*fun(np.zeros(3), array[i]
+                                     [0], conf2, theta0, theta1, theta2, alpha_1_descr)
         else:
             for i in np.arange(len(array)):
                 for conf2 in array[i][1]:
                     result[i] += fun(np.zeros(3), array[i]
-                                     [0], conf2, theta0, theta1, theta2, theta3)
+                                     [0], conf2, theta0, theta1, theta2)
     return result
 
 
@@ -95,7 +95,7 @@ def dummy_calc_ef(data):
 
     """
     
-    array, theta0, theta1, theta2, theta3, kertype, mapping, alpha_1_descr = data
+    array, theta0, theta1, theta2, kertype, mapping, alpha_1_descr = data
     if mapping:
         if kertype == "single":
             with open(Mffpath / "keam_efd_s.pickle", 'rb') as f:
@@ -116,21 +116,21 @@ def dummy_calc_ef(data):
             conf2 = np.array(array[i][1], dtype='float')
             for conf1 in array[i][0]:
                 conf1 = np.array(conf1, dtype='float')
-                result[i] += -fun(np.zeros(3), np.zeros(3), conf1,
-                                  conf2,  theta0, theta1, theta2, theta3)
+                result[i] += -0.5*fun(np.zeros(3), np.zeros(3), conf1,
+                                  conf2,  theta0, theta1, theta2)
     else:
         if kertype == "multi":
             for i in np.arange(len(array)):
                 conf2 = np.array(array[i][1], dtype='float')
                 conf1 = np.array(array[i][0], dtype='float')
                 result[i] += -fun(np.zeros(3), conf1,
-                                  conf2, theta0, theta1, theta2, theta3, alpha_1_descr)
+                                  conf2, theta0, theta1, theta2, alpha_1_descr)
         else:
             for i in np.arange(len(array)):
                 conf2 = np.array(array[i][1], dtype='float')
                 conf1 = np.array(array[i][0], dtype='float')
                 result[i] += -fun(np.zeros(3), conf1,
-                                  conf2, theta0, theta1, theta2, theta3)
+                                  conf2, theta0, theta1, theta2)
     return result
 
 
@@ -191,7 +191,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                       self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -210,7 +210,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             for i, conf1 in enumerate(X1):
                 for j, conf2 in enumerate(X2):
                     ker[i * 3:i * 3 + 3, 3 * j:3 * j + 3] += self.k2_ff(
-                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return ker
 
@@ -245,7 +245,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                       self.type, mapping, alpha_1_descr] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -264,19 +264,19 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 for i, x1 in enumerate(X_glob):
                     for j, conf2 in enumerate(X):
                         for conf1 in x1:
-                            ker[i, 3 * j:3 * j + 3] += self.k2_ef(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                            ker[i, 3 * j:3 * j + 3] += 0.5*self.k2_ef(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
             else:
                 if self.type == 'multi':
                     for i, conf1 in enumerate(X_glob):
                             for j, conf2 in enumerate(X):
                                 ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
-                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3], alpha_1_descr)
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], alpha_1_descr)
                 else:
                     for i, conf1 in enumerate(X_glob):
                         for j, conf2 in enumerate(X):
                             ker[i, 3 * j:3 * j + 3] += self.k2_ef_d(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return ker
 
@@ -311,7 +311,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
             splitind[1:-1] = [(i + 1) * factor for i in np.arange(ncores - 1)]
             splitind[-1] = n
             splitind = splitind.astype(int)
-            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+            clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                       self.type, mapping, alpha_1_descr] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
             import multiprocessing as mp
@@ -333,23 +333,23 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                     for j, x2 in enumerate(X2):
                         for conf1 in x1:
                             for conf2 in x2:
-                                ker[i, j] += self.k2_ee(conf1, conf2, self.theta[0],
-                                                        self.theta[1], self.theta[2], self.theta[3])
+                                ker[i, j] += 0.25*self.k2_ee(conf1, conf2, self.theta[0],
+                                                        self.theta[1], self.theta[2])
             else:
                 if self.type == 'multi':
                     ker = np.zeros((len(X1), len(X2)))
                     for i, conf1 in enumerate(X1):
                             for j, x2 in enumerate(X2):
                                 for conf2 in x2:
-                                    ker[i, j] += self.k2_ee_d(
-                                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3], alpha_1_descr)
+                                    ker[i, j] += 0.5*self.k2_ee_d(
+                                        conf1, conf2, self.theta[0], self.theta[1], self.theta[2], alpha_1_descr)
                 else:
                     ker = np.zeros((len(X1), len(X2)))
                     for i, conf1 in enumerate(X1):
                         for j, x2 in enumerate(X2):
                             for conf2 in x2:
-                                ker[i, j] += self.k2_ee_d(
-                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                                ker[i, j] += 0.5*self.k2_ee_d(
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
         return ker
 
@@ -390,7 +390,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                           self.type] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -415,11 +415,11 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 for i in np.arange(X.shape[0]):
                     diag[3 * i:3 * i + 3, 3 * i:3 * i + 3] = \
                         self.k2_ff(X[i], X[i], self.theta[0],
-                                   self.theta[1], self.theta[2], self.theta[3])
+                                   self.theta[1], self.theta[2])
                     for j in np.arange(i):
                         off_diag[3 * i:3 * i + 3, 3 * j:3 * j + 3] = \
                             self.k2_ff(X[i], X[j], self.theta[0],
-                                       self.theta[1], self.theta[2], self.theta[3])
+                                       self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T  # The gram matrix is symmetric
             return gram
@@ -462,7 +462,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                           self.type, False, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -484,17 +484,17 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 off_diag = np.zeros((X.shape[0], X.shape[0]))
                 for i in np.arange(X.shape[0]):
                     for k, conf1 in enumerate(X[i]):
-                        diag[i, i] += self.k2_ee(conf1, conf1, self.theta[0],
-                                                 self.theta[1], self.theta[2], self.theta[3])
+                        diag[i, i] += 0.25*self.k2_ee(conf1, conf1, self.theta[0],
+                                                 self.theta[1], self.theta[2])
                         for conf2 in X[i][:k]:
                             # *2 here to speed up the loop
-                            diag[i, i] += 2.0*self.k2_ee(
-                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                            diag[i, i] += 0.25*2.0*self.k2_ee(
+                                conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
                     for j in np.arange(i):
                         for conf1 in X[i]:
                             for conf2 in X[j]:
-                                off_diag[i, j] += self.k2_ee(
-                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                                off_diag[i, j] += 0.25*self.k2_ee(
+                                    conf1, conf2, self.theta[0], self.theta[1], self.theta[2])
 
             gram = diag + off_diag + off_diag.T  # Gram matrix is symmetric
 
@@ -540,7 +540,7 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                                   factor for i in np.arange(ncores - 1)]
                 splitind[-1] = n
                 splitind = splitind.astype(int)
-                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2], self.theta[3],
+                clist = [[confs[splitind[i]:splitind[i + 1]], self.theta[0], self.theta[1], self.theta[2],
                           self.type, False, False] for i in np.arange(ncores)]  # Shape is ncores * (ntrain*(ntrain+1)/2)/ncores
 
                 import multiprocessing as mp
@@ -558,8 +558,8 @@ class BaseEam(Kernel, metaclass=ABCMeta):
                 for i in np.arange(X_glob.shape[0]):
                     for j in np.arange(X.shape[0]):
                         for k in X_glob[i]:
-                            gram[i, 3 * j:3 * j + 3] += self.k2_ef(
-                                k, X[j], self.theta[0], self.theta[1], self.theta[2], self.theta[3])
+                            gram[i, 3 * j:3 * j + 3] += 0.5*self.k2_ef(
+                                k, X[j], self.theta[0], self.theta[1], self.theta[2])
 
             self.gram_ef = gram
 
@@ -638,8 +638,8 @@ class EamSingleSpeciesKernel(BaseEam):
             esp_term_1 = (r1j/r0 - 1)
             esp_term_2 = (r2m/r0 - 1)
 
-            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
-            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
+            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))*((T.sgn(rc-r1j) + 1) / 2)
+            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))*((T.sgn(rc-r2m) + 1) / 2)
 
             q1 = T.sum(T.exp(-esp_term_1)*cut_1)
             q2 = T.sum(T.exp(-esp_term_2)*cut_2)
@@ -869,8 +869,8 @@ class EamManySpeciesKernel(BaseEam):
             esp_term_1 = (r1j/r0 - 1)
             esp_term_2 = (r2m/r0 - 1)
 
-            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))
-            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))
+            cut_1 = 0.5*(1 + T.cos(np.pi*r1j/rc))*((T.sgn(rc-r1j) + 1) / 2)
+            cut_2 = 0.5*(1 + T.cos(np.pi*r2m/rc))*((T.sgn(rc-r2m) + 1) / 2)
 
             q1 = T.sum(T.exp(-esp_term_1)*cut_1)
             q2 = T.sum(T.exp(-esp_term_2)*cut_2)
